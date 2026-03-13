@@ -1,0 +1,134 @@
+Folder PATH listing
+Volume serial number is F8A0-6D95
+C:\USERS\CALDIM-12\DESKTOP\STEEL-ESTIMATION-APP\CLIENT\SRC
+¦   App.css
+¦   App.js
+¦   App.jsx
+¦   App.test.js
+¦   index.css
+¦   index.js
+¦   index.jsx
+¦   logo.svg
+¦   reportWebVitals.js
+¦   routes.jsx
+¦   setupTests.js
+¦   
++---components
+¦   ¦   ProtectedRoute.jsx
+¦   ¦   TrialProtectedRoute.jsx
+¦   ¦   
+¦   +---3d
+¦   ¦       BridgeModel.jsx
+¦   ¦       LandingModel.jsx
+¦   ¦       Scene.jsx
+¦   ¦       StairModel.jsx
+¦   ¦       StructuralModel.jsx
+¦   ¦       StructuralScene.jsx
+¦   ¦       
+¦   +---AISC
+¦   ¦       AISCClassificationPopup.jsx
+¦   ¦       AISCNomenclaturePopup.jsx
+¦   ¦       AISCShapeDatabasePopup.jsx
+¦   ¦       Auth.jsx
+¦   ¦       ControlPanel.jsx
+¦   ¦       Dashboard.jsx
+¦   ¦       ForgotPassword.jsx
+¦   ¦       Login.jsx
+¦   ¦       MiscEstimationPopup.jsx
+¦   ¦       ProfileDropdown.jsx
+¦   ¦       Signup.jsx
+¦   ¦       StairGeometrySection.jsx
+¦   ¦       StairVisualization2D.jsx
+¦   ¦       SummaryPopup.jsx
+¦   ¦       TreadStringerVisualizer.jsx
+¦   ¦       
+¦   +---auth
+¦   ¦       Login.jsx
+¦   ¦       Register.jsx
+¦   ¦       TrialTracker.jsx
+¦   ¦       
+¦   +---common
+¦   ¦       ErrorBoundary.jsx
+¦   ¦       Footer.jsx
+¦   ¦       Header.jsx
+¦   ¦       LoadingSpinner.jsx
+¦   ¦       PrivateRoute.jsx
+¦   ¦       TrialExpiredModal.jsx
+¦   ¦       TrialRestrictedRoute.jsx
+¦   ¦       
+¦   +---dashboard
+¦   ¦       Dashboard.jsx
+¦   ¦       OwnerDashboard.jsx
+¦   ¦       RestrictedDashboard.jsx
+¦   ¦       Sidebar.jsx
+¦   ¦       StatCard.jsx
+¦   ¦       TrialStatus.jsx
+¦   ¦       
+¦   +---debug
+¦   ¦       DebugHandrail.jsx
+¦   ¦       
+¦   +---estimation
+¦   ¦   ¦   EstimationForm.jsx
+¦   ¦   ¦   EstimationPage.jsx
+¦   ¦   ¦   FinalEstimate.jsx
+¦   ¦   ¦   GuardRailEstimation.jsx
+¦   ¦   ¦   ImperialInput.jsx
+¦   ¦   ¦   RailDropdown.jsx
+¦   ¦   ¦   SecureExcelUpload.jsx
+¦   ¦   ¦   ShapeDatabase.jsx
+¦   ¦   ¦   
+¦   ¦   +---components
+¦   ¦   ¦       DataStatusBar.jsx
+¦   ¦   ¦       EstimationSummary.jsx
+¦   ¦   ¦       NavigationBar.jsx
+¦   ¦   ¦       ProjectInfoModal.jsx
+¦   ¦   ¦       TabNavigation.jsx
+¦   ¦   ¦       
+¦   ¦   +---tabs
+¦   ¦           GuardRailTable.jsx
+¦   ¦           WallGrabRailTable.jsx
+¦   ¦           
+¦   +---menus
+¦   ¦       GeneralSettings.jsx
+¦   ¦       GeneralStringerSettings.jsx
+¦   ¦       LeftEndFSConnection.jsx
+¦   ¦       LeftEndNSConnection.jsx
+¦   ¦       LeftEndSettings.jsx
+¦   ¦       RightEndFSConnection.jsx
+¦   ¦       RightEndNSConnection.jsx
+¦   ¦       RightEndSettings.jsx
+¦   ¦       StairGeometryInformation.jsx
+¦   ¦       
+¦   +---sections
+¦           DimensionsSection.jsx
+¦           MaterialsDimensions.jsx
+¦           MaterialsSection.jsx
+¦           ProjectInfo.jsx
+¦           RailingSystem.jsx
+¦           StairDetails.jsx
+¦           SteelGrades.jsx
+¦           
++---contexts
+¦       AuthContext.jsx
+¦       EstimationContext.jsx
+¦       TrialContext.jsx
+¦       
++---hooks
+¦       useAuth.js
+¦       useImperialConverter.js
+¦       useTrialStatus.js
+¦       
++---services
+¦       api.js
+¦       authService.js
+¦       estimationService.js
+¦       
++---styles
+¦       animations.css
+¦       globals.css
+¦       
++---utils
+        formatters.js
+        imperialConverter.js
+        validators.js
+        

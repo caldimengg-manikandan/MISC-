@@ -1,0 +1,9 @@
+/* In your main layout component */
+.main-content {
+  transition: margin-left 0.3s ease;
+  margin-left: 280px; /* Default expanded width */
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 80px; /* Collapsed width */
+}
