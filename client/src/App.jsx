@@ -28,6 +28,9 @@ import StairEstimation   from './components/estimation/StairEstimation';
 import PlaceholderModule from './components/estimation/PlaceholderModule';
 import Reports           from './components/reports/Reports';
 
+// Admin
+import DictionaryManager from './components/admin/DictionaryManager';
+
 // Debug
 import DebugHandrail from './components/debug/DebugHandrail';
 
@@ -36,6 +39,14 @@ import './styles/globals.css';
 // Helper: wraps a page in PrivateRoute + MainLayout
 const EngRoute = ({ element }) => (
   <PrivateRoute>
+    <MainLayout>
+      {element}
+    </MainLayout>
+  </PrivateRoute>
+);
+
+const AdminRoute = ({ element }) => (
+  <PrivateRoute requireAdmin={true}>
     <MainLayout>
       {element}
     </MainLayout>
@@ -89,6 +100,9 @@ function App() {
           <Route path="/estimate/bollards"       element={<EngRoute element={<PlaceholderModule type="bollards" />} />} />
           <Route path="/estimate/gates"          element={<EngRoute element={<PlaceholderModule type="gates" />} />} />
           <Route path="/reports"                 element={<EngRoute element={<Reports />} />} />
+
+          {/* ADMIN */}
+          <Route path="/admin/dictionary"        element={<AdminRoute element={<DictionaryManager />} />} />
 
           {/* DEBUG */}
           <Route path="/debug/handrail" element={<PrivateRoute><DebugHandrail /></PrivateRoute>} />

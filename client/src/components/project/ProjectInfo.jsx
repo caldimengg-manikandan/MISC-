@@ -196,7 +196,7 @@ export default function ProjectInfo() {
           <div className="eng-card-body">
             <div className="form-grid form-grid-2">
               <div className="form-field">
-                <label className="form-label">Customer Name <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">Customer Name <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-customerName"
@@ -207,7 +207,7 @@ export default function ProjectInfo() {
               </div>
               <div className="form-field">
                 <label className="form-label">
-                  Project Name <span className="required">*</span> <span className="data-badge dt-string">STRING</span>
+                  Project Name <span className="required">*</span> <span className="data-badge dt-string"></span>
                 </label>
                 <input
                   className="form-input data-type-string"
@@ -219,7 +219,7 @@ export default function ProjectInfo() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Project Number <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">Project Number <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-projectNumber"
@@ -229,7 +229,7 @@ export default function ProjectInfo() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Project Location <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">Project Location <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-projectLocation"
@@ -250,7 +250,7 @@ export default function ProjectInfo() {
           <div className="eng-card-body">
             <div className="form-grid form-grid-3">
               <div className="form-field">
-                <label className="form-label">Architect <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">Architect <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-architect"
@@ -260,7 +260,7 @@ export default function ProjectInfo() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">EOR (Engineer of Record) <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">EOR (Engineer of Record) <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-eor"
@@ -270,7 +270,7 @@ export default function ProjectInfo() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">G.C. Name <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">G.C. Name <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-gcName"
@@ -280,7 +280,7 @@ export default function ProjectInfo() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Detailer <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">Detailer <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-detailer"
@@ -290,7 +290,7 @@ export default function ProjectInfo() {
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">Vendor Name <span className="data-badge dt-string">STRING</span></label>
+                <label className="form-label">Vendor Name <span className="data-badge dt-string"></span></label>
                 <input
                   className="form-input data-type-string"
                   id="field-vendorName"

@@ -291,7 +291,7 @@ const Login3D = () => {
     specialty: ''
   });
   const [daysRemaining, setDaysRemaining] = useState(30);
-  const { login, register } = useAuth();
+  const { login, register, loading } = useAuth();
 
   // Stair specifications
   const stairSpecs = [
@@ -374,18 +374,8 @@ const Login3D = () => {
     try {
       if (isLogin) {
         await login(formData.email, formData.password, isOwnerLogin);
-        toast.success(
-          isOwnerLogin
-            ? 'Welcome back, Owner!'
-            : 'Welcome back, Engineer!'
-        );
       } else {
         await register(formData, isOwnerLogin);
-        toast.success(
-          isOwnerLogin
-            ? 'Owner account created!'
-            : 'Stair design account created! 30-day trial started.'
-        );
       }
     } catch (error) {
       toast.error(error.message || 'Authentication failed');
@@ -814,20 +804,30 @@ const Login3D = () => {
 
               <motion.button
                 type="submit"
+                disabled={loading}
                 className={`w-full py-3.5 text-white font-semibold text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center ${isOwnerLogin
                   ? 'bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500'
                   : 'bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500'
-                  }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                  } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                whileHover={!loading ? { scale: 1.02 } : {}}
+                whileTap={!loading ? { scale: 0.98 } : {}}
               >
-                <span>
-                  {isLogin
-                    ? (isOwnerLogin ? 'Sign In as Owner' : 'Sign In')
-                    : (isOwnerLogin ? 'Create Owner Account' : 'Start Free Trial')
-                  }
-                </span>
-                <ChevronRight className="w-4 h-4 ml-2" />
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      {isLogin
+                        ? (isOwnerLogin ? 'Sign In as Owner' : 'Sign In')
+                        : (isOwnerLogin ? 'Create Owner Account' : 'Start Free Trial')
+                      }
+                    </span>
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </motion.button>
             </form>
 

@@ -193,6 +193,14 @@ const Sidebar = ({ onToggle }) => {
       path: '/settings',
       color: 'from-gray-700 to-gray-800'
     },
+    // ── Admin ────────────────────────────────────────────────────────
+    ...((user?.role === 'admin' || user?.role === 'owner') ? [{
+      id: 'admin-dictionary',
+      label: 'Admin Tools',
+      icon: UserCog,
+      path: '/admin/dictionary',
+      color: 'from-indigo-600 to-violet-700'
+    }] : []),
   ];
 
   const handleNavigation = (item) => {

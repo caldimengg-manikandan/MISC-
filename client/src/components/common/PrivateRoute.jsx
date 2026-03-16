@@ -3,7 +3,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-const PrivateRoute = ({ children, requireOwner = false }) => {
+const PrivateRoute = ({ children, requireOwner = false, requireAdmin = false }) => {
   const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -21,6 +21,11 @@ const PrivateRoute = ({ children, requireOwner = false }) => {
 
   // If owner access required but user is not owner
   if (requireOwner && user?.role !== 'owner') {
+    return <Navigate to="/home" replace />;
+  }
+
+  // If admin access required but user is not admin or owner
+  if (requireAdmin && user?.role !== 'admin' && user?.role !== 'owner') {
     return <Navigate to="/home" replace />;
   }
 

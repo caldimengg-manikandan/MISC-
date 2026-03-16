@@ -18,6 +18,7 @@ const logger = require('./src/utils/logger');
 // Import routes
 
 const projectRoutes = require('./src/routes/projects');
+const dictionaryRoutes = require('./src/routes/dictionary');
 
 // Import secure routes
 const priceRoutes = require('./src/routes/priceRoutes');
@@ -138,11 +139,11 @@ app.use(mongoSanitize());
 // Rate limiting - different limits for different routes
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Increased for development to prevent blocking (Original: 100)
   message: {
     success: false,
     error: 'Too many requests, please try again later.',
-    retryAfter: '15 minutes'
+    retryAfter: '1 minute'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -164,7 +165,7 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // Stricter limit for auth endpoints
+  max: 100, // Increased for development (Original: 20)
   message: {
     success: false,
     error: 'Too many authentication attempts, please try again later.'
@@ -281,6 +282,7 @@ app.get('/api/docs', (req, res) => {
 // Protected routes with authentication
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', authMiddleware, projectRoutes);
+app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/debug', authMiddleware, debugRoutes);
 
 // Secure routes

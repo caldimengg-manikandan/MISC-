@@ -1,28 +1,31 @@
 // src/components/estimation/StairEstimation.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import StairConfig    from './stair/StairConfig';
-import LandingConfig  from './stair/LandingConfig';
-import RailConfig     from './stair/RailConfig';
+import StairConfig from './stair/StairConfig';
+import LandingConfig from './stair/LandingConfig';
+import RailConfig from './stair/RailConfig';
 
 let uid = 1;
 const makeId = () => uid++;
 
 const RAIL_TYPES = [
-  { key: 'guardRail',  label: 'Guard Rail',  badge: 'GUARD',  icon: '🛡' },
-  { key: 'wallRail',   label: 'Wall Rail',   badge: 'WALL',   icon: '🔘' },
-  { key: 'grabRail',   label: 'Grab Rail',   badge: 'GRAB',   icon: '✊' },
-  { key: 'caneRail',   label: 'Cane Rail',   badge: 'CANE',   icon: '🦯' },
+  { key: 'guardRail', label: 'Guard Rail', badge: 'GUARD', icon: '🛡' },
+  { key: 'wallRail', label: 'Wall Rail', badge: 'WALL', icon: '🔘' },
+  { key: 'grabRail', label: 'Grab Rail', badge: 'GRAB', icon: '✊' },
+  { key: 'caneRail', label: 'Cane Rail', badge: 'CANE', icon: '🦯' },
 ];
 
 // ── Collapsible Wrapper ─────────────────────────────────────────────────────
-function CollapsibleSection({ badge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true }) {
+function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div className="collapsible-section">
       <div className="collapsible-header" onClick={() => setOpen(o => !o)}>
         <div className="collapsible-header-left">
-          <span className="collapsible-type-badge">{badge}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+            <span className="collapsible-type-badge">{badge}</span>
+            {subBadge && <span className="collapsible-type-badge" style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)', fontSize: '8.5px', padding: '1px 5px' }}>{subBadge}</span>}
+          </div>
           <div>
             <div className="collapsible-title">{title}</div>
             {subtitle && <div className="collapsible-subtitle">{subtitle}</div>}
@@ -31,10 +34,14 @@ function CollapsibleSection({ badge, title, subtitle, onDelete, onDuplicate, chi
         <div className="collapsible-header-right" onClick={e => e.stopPropagation()}>
           <div className="collapsible-actions">
             {onDuplicate && (
-              <button className="icon-btn" title="Duplicate" onClick={onDuplicate}>⎘</button>
+              <button className="icon-btn" title="Duplicate/Copy" onClick={onDuplicate}>
+                <span style={{ fontSize: '14px' }}>📋</span>
+              </button>
             )}
             {onDelete && (
-              <button className="icon-btn danger" title="Delete" onClick={onDelete}>✕</button>
+              <button className="icon-btn danger" title="Delete" onClick={onDelete}>
+                <span style={{ fontSize: '14px' }}>✕</span>
+              </button>
             )}
           </div>
           <span className={`expand-chevron ${open ? 'open' : ''}`}>▾</span>
@@ -50,43 +57,63 @@ function CollapsibleSection({ badge, title, subtitle, onDelete, onDuplicate, chi
 }
 
 // ── Stair Item (groups stair + its flights, landings, rails) ───────────────
-function StairItem({ stair, onDeleteStair, onChange }) {
-  const [flights,   setFlights]   = useState([{ id: makeId(), label: 'Flight 1' }]);
-  const [landings,  setLandings]  = useState([]);
-  const [rails,     setRails]     = useState([]);
-
-  const addFlight  = () => setFlights(f => [...f, { id: makeId(), label: `Flight ${f.length + 1}` }]);
-  const addLanding = () => setLandings(l => [...l, { id: makeId(), label: `Landing ${l.length + 1}` }]);
-  const addRail    = (type) => setRails(r => [...r, { id: makeId(), type, label: `${RAIL_TYPES.find(t => t.key === type).label} ${r.filter(x => x.type === type).length + 1}` }]);
-
-  const deleteFlight  = (id) => setFlights(f => f.filter(x => x.id !== id));
-  const deleteLanding = (id) => setLandings(l => l.filter(x => x.id !== id));
-  const deleteRail    = (id) => setRails(r => r.filter(x => x.id !== id));
+function StairItem({ 
+  stair, 
+  onDeleteStair, 
+  onDuplicateStair,
+  onUpdateStair,
+  onAddFlight,
+  onCopyLastFlight,
+  onAddLanding,
+  onAddRail,
+  onUpdateSubItem,
+  onDuplicateSubItem,
+  onDeleteSubItem,
+  onUndoDeleteSubItem,
+  history
+}) {
+  const flights = stair.flights || [];
+  const landings = stair.landings || [];
+  const rails = stair.rails || [];
 
   const railMeta = (r) => RAIL_TYPES.find(t => t.key === r.type);
 
   return (
     <CollapsibleSection
       badge="STAIR"
+      subBadge="FLIGHT 1"
       title={stair.label}
-      subtitle={stair.stairType || 'Configure stair properties below'}
+      subtitle={stair.stairType || 'Primary Stair Flight Configuration'}
       onDelete={onDeleteStair}
+      onDuplicate={onDuplicateStair}
       defaultOpen={true}
     >
       {/* Stair Config Form */}
-      <StairConfig stair={stair} onChange={onChange} />
+      <StairConfig stair={stair} onChange={onUpdateStair} />
 
       <div className="divider" />
 
       {/* ── Flights ────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-            Flights ({flights.length})
-          </span>
-          <button className="add-btn" onClick={addFlight} id="add-flight">
-            + Add Flight
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+              Flights ({flights.length + 1})
+            </span>
+            {history.lastDeleted?.type === 'flight' && (
+              <button className="text-btn" onClick={() => onUndoDeleteSubItem('flight')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                ↩ Undo Delete
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="add-btn ghost" onClick={onCopyLastFlight} id="copy-flight">
+              ⎘ Copy from Above
+            </button>
+            <button className="add-btn" onClick={onAddFlight} id="add-flight">
+              + Add Flight
+            </button>
+          </div>
         </div>
 
         {flights.map(fl => (
@@ -95,10 +122,15 @@ function StairItem({ stair, onDeleteStair, onChange }) {
             badge="FLIGHT"
             title={fl.label}
             subtitle="Stair flight geometry"
-            onDelete={() => deleteFlight(fl.id)}
+            onDelete={() => onDeleteSubItem('flight', fl.id)}
+            onDuplicate={() => onDuplicateSubItem('flight', fl.id)}
             defaultOpen={false}
           >
-            <StairConfig stair={{ ...stair, ...fl }} onChange={() => {}} isFlightMode />
+            <StairConfig
+              stair={{ ...stair, ...fl }}
+              onChange={(changes) => onUpdateSubItem('flight', fl.id, changes)}
+              isFlightMode
+            />
           </CollapsibleSection>
         ))}
       </div>
@@ -106,10 +138,17 @@ function StairItem({ stair, onDeleteStair, onChange }) {
       {/* ── Landings ───────────────────────────────────────────────── */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-            Landings ({landings.length})
-          </span>
-          <button className="add-btn" onClick={addLanding} id="add-landing">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+              Landings ({landings.length})
+            </span>
+            {history.lastDeleted?.type === 'landing' && (
+              <button className="text-btn" onClick={() => onUndoDeleteSubItem('landing')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                ↩ Undo Delete
+              </button>
+            )}
+          </div>
+          <button className="add-btn" onClick={onAddLanding} id="add-landing">
             + Add Landing
           </button>
         </div>
@@ -120,14 +159,18 @@ function StairItem({ stair, onDeleteStair, onChange }) {
             badge="LANDING"
             title={l.label}
             subtitle="Platform dimensions and type"
-            onDelete={() => deleteLanding(l.id)}
+            onDelete={() => onDeleteSubItem('landing', l.id)}
+            onDuplicate={() => onDuplicateSubItem('landing', l.id)}
             defaultOpen={false}
           >
-            <LandingConfig />
+            <LandingConfig
+              data={l}
+              onChange={(changes) => onUpdateSubItem('landing', l.id, changes)}
+            />
           </CollapsibleSection>
         ))}
 
-        {landings.length === 0 && (
+        {landings.length === 0 && !history.lastDeleted?.type === 'landing' && (
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '4px' }}>
             No landings added — click "+ Add Landing" to begin.
           </div>
@@ -137,9 +180,16 @@ function StairItem({ stair, onDeleteStair, onChange }) {
       {/* ── Rails ──────────────────────────────────────────────────── */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-            Rails ({rails.length})
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+              Rails ({rails.length})
+            </span>
+            {history.lastDeleted?.type === 'rail' && (
+              <button className="text-btn" onClick={() => onUndoDeleteSubItem('rail')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                ↩ Undo Delete
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Rail type add buttons */}
@@ -148,7 +198,7 @@ function StairItem({ stair, onDeleteStair, onChange }) {
             <button
               key={rt.key}
               className="add-btn"
-              onClick={() => addRail(rt.key)}
+              onClick={() => onAddRail(rt.key)}
               id={`add-${rt.key}`}
             >
               {rt.icon} + {rt.label}
@@ -165,16 +215,21 @@ function StairItem({ stair, onDeleteStair, onChange }) {
                 badge={meta.badge}
                 title={r.label}
                 subtitle={`${meta.label} configuration`}
-                onDelete={() => deleteRail(r.id)}
+                onDelete={() => onDeleteSubItem('rail', r.id)}
+                onDuplicate={() => onDuplicateSubItem('rail', r.id)}
                 defaultOpen={false}
               >
-                <RailConfig type={r.type} />
+                <RailConfig
+                  type={r.type}
+                  data={r}
+                  onChange={(changes) => onUpdateSubItem('rail', r.id, changes)}
+                />
               </CollapsibleSection>
             );
           })}
         </div>
 
-        {rails.length === 0 && (
+        {rails.length === 0 && !history.lastDeleted?.type === 'rail' && (
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '4px', marginTop: '8px' }}>
             No rails added — use the buttons above to add rail types.
           </div>
@@ -187,7 +242,16 @@ function StairItem({ stair, onDeleteStair, onChange }) {
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function StairEstimation() {
   const [stairs, setStairs] = useState([
-    { id: makeId(), label: 'Stair 1', stairType: '', drawingRef: '' }
+    { 
+      id: makeId(), 
+      label: 'Stair 1', 
+      stairType: '', 
+      drawingRef: '', 
+      flights: [], 
+      landings: [], 
+      rails: [],
+      history: { lastDeleted: null }
+    }
   ]);
   const [projectData, setProjectData] = useState({ projectName: '', projectNumber: '' });
 
@@ -206,15 +270,186 @@ export default function StairEstimation() {
     }
   }, []);
 
-  const addStair = () => setStairs(s => [
-    ...s,
-    { id: makeId(), label: `Stair ${s.length + 1}`, stairType: '', drawingRef: '' }
-  ]);
+  const addStair = () => {
+    const nextNum = stairs.length > 0 
+      ? Math.max(...stairs.map(s => {
+          const m = s.label.match(/\d+/);
+          return m ? parseInt(m[0]) : 0;
+        })) + 1 
+      : 1;
+    setStairs(s => [
+      ...s,
+      { 
+        id: makeId(), 
+        label: `Stair ${nextNum}`, 
+        stairType: '', 
+        drawingRef: '',
+        flights: [],
+        landings: [],
+        rails: [],
+        history: { lastDeleted: null }
+      }
+    ]);
+  };
+
+  const duplicateStair = (id) => {
+    const target = stairs.find(s => s.id === id);
+    if (!target) return;
+    
+    const nextNum = Math.max(...stairs.map(s => {
+      const m = s.label.match(/\d+/);
+      return m ? parseInt(m[0]) : 0;
+    })) + 1;
+
+    // Deep copy helper for nested objects (flights, landings, rails)
+    const deepClone = (items) => items.map(item => ({ ...item, id: makeId() }));
+
+    setStairs(s => [
+      ...s,
+      { 
+        ...target, 
+        id: makeId(), 
+        label: `Stair ${nextNum}`,
+        flights: deepClone(target.flights || []),
+        landings: deepClone(target.landings || []),
+        rails: deepClone(target.rails || []),
+        history: { lastDeleted: null }
+      }
+    ]);
+  };
 
   const deleteStair = (id) => setStairs(s => s.filter(x => x.id !== id));
 
   const updateStair = (id, changes) =>
     setStairs(s => s.map(x => x.id === id ? { ...x, ...changes } : x));
+
+  // ── Sub-Item Handlers (Lifting state up) ──────────────────────────────
+  
+  const addSubItem = (stairId, type, extra = {}) => {
+    setStairs(st => st.map(s => {
+      if (s.id !== stairId) return s;
+      
+      let nextNum = 1;
+      const items = s[type + 's'] || [];
+      
+      if (type === 'flight') {
+        nextNum = items.length > 0 
+          ? Math.max(...items.map(f => {
+              const m = f.label.match(/\d+/);
+              return m ? parseInt(m[0]) : 0;
+            })) + 1 
+          : 2;
+      } else {
+        nextNum = items.length > 0 
+          ? Math.max(...items.map(l => {
+              const m = l.label.match(/\d+/);
+              return m ? parseInt(m[0]) : 0;
+            })) + 1 
+          : 1;
+      }
+
+      let label = `${type.charAt(0).toUpperCase() + type.slice(1)} ${nextNum}`;
+      if (type === 'rail' && extra.type) {
+        const meta = RAIL_TYPES.find(t => t.key === extra.type);
+        const sameTypeRails = items.filter(r => r.type === extra.type);
+        nextNum = sameTypeRails.length > 0
+          ? Math.max(...sameTypeRails.map(r => {
+              const m = r.label.match(/\d+/);
+              return m ? parseInt(m[0]) : 0;
+            })) + 1
+          : 1;
+        label = `${meta.label} ${nextNum}`;
+      }
+
+      return {
+        ...s,
+        [type + 's']: [...items, { id: makeId(), label, ...extra }]
+      };
+    }));
+  };
+
+  const copyLastFlight = (stairId) => {
+    setStairs(st => st.map(s => {
+      if (s.id !== stairId) return s;
+      const flights = s.flights || [];
+      if (flights.length === 0) {
+        const nextNum = 2;
+        return { ...s, flights: [...flights, { id: makeId(), label: `Flight ${nextNum}` }] };
+      }
+      const last = flights[flights.length - 1];
+      const nextNum = Math.max(...flights.map(f => {
+        const m = f.label.match(/\d+/);
+        return m ? parseInt(m[0]) : 0;
+      })) + 1;
+      return { ...s, flights: [...flights, { ...last, id: makeId(), label: `Flight ${nextNum}` }] };
+    }));
+  };
+
+  const updateSubItem = (stairId, type, itemId, data) => {
+    setStairs(st => st.map(s => {
+      if (s.id !== stairId) return s;
+      const key = type + 's';
+      return {
+        ...s,
+        [key]: s[key].map(item => item.id === itemId ? { ...item, ...data } : item)
+      };
+    }));
+  };
+
+  const duplicateSubItem = (stairId, type, itemId) => {
+    setStairs(st => st.map(s => {
+      if (s.id !== stairId) return s;
+      const key = type + 's';
+      const items = s[key];
+      const target = items.find(x => x.id === itemId);
+      
+      let nextNum = Math.max(...items.map(item => {
+        const m = item.label.match(/\d+/);
+        return m ? parseInt(m[0]) : 0;
+      })) + 1;
+
+      let label = `${type.charAt(0).toUpperCase() + type.slice(1)} ${nextNum}`;
+      if (type === 'rail') {
+        const sameTypeRails = items.filter(r => r.type === target.type);
+        const meta = RAIL_TYPES.find(t => t.key === target.type);
+        nextNum = Math.max(...sameTypeRails.map(r => {
+          const m = r.label.match(/\d+/);
+          return m ? parseInt(m[0]) : 0;
+        })) + 1;
+        label = `${meta.label} ${nextNum}`;
+      }
+
+      return {
+        ...s,
+        [key]: [...items, { ...target, id: makeId(), label }]
+      };
+    }));
+  };
+
+  const deleteSubItem = (stairId, type, itemId) => {
+    setStairs(st => st.map(s => {
+      if (s.id !== stairId) return s;
+      const key = type + 's';
+      const deleted = s[key].find(x => x.id === itemId);
+      return {
+        ...s,
+        [key]: s[key].filter(x => x.id !== itemId),
+        history: { lastDeleted: { type, data: deleted } }
+      };
+    }));
+  };
+
+  const undoDeleteSubItem = (stairId, type) => {
+    setStairs(st => st.map(s => {
+      if (s.id !== stairId || !s.history.lastDeleted || s.history.lastDeleted.type !== type) return s;
+      const key = type + 's';
+      return {
+        ...s,
+        [key]: [...s[key], s.history.lastDeleted.data],
+        history: { lastDeleted: null }
+      };
+    }));
+  };
 
   // Summary stats
   const totalStairs = stairs.length;
@@ -280,8 +515,18 @@ export default function StairEstimation() {
         <StairItem
           key={stair.id}
           stair={stair}
+          history={stair.history}
           onDeleteStair={() => deleteStair(stair.id)}
-          onChange={changes => updateStair(stair.id, changes)}
+          onDuplicateStair={() => duplicateStair(stair.id)}
+          onUpdateStair={changes => updateStair(stair.id, changes)}
+          onAddFlight={() => addSubItem(stair.id, 'flight')}
+          onCopyLastFlight={() => copyLastFlight(stair.id)}
+          onAddLanding={() => addSubItem(stair.id, 'landing')}
+          onAddRail={(type) => addSubItem(stair.id, 'rail', { type })}
+          onUpdateSubItem={(type, id, data) => updateSubItem(stair.id, type, id, data)}
+          onDuplicateSubItem={(type, id) => duplicateSubItem(stair.id, type, id)}
+          onDeleteSubItem={(type, id) => deleteSubItem(stair.id, type, id)}
+          onUndoDeleteSubItem={(type) => undoDeleteSubItem(stair.id, type)}
         />
       ))}
 

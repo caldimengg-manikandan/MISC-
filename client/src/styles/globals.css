@@ -397,6 +397,9 @@ body {
 .form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
 .form-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.form-grid-5 { grid-template-columns: repeat(5, 1fr); }
+.form-grid-6 { grid-template-columns: repeat(6, 1fr); }
+.form-grid-8 { grid-template-columns: repeat(8, 1fr); }
 
 .form-field { display: flex; flex-direction: column; gap: 5px; }
 
@@ -505,33 +508,57 @@ textarea.form-input {
 /* ===================== RADIO / TOGGLE ===================== */
 .radio-group {
   display: flex;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 4px 0;
 }
 
 .radio-option {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  gap: 8px;
   cursor: pointer;
-  transition: all var(--transition);
-  border-right: 1px solid var(--border-color);
   user-select: none;
-  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-label);
+  transition: all var(--transition);
+  position: relative;
 }
 
-.radio-option:last-child { border-right: none; }
+/* Custom Radio Indicator */
+.radio-option::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 50%;
+  background: white;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.radio-option:hover::before { border-color: var(--color-primary-300); }
 
 .radio-option.selected {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+.radio-option.selected::before {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-50);
+}
+
+.radio-option.selected::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--color-primary-600);
-  color: white;
 }
 
 /* ===================== COLLAPSIBLE SECTIONS ===================== */
@@ -786,6 +813,9 @@ textarea.form-input {
   .form-grid-2 { grid-template-columns: 1fr; }
   .form-grid-3 { grid-template-columns: 1fr 1fr; }
   .form-grid-4 { grid-template-columns: 1fr 1fr; }
+  .form-grid-5 { grid-template-columns: 1fr 1fr; }
+  .form-grid-6 { grid-template-columns: 1fr 1fr; }
+  .form-grid-8 { grid-template-columns: 1fr 1fr; }
   .sidebar { width: 200px; }
   :root { --sidebar-width: 200px; }
 }
