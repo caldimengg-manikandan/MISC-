@@ -1,65 +1,63 @@
-// src/components/layout/MainLayout.jsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { 
+  FolderOpen, ClipboardCheck, ArrowUpDown, BarChart3, Settings, 
+  LogOut, ChevronRight, HelpCircle, Save, Share2, Menu, X,
+  LayoutDashboard, Database, Box, DollarSign, Info
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// ── Icons ──────────────────────────────────────────────────────────────────
-const Icon = ({ name }) => {
-  const icons = {
-    folder: '📁', estimate: '📐', stair: '🪜', railing: '🔩', ladder: '⚙️',
-    bollard: '🔳', gate: '🚪', reports: '📊', settings: '⚙️', logout: '→',
-    chevron: '›', save: '💾', export: '📤', add: '+', help: '?',
-  };
-  return <span style={{ fontSize: '14px' }}>{icons[name] || '•'}</span>;
-};
-
-// ── Collapsible Sub-Menu ────────────────────────────────────────────────────
-const SubMenu = ({ items, activePath, onNavigate }) => (
-  <div>
-    {items.map(item => (
-      <div
-        key={item.path}
-        className={`sidebar-item sidebar-sub-item ${activePath === item.path ? 'active' : ''}`}
-        onClick={() => onNavigate(item.path)}
-        id={`nav-${item.id}`}
-      >
-        <span className="sidebar-item-icon" style={{ fontSize: '12px' }}>
-          {item.icon}
-        </span>
-        {item.label}
-      </div>
-    ))}
-  </div>
-);
-
-// ── Nav Config ──────────────────────────────────────────────────────────────
 const NAV = [
   {
     id: 'project-info',
     label: 'Project Info',
-    icon: '📋',
+    icon: <ClipboardCheck size={18} />,
     path: '/project-info',
   },
   {
     id: 'estimate',
     label: 'Estimate',
-    icon: '📐',
+    icon: <ArrowUpDown size={18} />,
     path: null,
     children: [
-      { id: 'stair-railings', label: 'Stair & Railings', icon: '🪜', path: '/estimate/stair-railings' },
-      { id: 'railings',       label: 'Railings',         icon: '🔧', path: '/estimate/railings' },
-      { id: 'ladders',        label: 'Ladders',           icon: '⬆', path: '/estimate/ladders' },
-      { id: 'bollards',       label: 'Bollards',          icon: '🔳', path: '/estimate/bollards' },
-      { id: 'gates',          label: 'Gates',             icon: '🚪', path: '/estimate/gates' },
+      { id: 'stair-railings', label: 'Stair & Railings', icon: <Box size={14} />, path: '/estimate/stair-railings' },
+      { id: 'railings',       label: 'Railings',         icon: <Database size={14} />, path: '/estimate/railings' },
+      { id: 'ladders',        label: 'Ladders',           icon: <ArrowUpDown size={14} />, path: '/estimate/ladders' },
+      { id: 'bollards',       label: 'Bollards',          icon: <Box size={14} />, path: '/estimate/bollards' },
+      { id: 'gates',          label: 'Gates',             icon: <Box size={14} />, path: '/estimate/gates' },
     ],
   },
   {
     id: 'reports',
     label: 'Reports',
-    icon: '📊',
+    icon: <BarChart3 size={18} />,
     path: '/reports',
   },
 ];
+
+const SubMenu = ({ items, activePath, onNavigate }) => (
+  <motion.div 
+    initial={{ height: 0, opacity: 0 }}
+    animate={{ height: 'auto', opacity: 1 }}
+    exit={{ height: 0, opacity: 0 }}
+    className="sidebar-submenu"
+    style={{ overflow: 'hidden' }}
+  >
+    {items.map(item => (
+      <div
+        key={item.path}
+        className={`sidebar-item sidebar-sub-item ${activePath === item.path ? 'active' : ''}`}
+        onClick={() => onNavigate(item.path)}
+      >
+        <span className="sidebar-item-icon">
+          {item.icon}
+        </span>
+        {item.label}
+      </div>
+    ))}
+  </motion.div>
+);
 
 // ── Main Layout ─────────────────────────────────────────────────────────────
 export default function MainLayout({ children }) {
@@ -106,24 +104,30 @@ export default function MainLayout({ children }) {
 
           {NAV.map(item => {
             if (item.children) {
+              const isActive = item.children.some(c => activePath === c.path);
               return (
                 <div key={item.id}>
                   <div
-                    className={`sidebar-item has-children ${isEstimateActive ? 'active' : ''}`}
+                    className={`sidebar-item has-children ${isActive ? 'active' : ''}`}
                     onClick={() => setEstimateOpen(o => !o)}
-                    id={`nav-${item.id}`}
                   >
                     <span className="sidebar-item-icon">{item.icon}</span>
-                    {item.label}
-                    <span className={`sidebar-expand-icon ${estimateOpen ? 'open' : ''}`}>›</span>
-                  </div>
-                  {estimateOpen && (
-                    <SubMenu
-                      items={item.children}
-                      activePath={activePath}
-                      onNavigate={navigate}
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    <ChevronRight 
+                      size={16} 
+                      className={`sidebar-expand-icon ${estimateOpen ? 'open' : ''}`}
+                      style={{ transition: 'transform 0.2s' }}
                     />
-                  )}
+                  </div>
+                  <AnimatePresence>
+                    {estimateOpen && (
+                      <SubMenu
+                        items={item.children}
+                        activePath={activePath}
+                        onNavigate={navigate}
+                      />
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             }
@@ -133,7 +137,6 @@ export default function MainLayout({ children }) {
                 key={item.id}
                 className={`sidebar-item ${activePath === item.path ? 'active' : ''}`}
                 onClick={() => navigate(item.path)}
-                id={`nav-${item.id}`}
               >
                 <span className="sidebar-item-icon">{item.icon}</span>
                 {item.label}
@@ -141,15 +144,14 @@ export default function MainLayout({ children }) {
             );
           })}
 
-          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', marginTop: '16px' }}>
+          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
             <div
               className="sidebar-item"
               onClick={handleLogout}
-              id="nav-logout"
-              style={{ color: '#f87171' }}
+              style={{ color: '#fb7185' }}
             >
-              <span className="sidebar-item-icon">⬅</span>
-              Logout
+              <span className="sidebar-item-icon"><LogOut size={18} /></span>
+              Sign Out
             </div>
           </div>
         </nav>
@@ -181,14 +183,14 @@ export default function MainLayout({ children }) {
           </nav>
 
           <div className="header-actions">
-            <button className="header-btn header-btn-outline" id="header-help">
-              ? Help
+            <button className="header-btn header-btn-outline">
+              <HelpCircle size={16} /> Help
             </button>
-            <button className="header-btn header-btn-outline" id="header-export">
-              📤 Export
+            <button className="header-btn header-btn-outline">
+              <Share2 size={16} /> Export
             </button>
-            <button className="header-btn header-btn-primary" id="header-save">
-              💾 Save
+            <button className="header-btn header-btn-primary">
+              <Save size={16} /> Save Changes
             </button>
           </div>
         </header>

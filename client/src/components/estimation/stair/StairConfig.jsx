@@ -199,7 +199,15 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             <div className="form-field">
               <label className="form-label">
                 Stair Type <span className="data-badge dt-string"></span>
-                {isAdmin && <button onClick={(e) => openManage('stair_type', 'Stair Types', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
+                {isAdmin && (
+                  <button 
+                    onClick={(e) => openManage('stair_type', 'Stair Types', e)} 
+                    className="quick-edit-btn" 
+                    title="Manage Options"
+                  >
+                    <Settings size={14} />
+                  </button>
+                )}
               </label>
               <select className="form-select data-type-string" id="stair-type" value={form.stairType} onChange={e => set('stairType', e.target.value)}>
                 {dropdowns.stairTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -223,7 +231,15 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
               <div className="form-field fade-in">
                 <label className="form-label">
                   Grating Tread Type <span className="data-badge dt-string"></span>
-                  {isAdmin && <button onClick={(e) => openManage('grating_type', 'Grating Tread Types', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
+                  {isAdmin && (
+                    <button 
+                      onClick={(e) => openManage('grating_type', 'Grating Tread Types', e)} 
+                      className="quick-edit-btn" 
+                      title="Manage Options"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  )}
                 </label>
                 <select className="form-select data-type-string" value={form.gratingType} onChange={e => set('gratingType', e.target.value)}>
                   <option value="">— Select Grating Type —</option>
@@ -294,7 +310,15 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             <div className="form-field fade-in">
               <label className="form-label">
                 Rolled Stringer Size <span className="data-badge dt-string"></span>
-                {isAdmin && <button onClick={(e) => openManage('stringer_size', 'Stringer Sizes', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
+                {isAdmin && (
+                  <button 
+                    onClick={(e) => openManage('stringer_size', 'Stringer Sizes', e)} 
+                    className="quick-edit-btn" 
+                    title="Manage Options"
+                  >
+                    <Settings size={14} />
+                  </button>
+                )}
               </label>
               <select className="form-select data-type-string" id="stringer-size" value={form.stringerSize} onChange={e => set('stringerSize', e.target.value)}>
                 <option value="">— Select from Profile Data Base —</option>
@@ -345,7 +369,15 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
         <div className="form-section" style={{ marginBottom: 0 }}>
           <div className="form-section-title">
             Finish Specification <span className="data-badge dt-string"></span>
-            {isAdmin && <button onClick={(e) => openManage('finish_option', 'Finish Options', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
+            {isAdmin && (
+              <button 
+                onClick={(e) => openManage('finish_option', 'Finish Options', e)} 
+                className="quick-edit-btn" 
+                title="Manage Options"
+              >
+                <Settings size={14} />
+              </button>
+            )}
           </div>
           <select
             className="form-select data-type-string"
@@ -369,12 +401,19 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
 
       <style jsx>{`
         .quick-edit-btn {
-          margin-left: 8px; background: none; border: none; cursor: pointer;
-          color: var(--color-primary-500); padding: 2px; border-radius: 4px;
+          margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
+          border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
+          cursor: pointer; color: var(--color-primary-600); 
+          padding: 4px; border-radius: 6px;
           display: inline-flex; align-items: center; vertical-align: middle;
-          transition: all 0.2s; border: 1px solid transparent;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .quick-edit-btn:hover { background: var(--color-primary-50); border-color: var(--color-primary-200); }
+        .quick-edit-btn:hover { 
+          background: var(--color-primary-500); 
+          color: white;
+          transform: translateY(-1px) rotate(30deg);
+          box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
+        }
       `}</style>
     </div>
   );

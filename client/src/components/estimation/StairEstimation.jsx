@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import StairConfig from './stair/StairConfig';
 import LandingConfig from './stair/LandingConfig';
 import RailConfig from './stair/RailConfig';
+import { motion, AnimatePresence } from 'framer-motion';
 
 let uid = 1;
 const makeId = () => uid++;
@@ -15,44 +16,59 @@ const RAIL_TYPES = [
 ];
 
 // ── Collapsible Wrapper ─────────────────────────────────────────────────────
-function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true }) {
+function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true, headerClass = "" }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="collapsible-section">
-      <div className="collapsible-header" onClick={() => setOpen(o => !o)}>
+    <motion.div 
+      layout
+      className="collapsible-section"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <div className={`collapsible-header ${headerClass}`} onClick={() => setOpen(o => !o)}>
         <div className="collapsible-header-left">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
             <span className="collapsible-type-badge">{badge}</span>
             {subBadge && <span className="collapsible-type-badge" style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)', fontSize: '8.5px', padding: '1px 5px' }}>{subBadge}</span>}
           </div>
           <div>
-            <div className="collapsible-title">{title}</div>
+            <div className="collapsible-title" style={{ fontSize: '15px', letterSpacing: '-0.2px' }}>{title}</div>
             {subtitle && <div className="collapsible-subtitle">{subtitle}</div>}
           </div>
         </div>
         <div className="collapsible-header-right" onClick={e => e.stopPropagation()}>
           <div className="collapsible-actions">
             {onDuplicate && (
-              <button className="icon-btn" title="Duplicate/Copy" onClick={onDuplicate}>
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="icon-btn" title="Duplicate/Copy" onClick={onDuplicate}>
                 <span style={{ fontSize: '14px' }}>📋</span>
-              </button>
+              </motion.button>
             )}
             {onDelete && (
-              <button className="icon-btn danger" title="Delete" onClick={onDelete}>
+              <motion.button whileHover={{ scale: 1.1, backgroundColor: '#fef2f2' }} whileTap={{ scale: 0.9 }} className="icon-btn danger" title="Delete" onClick={onDelete}>
                 <span style={{ fontSize: '14px' }}>✕</span>
-              </button>
+              </motion.button>
             )}
           </div>
-          <span className={`expand-chevron ${open ? 'open' : ''}`}>▾</span>
+          <span className={`expand-chevron ${open ? 'open' : ''}`} style={{ fontSize: '18px', marginLeft: '12px' }}>▾</span>
         </div>
       </div>
-      {open && (
-        <div className="collapsible-body fade-in">
-          {children}
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="collapsible-body">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -87,6 +103,7 @@ function StairItem({
       onDelete={onDeleteStair}
       onDuplicate={onDuplicateStair}
       defaultOpen={true}
+      headerClass="header-stair"
     >
       {/* Stair Config Form */}
       <StairConfig stair={stair} onChange={onUpdateStair} />
@@ -125,6 +142,7 @@ function StairItem({
             onDelete={() => onDeleteSubItem('flight', fl.id)}
             onDuplicate={() => onDuplicateSubItem('flight', fl.id)}
             defaultOpen={false}
+            headerClass="header-flight"
           >
             <StairConfig
               stair={{ ...stair, ...fl }}
@@ -162,6 +180,7 @@ function StairItem({
             onDelete={() => onDeleteSubItem('landing', l.id)}
             onDuplicate={() => onDuplicateSubItem('landing', l.id)}
             defaultOpen={false}
+            headerClass="header-landing"
           >
             <LandingConfig
               data={l}
@@ -218,6 +237,7 @@ function StairItem({
                 onDelete={() => onDeleteSubItem('rail', r.id)}
                 onDuplicate={() => onDuplicateSubItem('rail', r.id)}
                 defaultOpen={false}
+                headerClass={`header-${r.type.replace('Rail', '')}`}
               >
                 <RailConfig
                   type={r.type}
@@ -495,18 +515,26 @@ export default function StairEstimation() {
       )}
 
       {/* Summary Row */}
-      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '20px' }}>
+      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '32px', gap: '20px' }}>
         {[
-          { icon: '🪜', label: 'Stairs',   value: stairs.length },
-          { icon: '🛡', label: 'Guard Rails', value: 0 },
-          { icon: '🏗', label: 'Landings',  value: 0 },
-          { icon: '🔧', label: 'Rails Total', value: 0 },
-        ].map(s => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-card-icon">{s.icon}</div>
-            <div className="stat-card-label">{s.label}</div>
-            <div className="stat-card-value">{s.value}</div>
-          </div>
+          { icon: '🪜', label: 'Stairs',   value: stairs.length, color: 'hsl(220, 90%, 50%)' },
+          { icon: '🛡', label: 'Guard Rails', value: 0, color: 'hsl(0, 84%, 60%)' },
+          { icon: '🏗', label: 'Landings',  value: 0, color: 'hsl(160, 84%, 39%)' },
+          { icon: '🔧', label: 'Rails Total', value: 0, color: 'hsl(35, 100%, 55%)' },
+        ].map((s, idx) => (
+          <motion.div 
+            key={s.label} 
+            className="stat-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }}
+            style={{ borderLeft: `4px solid ${s.color}` }}
+          >
+            <div className="stat-card-icon" style={{ background: `${s.color}15`, padding: '8px', borderRadius: '8px', width: 'fit-content' }}>{s.icon}</div>
+            <div className="stat-card-label" style={{ fontWeight: 600 }}>{s.label}</div>
+            <div className="stat-card-value" style={{ color: s.color }}>{s.value}</div>
+          </motion.div>
         ))}
       </div>
 

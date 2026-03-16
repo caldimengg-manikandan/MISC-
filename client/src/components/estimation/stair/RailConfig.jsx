@@ -4,7 +4,7 @@ import API_BASE_URL from '../../../config/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import QuickManageModal from '../../common/QuickManageModal';
 
-const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv + Painted', 'Powder Coated'];
+const DEFAULT_FINISH_OPTIONS = ['PRIMER', 'PAINTED', 'GALVANIZED', 'GALV+PAINTED', 'POWDER COATED'];
 
 const RAIL_CONFIGS = {
   guardRail: {
@@ -76,7 +76,7 @@ const RAIL_CONFIGS = {
     mountings:['Anchored to Floor'],
     hasToeplate: true,
     hasIntermediateRails: true,
-    hasPostSpacing: true,
+    hasPostSpacing: false,
     hasPostQty: true
   },
 };
@@ -137,15 +137,15 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
   const config = RAIL_CONFIGS[type] || RAIL_CONFIGS.guardRail;
 
   const [form, setForm] = useState({
-    railType:           data?.railType || '',
+    railType:           data?.railType || (dropdowns[`${type}Types`][0] || config.types[0] || ''),
     railLength:         data?.railLength || '',
     mountingType:       data?.mountingType || (config.mountings[0] || ''),
-    intermediateRails:  data?.intermediateRails || '',
+    intermediateRails:  data?.intermediateRails || (type === 'caneRail' ? '0' : ''),
     postSpacing:        data?.postSpacing || '',
     postQty:            data?.postQty || '',
     toeplateRequired:   data?.toeplateRequired || 'No',
     toeplateLength:     data?.toeplateLength || '',
-    finish:             data?.finish || 'Primer',
+    finish:             data?.finish || 'PRIMER',
     ...data
   });
 
@@ -161,6 +161,19 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
     setForm(updated);
     if (onChange) onChange(updated);
   };
+
+  // Default values for new items
+  useEffect(() => {
+    if (!form.railType && (dropdowns[`${type}Types`]?.length > 0 || config.types.length > 0)) {
+      set('railType', dropdowns[`${type}Types`]?.[0] || config.types[0]);
+    }
+  }, [dropdowns, type, form.railType, config.types]);
+
+  useEffect(() => {
+    if (type === 'caneRail' && form.intermediateRails === '') {
+      set('intermediateRails', '0');
+    }
+  }, [type, form.intermediateRails]);
 
   // Auto-calculation logic
   const calculatedPostQty = (form.railLength && form.postSpacing)
@@ -180,11 +193,15 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           <div className="form-field">
             <label className="form-label">
               {type === 'guardRail' ? 'Guard Rail Type' : 'Rail Type'} <span className="required">*</span>
-              {isAdmin && (
-                <button onClick={(e) => openManage(`${type}_type`, `${type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} Types`, e)} className="quick-edit-btn" title="Manage Options">
-                  <Settings size={12} />
-                </button>
-              )}
+                {isAdmin && (
+                  <button 
+                    onClick={(e) => openManage(`${type}_type`, `${type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} Types`, e)} 
+                    className="quick-edit-btn" 
+                    title="Manage Options"
+                  >
+                    <Settings size={14} />
+                  </button>
+                )}
             </label>
             <select
               className="form-select"
@@ -198,7 +215,9 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           </div>
 
           <div className="form-field">
-            <label className="form-label">{type === 'guardRail' ? 'Guard Rail length' : 'Rail Length'}</label>
+            <label className="form-label">
+              {type === 'guardRail' ? 'Guard Rail length' : 'Rail Length'}
+            </label>
             <div className="form-input-with-unit compact-input">
               <input
                 id={`${type}-length`}
@@ -246,7 +265,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
 
           {config.hasPostQty !== false && (
             <div className="form-field">
-              <label className="form-label">Post Qty</label>
+              <label className="form-label">{type === 'caneRail' ? 'Qty of Posts' : 'Post Qty'}</label>
               <div style={{ position: 'relative' }}>
                 <input
                   className="form-input compact-input"
@@ -270,7 +289,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
         <div className="rail-options-grid mt-4">
           {config.hasToeplate && (
             <div className="form-field">
-              <label className="form-label">Toe pl{type === 'guardRail' ? '(PL. 1/4X4)' : ''} reqd</label>
+              <label className="form-label">Toe pl{(type === 'guardRail' || type === 'caneRail') ? '(PL. 1/4X4)' : ''} reqd</label>
               <div className="radio-group compact" id={`${type}-toeplate`}>
                 {['Yes', 'No'].map(v => (
                   <div
@@ -293,12 +312,13 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
                   id={`${type}-toeplate-length`}
                   type="number"
                   step="0.01"
+                  className="form-input"
                   value={form.toeplateLength}
                   onChange={e => set('toeplateLength', e.target.value)}
                   placeholder="0.00"
                 />
-                <span className="form-input-unit">ft</span>
-              </div>
+              <span className="form-input-unit">ft</span>
+            </div>
             </div>
           )}
 
@@ -306,8 +326,12 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
             <label className="form-label">
               {type === 'guardRail' ? 'Guard Rail Mounting type' : 'Mounting Type'}
               {isAdmin && (
-                <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
-                  <Settings size={12} />
+                <button 
+                  onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} 
+                  className="quick-edit-btn" 
+                  title="Manage Options"
+                >
+                  <Settings size={14} />
                 </button>
               )}
             </label>
@@ -318,7 +342,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
               onChange={e => set('mountingType', e.target.value)}
             >
               <option value="">— Select Mounting —</option>
-              {(type === 'guardRail' ? dropdowns.mountings : config.mountings).map(m => (
+              {dropdowns.mountings.map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
@@ -327,7 +351,15 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           <div className="form-field">
             <label className="form-label">
               FINISH
-              {isAdmin && <button onClick={(e) => openManage('finish_option', 'Finish Options', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
+              {isAdmin && (
+                <button 
+                  onClick={(e) => openManage('finish_option', 'Finish Options', e)} 
+                  className="quick-edit-btn" 
+                  title="Manage Options"
+                >
+                  <Settings size={14} />
+                </button>
+              )}
             </label>
             <select
               className="form-select compact-select"
@@ -383,12 +415,19 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           font-size: 11px;
         }
         .quick-edit-btn {
-          margin-left: 8px; background: none; border: none; cursor: pointer;
-          color: var(--color-primary-500); padding: 2px; border-radius: 4px;
+          margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
+          border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
+          cursor: pointer; color: var(--color-primary-600); 
+          padding: 4px; border-radius: 6px;
           display: inline-flex; align-items: center; vertical-align: middle;
-          transition: all 0.2s; border: 1px solid transparent;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .quick-edit-btn:hover { background: var(--color-primary-50); border-color: var(--color-primary-200); }
+        .quick-edit-btn:hover { 
+          background: var(--color-primary-500); 
+          color: white;
+          transform: translateY(-1px) rotate(30deg);
+          box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
+        }
       `}</style>
     </div>
   );

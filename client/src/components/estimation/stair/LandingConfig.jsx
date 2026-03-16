@@ -80,118 +80,91 @@ export default function LandingConfig({ data, onChange }) {
 
   return (
     <div>
-      {/* ── Identification ─────────────────────────────────────────── */}
-      <div className="form-section">
-        <div className="form-section-title">Identification</div>
-        <div className="form-grid form-grid-2">
-          <div className="form-field">
-            <label className="form-label">Landing Number <span className="data-badge dt-string"></span></label>
+      {/* ── Compressed Configuration Header ────────────────────────── */}
+      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+        <div className="form-field">
+          <label className="form-label">Landing Number</label>
+          <input
+            className="form-input data-type-string compact-input"
+            value={form.landingNumber}
+            onChange={e => set('landingNumber', e.target.value)}
+            placeholder="e.g. L-01"
+          />
+        </div>
+        <div className="form-field">
+          <label className="form-label">Length (ft)</label>
+          <div className="form-input-with-unit data-type-ft-in">
             <input
-              className="form-input data-type-string"
-              id="landing-number"
-              value={form.landingNumber}
-              onChange={e => set('landingNumber', e.target.value)}
-              placeholder="e.g. L-01"
+              type="number"
+              step="0.1"
+              value={form.platformLength}
+              onChange={e => set('platformLength', e.target.value)}
+              placeholder="0.0"
             />
+            <span className="form-input-unit">ft</span>
+          </div>
+        </div>
+        <div className="form-field">
+          <label className="form-label">Width (ft)</label>
+          <div className="form-input-with-unit data-type-ft-in">
+            <input
+              type="number"
+              step="0.1"
+              value={form.platformWidth}
+              onChange={e => set('platformWidth', e.target.value)}
+              placeholder="0.0"
+            />
+            <span className="form-input-unit">ft</span>
+          </div>
+        </div>
+        <div className="form-field">
+          <label className="form-label">Area (sq.ft)</label>
+          <div className="computed-field data-type-float" style={{ borderLeftWidth: '4px', height: '36px', opacity: area ? 1 : 0.5 }}>
+            <div className="computed-value" style={{ fontSize: '14px', fontWeight: '700' }}>{area || '0.00'}</div>
+            <span className="computed-unit">ft²</span>
           </div>
         </div>
       </div>
 
-      {/* ── Dimensions ─────────────────────────────────────────────── */}
-      <div className="form-section">
-        <div className="form-section-title">Platform Dimensions</div>
-        <div className="form-grid form-grid-3">
-          <div className="form-field">
-            <label className="form-label">Platform Length <span className="data-badge dt-ft-in"></span></label>
-            <div className="form-input-with-unit data-type-ft-in">
-              <input
-                id="platform-length"
-                type="number"
-                step="0.01"
-                value={form.platformLength}
-                onChange={e => set('platformLength', e.target.value)}
-                placeholder="0.00"
-              />
-              <span className="form-input-unit">ft</span>
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label className="form-label">Platform Width <span className="data-badge dt-ft-in"></span></label>
-            <div className="form-input-with-unit data-type-ft-in">
-              <input
-                id="platform-width"
-                type="number"
-                step="0.01"
-                value={form.platformWidth}
-                onChange={e => set('platformWidth', e.target.value)}
-                placeholder="0.00"
-              />
-              <span className="form-input-unit">ft</span>
-            </div>
-          </div>
-
-          {area && (
-            <div className="form-field" style={{ justifyContent: 'flex-end' }}>
-              <label className="form-label">Area (Auto-Calculated) <span className="data-badge dt-float"></span></label>
-              <div className="computed-field data-type-float" style={{ borderLeftWidth: '4px', height: '36px' }}>
-                <div>
-                  <div className="computed-label">⚙ Area</div>
-                  <div className="computed-value" style={{ fontSize: '14px' }}>{area}</div>
-                </div>
-                <span className="computed-unit">ft²</span>
-              </div>
-            </div>
-          )}
+      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="form-field">
+          <label className="form-label">
+            Platform Type
+            {isAdmin && (
+              <button onClick={(e) => openManage('platform_type', 'Platform Types', e)} className="quick-edit-btn" title="Manage Options">
+                <Settings size={12} />
+              </button>
+            )}
+          </label>
+          <select
+            className="form-select data-type-string compact-select"
+            value={form.platformType}
+            onChange={e => set('platformType', e.target.value)}
+          >
+            <option value="">— Select Type —</option>
+            {dropdowns.platformTypes.map(pt => (
+              <option key={pt.value || pt._id} value={pt.value || pt.label}>{pt.label}</option>
+            ))}
+          </select>
         </div>
-      </div>
 
-      {/* ── Platform Type ───────────────────────────────────────────── */}
-      <div className="form-section">
-        <div className="form-section-title">
-          Platform Type
-          {isAdmin && <button onClick={(e) => openManage('platform_type', 'Platform Types', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
+        <div className="form-field">
+          <label className="form-label">
+            Finish Specification
+            {isAdmin && (
+              <button onClick={(e) => openManage('finish_option', 'Finish Options', e)} className="quick-edit-btn" title="Manage Options">
+                <Settings size={12} />
+              </button>
+            )}
+          </label>
+          <select
+            className="form-select data-type-string compact-select"
+            value={form.finish}
+            onChange={e => set('finish', e.target.value)}
+          >
+            {dropdowns.finishes.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          {dropdowns.platformTypes.map(pt => (
-            <div
-              key={pt.value}
-              onClick={() => set('platformType', pt.value)}
-              className={`radio-option ${form.platformType === pt.value ? 'selected' : ''}`}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-md)',
-                border: `2px solid ${form.platformType === pt.value ? 'var(--color-primary-500)' : 'var(--border-color)'}`,
-                background: form.platformType === pt.value ? 'var(--color-primary-50)' : 'white',
-                cursor: 'pointer',
-                fontSize: '12.5px',
-                transition: 'all var(--transition)',
-              }}
-              id={`platform-type-${pt.value}`}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: 600 }}>{pt.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Finish ─────────────────────────────────────────────────── */}
-      <div className="form-section" style={{ marginBottom: 0 }}>
-        <div className="form-section-title">
-          Finish Specification <span className="data-badge dt-string"></span>
-          {isAdmin && <button onClick={(e) => openManage('finish_option', 'Finish Options', e)} className="quick-edit-btn" title="Manage Options"><Settings size={12} /></button>}
-        </div>
-        <select
-          className="form-select data-type-string"
-          id="landing-finish"
-          value={form.finish}
-          onChange={e => set('finish', e.target.value)}
-          style={{ maxWidth: '260px' }}
-        >
-          {dropdowns.finishes.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
       </div>
       <QuickManageModal 
         isOpen={quickModal.isOpen}
@@ -204,12 +177,19 @@ export default function LandingConfig({ data, onChange }) {
 
       <style jsx>{`
         .quick-edit-btn {
-          margin-left: 8px; background: none; border: none; cursor: pointer;
-          color: var(--color-primary-500); padding: 2px; border-radius: 4px;
+          margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
+          border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
+          cursor: pointer; color: var(--color-primary-600); 
+          padding: 4px; border-radius: 6px;
           display: inline-flex; align-items: center; vertical-align: middle;
-          transition: all 0.2s; border: 1px solid transparent;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .quick-edit-btn:hover { background: var(--color-primary-50); border-color: var(--color-primary-200); }
+        .quick-edit-btn:hover { 
+          background: var(--color-primary-500); 
+          color: white;
+          transform: translateY(-1px) rotate(30deg);
+          box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
+        }
       `}</style>
     </div>
   );
