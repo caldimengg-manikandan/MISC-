@@ -8,19 +8,15 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
   const [loading, setLoading] = useState(false);
   const [newLabel, setNewLabel] = useState('');
 
-  // Calculate position based on triggerRect
+  // Centralize the modal on the screen
   const getModalStyle = () => {
-    if (!triggerRect) return {};
-    const margin = 10;
-    const modalWidth = 440;
-    const modalHeight = 400; // Estimated max height
-    let left = triggerRect.left;
-    let top = triggerRect.bottom + margin;
-    if (left + modalWidth > window.innerWidth) left = window.innerWidth - modalWidth - 20;
-    if (top + modalHeight > window.innerHeight) top = triggerRect.top - modalHeight - margin;
-    left = Math.max(20, left);
-    top = Math.max(20, top);
-    return { position: 'fixed', top: `${top}px`, left: `${left}px`, margin: 0 };
+    return { 
+      position: 'fixed', 
+      top: '50%', 
+      left: '50%', 
+      transform: 'translate(-50%, -50%)', 
+      margin: 0 
+    };
   };
 
   const modalStyle = getModalStyle();
@@ -169,17 +165,18 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
       <style jsx>{`
         .quick-modal-overlay {
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.2); z-index: 2100;
-          backdrop-filter: blur(2px);
+          background: rgba(15, 23, 42, 0.4); z-index: 2100;
+          backdrop-filter: blur(4px);
+          display: flex; align-items: center; justify-content: center;
         }
         .quick-modal {
           background: white; width: 440px; border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-          overflow: hidden; animation: modalPop 0.2s ease-out;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          overflow: hidden; animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes modalPop {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
         .quick-modal-header {
           padding: 14px 20px; border-bottom: 1px solid #e2e8f0;

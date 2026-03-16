@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  Save, Users, Construction, Settings, 
+  Cloud, Check, Search, FileText, MapPin, Globe, Trash2
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import API_BASE_URL from '../../config/api';
 
 const initialData = {
@@ -8,15 +13,44 @@ const initialData = {
 };
 
 export default function ProjectInfo() {
-  const [form, setForm] = useState(() => {
-    const saved = localStorage.getItem('steelProjectInfo');
-    return saved ? JSON.parse(saved) : initialData;
-  });
+  const [form, setForm] = useState(initialData);
   const [saved, setSaved] = useState(false);
   const [dbProjects, setDbProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+
+  // Check for edit data from Project History on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('steelProjectInfo');
+    if (saved) {
+      try {
+        const proj = JSON.parse(saved);
+        // Only load if it's a valid project with an ID (from History page)
+        if (proj._id) {
+          setSelectedId(proj._id);
+          setForm({
+            customerName: proj.customerName || '',
+            projectName: proj.projectName || '',
+            projectNumber: proj.projectNumber || '',
+            projectLocation: proj.projectLocation || '',
+            architect: proj.architect || '',
+            eor: proj.eor || '',
+            gcName: proj.gcName || '',
+            detailer: proj.detailer || '',
+            vendorName: proj.vendorName || '',
+            aiscCertified: proj.aiscCertified || 'Yes',
+            units: proj.units || 'Imperial',
+            notes: proj.notes || ''
+          });
+          // We don't clear it immediately so if they refresh while editing they don't lose work
+          // But handleSave will clear it once finished
+        }
+      } catch (e) {
+        console.error('Failed to parse saved project info', e);
+      }
+    }
+  }, []);
 
   // Fetch past projects from DB
   useEffect(() => {
@@ -40,19 +74,25 @@ export default function ProjectInfo() {
       }
     };
     fetchProjects();
-  }, []);
+  }, [saved]); // Re-fetch when saved changes to update dropdown
 
-  // Auto-save form changes to localStorage
-  useEffect(() => {
-    localStorage.setItem('steelProjectInfo', JSON.stringify(form));
-  }, [form]);
+  // Removed localStorage sync effect to prioritize database persistence and avoid stale IDs
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
 
   const handleSave = async () => {
+    if (!form.projectName || !form.projectNumber) {
+      toast.error('Project Name and Number are required');
+      return;
+    }
+
+    const loadingToast = toast.loading('Saving project...');
     try {
       const token = localStorage.getItem('steel_token');
-      if (!token) return;
+      if (!token) {
+        toast.error('Session expired. Please login again.', { id: loadingToast });
+        return;
+      }
 
       const res = await fetch(`${API_BASE_URL}/api/projects/upsert`, {
         method: 'POST',
@@ -62,24 +102,44 @@ export default function ProjectInfo() {
         },
         body: JSON.stringify({
           ...form,
-          _id: selectedId // Include ID if we are editing an existing project
+          _id: selectedId
         })
       });
 
       const data = await res.json();
       if (data.success) {
+        toast.success('Project saved successfully!', { id: loadingToast });
+        
+        // COMPLETELY RESET STATE
         setSaved(true);
-        if (data.projectId) setSelectedId(data.projectId);
+        setForm(initialData);
+        setSelectedId(null);
+        setSearchQuery('');
+        
+        // CLEAR STORAGE
+        localStorage.removeItem('steelProjectInfo');
+        
         setTimeout(() => setSaved(false), 3000);
+      } else {
+        toast.error(data.message || 'Failed to save project', { id: loadingToast });
       }
     } catch (e) {
       console.error('Save failed', e);
+      toast.error('Network error. Please check your connection.', { id: loadingToast });
     }
   };
 
   const handleLoadProject = (e) => {
     const projId = typeof e === 'string' ? e : e.target.value;
     if (!projId) return;
+
+    if (projId === 'clear') {
+      setForm(initialData);
+      setSelectedId(null);
+      localStorage.removeItem('steelProjectInfo');
+      toast.success('Form cleared');
+      return;
+    }
 
     const proj = dbProjects.find(p => p._id === projId);
     if (proj) {
@@ -99,7 +159,8 @@ export default function ProjectInfo() {
         notes: proj.notes || ''
       };
       setForm(updatedForm);
-      localStorage.setItem('steelProjectInfo', JSON.stringify(updatedForm));
+      // We still keep this so the estimation module knows which project is active
+      localStorage.setItem('steelProjectInfo', JSON.stringify({ ...updatedForm, _id: proj._id }));
     }
   };
 
@@ -126,7 +187,7 @@ export default function ProjectInfo() {
               onClick={handleSave}
               id="save-project-info"
             >
-              💾 Save Project Info
+              <Save size={16} /> Save Project Info
             </button>
           </div>
         </div>
@@ -139,7 +200,7 @@ export default function ProjectInfo() {
           <div className="eng-card-body" style={{ padding: '16px' }}>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                <div style={{ flex: 1, position: 'relative' }}>
-                  <label className="form-label" style={{ marginBottom: '6px' }}>Search & Load Previous Project</label>
+                  <label className="form-label" style={{ marginBottom: '6px' }}><Search size={14} style={{ verticalAlign: 'middle' }} /> Search & Load Previous Project</label>
                   <input 
                     type="text" 
                     className="form-input data-type-string" 
@@ -169,20 +230,41 @@ export default function ProjectInfo() {
                   )}
                </div>
                
-               <div style={{ width: '240px' }}>
-                  <label className="form-label" style={{ marginBottom: '6px' }}>Quick Select</label>
-                  <select 
-                    onChange={handleLoadProject} 
-                    className="form-select data-type-string" 
-                    value={selectedId || ""}
-                  >
-                    <option value="" disabled>☁ Select project...</option>
-                    {dbProjects.map(p => (
-                      <option key={p._id} value={p._id}>
-                        {p.projectName}
-                      </option>
-                    ))}
-                  </select>
+                <div style={{ width: '320px' }}>
+                  <label className="form-label" style={{ marginBottom: '6px' }}><Globe size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Quick Select</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select 
+                      onChange={handleLoadProject} 
+                      className="form-select data-type-string" 
+                      value={selectedId || ""}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">Select project...</option>
+                      {dbProjects.map(p => (
+                        <option key={p._id} value={p._id}>
+                          {p.projectName}
+                        </option>
+                      ))}
+                    </select>
+                    { (selectedId || Object.values(form).some(v => v !== '' && v !== 'Yes' && v !== 'Imperial')) && (
+                      <button 
+                        className="header-btn header-btn-outline" 
+                        style={{ 
+                          height: '38px', 
+                          padding: '0 12px', 
+                          borderColor: 'var(--color-error)', 
+                          color: 'var(--color-error)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onClick={() => handleLoadProject('clear')}
+                        title="Clear Form"
+                      >
+                        <Trash2 size={14} /> Clear
+                      </button>
+                    )}
+                  </div>
                </div>
             </div>
           </div>
@@ -191,7 +273,7 @@ export default function ProjectInfo() {
         {/* ── Project Parties ──────────────────────────────────────── */}
         <div className="eng-card">
           <div className="eng-card-header">
-            <span className="eng-card-title">👤 Project Parties</span>
+            <span className="eng-card-title"><Users size={16} /> Project Parties</span>
           </div>
           <div className="eng-card-body">
             <div className="form-grid form-grid-2">
@@ -245,7 +327,7 @@ export default function ProjectInfo() {
         {/* ── Engineering Team ──────────────────────────────────────── */}
         <div className="eng-card">
           <div className="eng-card-header">
-            <span className="eng-card-title">🏗 Engineering Team</span>
+            <span className="eng-card-title"><Construction size={16} /> Engineering Team</span>
           </div>
           <div className="eng-card-body">
             <div className="form-grid form-grid-3">
@@ -306,7 +388,7 @@ export default function ProjectInfo() {
         {/* ── Project Configuration ──────────────────────────────────── */}
         <div className="eng-card">
           <div className="eng-card-header">
-            <span className="eng-card-title">⚙️ Project Configuration</span>
+            <span className="eng-card-title"><Settings size={16} /> Project Configuration</span>
           </div>
           <div className="eng-card-body">
             <div className="form-grid form-grid-2">
@@ -319,7 +401,7 @@ export default function ProjectInfo() {
                       className={`radio-option ${form.aiscCertified === v ? 'selected' : ''}`}
                       onClick={() => set('aiscCertified', v)}
                     >
-                      {v === 'Yes' ? '✓' : '✕'} {v}
+                      {v === 'Yes' ? <Check size={14} /> : '✕'} {v}
                     </div>
                   ))}
                 </div>

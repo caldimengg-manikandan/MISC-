@@ -7,19 +7,13 @@ import PrivateRoute from './components/common/PrivateRoute';
 import MainLayout   from './components/layout/MainLayout';
 
 // Auth & Public
-import Login3D from './components/auth/Login';
+import Login from './components/auth/Login';
 
 // Existing Dashboards
-import Home               from './components/dashboard/Home';
-import Dashboard          from './components/dashboard/Dashboard';
 import OwnerDashboard     from './components/dashboard/OwnerDashboard';
-import RestrictedDashboard from './components/dashboard/RestrictedDashboard';
 
 // Existing Estimation
-import EstimationForm  from './components/estimation/EstimationForm';
-import EstimationPage  from './components/estimation/EstimationPage';
-import ShapeDatabase   from './components/estimation/ShapeDatabase';
-import FinalEstimate   from './components/estimation/FinalEstimate';
+// (Removing old estimation imports as they are replaced by the new platform)
 
 // New Engineering Platform Pages
 import ProjectInfo       from './components/project/ProjectInfo';
@@ -67,8 +61,8 @@ function App() {
 
         <Routes>
           {/* PUBLIC */}
-          <Route path="/login" element={<Login3D />} />
-          <Route path="/"      element={<Navigate to="/home" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/"      element={<Navigate to="/estimate/stair-railings" replace />} />
 
           {/* OWNER / ADMIN */}
           <Route
@@ -80,16 +74,9 @@ function App() {
             }
           />
 
-          {/* EXISTING DASHBOARDS */}
-          <Route path="/home"       element={<PrivateRoute><Home /></PrivateRoute>} />
-          <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/restricted" element={<PrivateRoute><RestrictedDashboard /></PrivateRoute>} />
-
-          {/* EXISTING ESTIMATION */}
-          <Route path="/costing"        element={<PrivateRoute><EstimationForm /></PrivateRoute>} />
-          <Route path="/estimation"     element={<PrivateRoute><EstimationPage /></PrivateRoute>} />
-          <Route path="/shape-database" element={<PrivateRoute><ShapeDatabase /></PrivateRoute>} />
-          <Route path="/final-estimate" element={<PrivateRoute><FinalEstimate /></PrivateRoute>} />
+          {/* REDIRECTS TO NEW PLATFORM */}
+          <Route path="/home"       element={<Navigate to="/estimate/stair-railings" replace />} />
+          <Route path="/dashboard"  element={<Navigate to="/estimate/stair-railings" replace />} />
 
           {/* NEW ENGINEERING PLATFORM */}
           <Route path="/project-history"         element={<EngRoute element={<ProjectHistory />} />} />
@@ -108,7 +95,7 @@ function App() {
           <Route path="/debug/handrail" element={<PrivateRoute><DebugHandrail /></PrivateRoute>} />
 
           {/* FALLBACK */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/estimate/stair-railings" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

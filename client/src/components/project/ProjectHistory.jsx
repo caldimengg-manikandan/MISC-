@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
+  Plus,
   FolderSearch, 
   Calendar, 
   ChevronRight, 
@@ -9,7 +10,8 @@ import {
   Download,
   ExternalLink,
   Search,
-  Filter
+  Filter,
+  Settings
 } from 'lucide-react';
 import API_BASE_URL from '../../config/api';
 
@@ -54,12 +56,16 @@ export default function ProjectHistory() {
   const handleSelectProject = (project) => {
     // Save to local storage for estimation module
     localStorage.setItem('steelProjectInfo', JSON.stringify({
-      projectName: project.projectName,
-      projectNumber: project.projectNumber,
-      customerName: project.customerName || '',
-      projectLocation: project.projectLocation || ''
+      ...project,
+      units: project.units || 'Imperial'
     }));
     navigate('/estimate/stair-railings');
+  };
+
+  const handleCreateNew = () => {
+    // Clear project info to start fresh
+    localStorage.removeItem('steelProjectInfo');
+    navigate('/project-info');
   };
 
   return (
@@ -71,6 +77,12 @@ export default function ProjectHistory() {
             <p className="page-subtitle">View and manage previous estimations and reports</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button 
+              className="header-btn header-btn-primary"
+              onClick={handleCreateNew}
+            >
+              <Plus size={16} /> Create New
+            </button>
             <div style={{ position: 'relative' }}>
               <Search className="w-4 h-4 text-slate-400" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
@@ -158,6 +170,19 @@ export default function ProjectHistory() {
                             style={{ padding: '4px 10px', fontSize: '11px' }}
                           >
                             <ExternalLink className="w-3 h-3 mr-1" /> Open
+                          </button>
+                          <button 
+                            onClick={() => {
+                              localStorage.setItem('steelProjectInfo', JSON.stringify({
+                                ...project,
+                                units: project.units || 'Imperial'
+                              }));
+                              navigate('/project-info');
+                            }}
+                            className="header-btn header-btn-outline" 
+                            style={{ padding: '4px 10px', fontSize: '11px' }}
+                          >
+                            <Settings className="w-3 h-3 mr-1" /> Edit Info
                           </button>
                           <button 
                             onClick={() => navigate('/reports', { state: { projectId: project._id } })}

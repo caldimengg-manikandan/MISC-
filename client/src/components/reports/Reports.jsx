@@ -1,13 +1,17 @@
-// src/components/reports/Reports.jsx
 import React, { useState } from 'react';
+import { 
+  BarChart3, Package, Calculator, Factory, Database, 
+  DollarSign, FileText, Printer, Download, Box, 
+  Construction, FileSpreadsheet, File
+} from 'lucide-react';
 
 const REPORT_TYPES = [
-  { id: 'material-takeoff', icon: '📦', title: 'Material Takeoff', desc: 'Complete bill of materials for all configured items', status: 'Available' },
-  { id: 'estimate-summary', icon: '📐', title: 'Estimate Summary', desc: 'High-level summary of all estimation modules', status: 'Available' },
-  { id: 'fabrication',      icon: '🏭', title: 'Fabrication Report', desc: 'Detailed fabrication specifications and cut lists', status: 'Coming Soon' },
-  { id: 'structural-db',    icon: '🗄', title: 'Structural Database', desc: 'Shape and section property reference report', status: 'Coming Soon' },
-  { id: 'cost-estimate',    icon: '💰', title: 'Cost Estimate', desc: 'Pricing breakdown by assembly and component', status: 'Coming Soon' },
-  { id: 'submittal',        icon: '📋', title: 'Submittal Package', desc: 'Complete project submittal documentation', status: 'Coming Soon' },
+  { id: 'material-takeoff', icon: <Package size={16} />, title: 'Material Takeoff', desc: 'Complete bill of materials for all configured items', status: 'Available' },
+  { id: 'estimate-summary', icon: <Calculator size={16} />, title: 'Estimate Summary', desc: 'High-level summary of all estimation modules', status: 'Available' },
+  { id: 'fabrication',      icon: <Factory size={16} />, title: 'Fabrication Report', desc: 'Detailed fabrication specifications and cut lists', status: 'Coming Soon' },
+  { id: 'structural-db',    icon: <Database size={16} />, title: 'Structural Database', desc: 'Shape and section property reference report', status: 'Coming Soon' },
+  { id: 'cost-estimate',    icon: <DollarSign size={16} />, title: 'Cost Estimate', desc: 'Pricing breakdown by assembly and component', status: 'Coming Soon' },
+  { id: 'submittal',        icon: <FileText size={16} />, title: 'Submittal Package', desc: 'Complete project submittal documentation', status: 'Coming Soon' },
 ];
 
 const SAMPLE_ROWS = [
@@ -24,12 +28,12 @@ export default function Reports() {
       <div className="page-header">
         <div className="page-header-row">
           <div>
-            <h1 className="page-title">📊 Reports &amp; Export</h1>
+            <h1 className="page-title"><BarChart3 size={24} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Reports &amp; Export</h1>
             <p className="page-subtitle">Generate and export project estimates, material takeoffs, and fabrication documents</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="header-btn header-btn-outline" id="export-pdf">📄 Export PDF</button>
-            <button className="header-btn header-btn-accent"  id="export-excel">📊 Export Excel</button>
+            <button className="header-btn header-btn-outline" id="export-pdf"><File size={16} /> Export PDF</button>
+            <button className="header-btn header-btn-accent"  id="export-excel"><FileSpreadsheet size={16} /> Export Excel</button>
           </div>
         </div>
       </div>
@@ -74,10 +78,10 @@ export default function Reports() {
         <div>
           <div className="eng-card">
             <div className="eng-card-header">
-              <span className="eng-card-title">📐 Estimate Summary — Preview</span>
+              <span className="eng-card-title"><FileText size={14} /> Estimate Summary — Preview</span>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="header-btn header-btn-outline" style={{ padding: '4px 10px', fontSize: '12px' }}>🖨 Print</button>
-                <button className="header-btn header-btn-primary" style={{ padding: '4px 10px', fontSize: '12px' }}>📤 Export</button>
+                <button className="header-btn header-btn-outline" style={{ padding: '4px 10px', fontSize: '12px' }}><Printer size={14} /> Print</button>
+                <button className="header-btn header-btn-primary" style={{ padding: '4px 10px', fontSize: '12px' }}><Download size={14} /> Export</button>
               </div>
             </div>
 
@@ -155,7 +159,7 @@ export default function Reports() {
           {/* 3D Viewer Placeholder */}
           <div className="eng-card" style={{ marginTop: '16px' }}>
             <div className="eng-card-header">
-              <span className="eng-card-title">🎯 3D Structural Model</span>
+              <span className="eng-card-title"><Box size={14} /> 3D Structural Model</span>
               <span className="info-chip chip-amber">v2.0</span>
             </div>
             <div style={{
@@ -165,7 +169,7 @@ export default function Reports() {
               flexDirection: 'column', gap: '10px',
               borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
             }}>
-              <span style={{ fontSize: '40px', opacity: 0.25 }}>🏗</span>
+              <Construction size={40} style={{ opacity: 0.25, color: '#93c5fd' }} />
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#93c5fd' }}>3D Visualization — Coming in v2.0</div>
                 <div style={{ fontSize: '11px', color: '#475569', marginTop: '4px' }}>

@@ -1,5 +1,10 @@
-// src/components/estimation/StairEstimation.jsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Shield, Circle, Hand, Accessibility, 
+  Construction, Wrench, Copy, Layers, 
+  Undo, X, ChevronDown, Plus, BarChart3, 
+  Calculator, Square, DoorOpen, HardHat, Box
+} from 'lucide-react';
 import StairConfig from './stair/StairConfig';
 import LandingConfig from './stair/LandingConfig';
 import RailConfig from './stair/RailConfig';
@@ -9,10 +14,10 @@ let uid = 1;
 const makeId = () => uid++;
 
 const RAIL_TYPES = [
-  { key: 'guardRail', label: 'Guard Rail', badge: 'GUARD', icon: '🛡' },
-  { key: 'wallRail', label: 'Wall Rail', badge: 'WALL', icon: '🔘' },
-  { key: 'grabRail', label: 'Grab Rail', badge: 'GRAB', icon: '✊' },
-  { key: 'caneRail', label: 'Cane Rail', badge: 'CANE', icon: '🦯' },
+  { key: 'guardRail', label: 'Guard Rail', badge: 'GUARD', icon: <Shield size={14} /> },
+  { key: 'wallRail', label: 'Wall Rail', badge: 'WALL', icon: <Circle size={14} /> },
+  { key: 'grabRail', label: 'Grab Rail', badge: 'GRAB', icon: <Hand size={14} /> },
+  { key: 'caneRail', label: 'Cane Rail', badge: 'CANE', icon: <Accessibility size={14} /> },
 ];
 
 // ── Collapsible Wrapper ─────────────────────────────────────────────────────
@@ -41,16 +46,16 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
           <div className="collapsible-actions">
             {onDuplicate && (
               <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="icon-btn" title="Duplicate/Copy" onClick={onDuplicate}>
-                <span style={{ fontSize: '14px' }}>📋</span>
+                <Copy size={14} />
               </motion.button>
             )}
             {onDelete && (
               <motion.button whileHover={{ scale: 1.1, backgroundColor: '#fef2f2' }} whileTap={{ scale: 0.9 }} className="icon-btn danger" title="Delete" onClick={onDelete}>
-                <span style={{ fontSize: '14px' }}>✕</span>
+                <X size={14} />
               </motion.button>
             )}
           </div>
-          <span className={`expand-chevron ${open ? 'open' : ''}`} style={{ fontSize: '18px', marginLeft: '12px' }}>▾</span>
+          <ChevronDown className={`expand-chevron ${open ? 'open' : ''}`} size={16} style={{ marginLeft: '12px' }} />
         </div>
       </div>
       <AnimatePresence>
@@ -108,13 +113,13 @@ function StairItem({
       {/* Stair Config Form */}
       <StairConfig stair={stair} onChange={onUpdateStair} />
 
-      <div className="divider" />
+      <div className="divider" style={{ margin: '24px 0', height: '1px', background: 'var(--border-subtle)' }} />
 
       {/* ── Flights ────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>
               Flights ({flights.length + 1})
             </span>
             {history.lastDeleted?.type === 'flight' && (
@@ -124,11 +129,11 @@ function StairItem({
             )}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="add-btn ghost" onClick={onCopyLastFlight} id="copy-flight">
-              ⎘ Copy from Above
+            <button className="add-btn ghost" onClick={onCopyLastFlight} id="copy-flight" style={{ fontSize: '12px', padding: '6px 12px' }}>
+              <Layers size={14} /> Copy from Above
             </button>
-            <button className="add-btn" onClick={onAddFlight} id="add-flight">
-              + Add Flight
+            <button className="add-btn" onClick={onAddFlight} id="add-flight" style={{ fontSize: '12px', padding: '6px 12px' }}>
+              <Plus size={14} /> Add Flight
             </button>
           </div>
         </div>
@@ -154,10 +159,10 @@ function StairItem({
       </div>
 
       {/* ── Landings ───────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>
               Landings ({landings.length})
             </span>
             {history.lastDeleted?.type === 'landing' && (
@@ -166,7 +171,7 @@ function StairItem({
               </button>
             )}
           </div>
-          <button className="add-btn" onClick={onAddLanding} id="add-landing">
+          <button className="add-btn" onClick={onAddLanding} id="add-landing" style={{ fontSize: '12px', padding: '6px 12px' }}>
             + Add Landing
           </button>
         </div>
@@ -188,19 +193,13 @@ function StairItem({
             />
           </CollapsibleSection>
         ))}
-
-        {landings.length === 0 && !history.lastDeleted?.type === 'landing' && (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '4px' }}>
-            No landings added — click "+ Add Landing" to begin.
-          </div>
-        )}
       </div>
 
       {/* ── Rails ──────────────────────────────────────────────────── */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>
               Rails ({rails.length})
             </span>
             {history.lastDeleted?.type === 'rail' && (
@@ -211,21 +210,21 @@ function StairItem({
           </div>
         </div>
 
-        {/* Rail type add buttons */}
-        <div className="add-section-row">
+        <div className="add-section-row" style={{ gap: '8px' }}>
           {RAIL_TYPES.map(rt => (
             <button
               key={rt.key}
               className="add-btn"
               onClick={() => onAddRail(rt.key)}
               id={`add-${rt.key}`}
+              style={{ fontSize: '12px', padding: '6px 12px' }}
             >
-              {rt.icon} + {rt.label}
+              {rt.icon} <span style={{ marginLeft: '4px' }}>+ {rt.label}</span>
             </button>
           ))}
         </div>
 
-        <div style={{ marginTop: '12px' }}>
+        <div style={{ marginTop: '16px' }}>
           {rails.map(r => {
             const meta = railMeta(r);
             return (
@@ -248,12 +247,6 @@ function StairItem({
             );
           })}
         </div>
-
-        {rails.length === 0 && !history.lastDeleted?.type === 'rail' && (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '4px', marginTop: '8px' }}>
-            No rails added — use the buttons above to add rail types.
-          </div>
-        )}
       </div>
     </CollapsibleSection>
   );
@@ -321,7 +314,6 @@ export default function StairEstimation() {
       return m ? parseInt(m[0]) : 0;
     })) + 1;
 
-    // Deep copy helper for nested objects (flights, landings, rails)
     const deepClone = (items) => items.map(item => ({ ...item, id: makeId() }));
 
     setStairs(s => [
@@ -343,8 +335,6 @@ export default function StairEstimation() {
   const updateStair = (id, changes) =>
     setStairs(s => s.map(x => x.id === id ? { ...x, ...changes } : x));
 
-  // ── Sub-Item Handlers (Lifting state up) ──────────────────────────────
-  
   const addSubItem = (stairId, type, extra = {}) => {
     setStairs(st => st.map(s => {
       if (s.id !== stairId) return s;
@@ -471,12 +461,10 @@ export default function StairEstimation() {
     }));
   };
 
-  // Summary stats
   const totalStairs = stairs.length;
 
   return (
     <div className="fade-in">
-      {/* Page Header */}
       <div className="page-header">
         <div className="page-header-row">
           <div>
@@ -484,43 +472,41 @@ export default function StairEstimation() {
             <p className="page-subtitle">Configure stair assemblies including flights, landings, and all rail types</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <span className="info-chip chip-blue">📐 {totalStairs} Stair{totalStairs !== 1 ? 's' : ''}</span>
+            <span className="info-chip chip-blue"><Calculator size={14} /> {totalStairs} Stair{totalStairs !== 1 ? 's' : ''}</span>
             <button className="header-btn header-btn-primary" id="btn-add-stair" onClick={addStair}>
-              + Add Stair
+              <Plus size={16} /> Add Stair
             </button>
           </div>
         </div>
       </div>
 
-      {/* Auto-imported Project Info matched to Reference (Cyan / STRING) */}
       {(projectData.projectName || projectData.projectNumber) && (
         <div style={{ marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           {projectData.projectName && (
-            <div className="computed-field data-type-string" style={{ borderLeftWidth: '4px', background: '#e6ffff' }}>
+            <div className="computed-field data-type-string" style={{ borderLeftWidth: '4px', background: 'var(--color-primary-50)', padding: '12px 20px', borderRadius: '12px' }}>
               <div>
-                <div className="computed-label" style={{ color: '#008b8b' }}>PROJECT NAME</div>
-                <div className="computed-value" style={{ color: '#006666' }}>{projectData.projectName}</div>
+                <div className="computed-label" style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-primary-600)', textTransform: 'uppercase' }}>PROJECT NAME</div>
+                <div className="computed-value" style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-main)' }}>{projectData.projectName}</div>
               </div>
             </div>
           )}
           {projectData.projectNumber && (
-            <div className="computed-field data-type-string" style={{ borderLeftWidth: '4px', background: '#e6ffff' }}>
+            <div className="computed-field data-type-string" style={{ borderLeftWidth: '4px', background: 'var(--color-primary-50)', padding: '12px 20px', borderRadius: '12px' }}>
               <div>
-                <div className="computed-label" style={{ color: '#008b8b' }}>PROJECT NUMBER</div>
-                <div className="computed-value" style={{ color: '#006666' }}>{projectData.projectNumber}</div>
+                <div className="computed-label" style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-primary-600)', textTransform: 'uppercase' }}>PROJECT NUMBER</div>
+                <div className="computed-value" style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-main)' }}>{projectData.projectNumber}</div>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Summary Row */}
       <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '32px', gap: '20px' }}>
         {[
-          { icon: '🪜', label: 'Stairs',   value: stairs.length, color: 'hsl(220, 90%, 50%)' },
-          { icon: '🛡', label: 'Guard Rails', value: 0, color: 'hsl(0, 84%, 60%)' },
-          { icon: '🏗', label: 'Landings',  value: 0, color: 'hsl(160, 84%, 39%)' },
-          { icon: '🔧', label: 'Rails Total', value: 0, color: 'hsl(35, 100%, 55%)' },
+          { icon: '🪜', label: 'Stairs',   value: stairs.length, color: 'var(--color-primary-500)' },
+          { icon: '🛡', label: 'Guard Rails', value: 0, color: 'var(--color-error)' },
+          { icon: '🏗', label: 'Landings',  value: 0, color: 'var(--color-success)' },
+          { icon: '🔧', label: 'Rails Total', value: 0, color: 'var(--color-accent)' },
         ].map((s, idx) => (
           <motion.div 
             key={s.label} 
@@ -529,16 +515,14 @@ export default function StairEstimation() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
             whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }}
-            style={{ borderLeft: `4px solid ${s.color}` }}
+            style={{ borderLeft: `4px solid ${s.color}`, padding: '20px', background: 'white', borderRadius: '14px', boxShadow: 'var(--shadow-md)' }}
           >
-            <div className="stat-card-icon" style={{ background: `${s.color}15`, padding: '8px', borderRadius: '8px', width: 'fit-content' }}>{s.icon}</div>
-            <div className="stat-card-label" style={{ fontWeight: 600 }}>{s.label}</div>
-            <div className="stat-card-value" style={{ color: s.color }}>{s.value}</div>
+            <div className="stat-card-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>{s.label}</div>
+            <div className="stat-card-value" style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)' }}>{s.value}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Stair Sections */}
       {stairs.map(stair => (
         <StairItem
           key={stair.id}
@@ -560,21 +544,20 @@ export default function StairEstimation() {
 
       {stairs.length === 0 && (
         <div className="eng-card">
-          <div className="empty-state">
-            <div className="empty-state-icon">🪜</div>
-            <div className="empty-state-title">No Stairs Added</div>
-            <div className="empty-state-sub">Click "+ Add Stair" to begin configuring your stair estimate.</div>
-            <button className="header-btn header-btn-primary" style={{ marginTop: '16px', display: 'inline-flex' }} onClick={addStair}>
+          <div className="empty-state" style={{ padding: '64px', textAlign: 'center' }}>
+            <div className="empty-state-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🪜</div>
+            <div className="empty-state-title" style={{ fontSize: '18px', fontWeight: 700 }}>No Stairs Added</div>
+            <div className="empty-state-sub" style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Click "+ Add Stair" to begin configuring your stair estimate.</div>
+            <button className="header-btn header-btn-primary" style={{ margin: '0 auto' }} onClick={addStair}>
               + Add First Stair
             </button>
           </div>
         </div>
       )}
 
-      {/* Bottom Add Row */}
       {stairs.length > 0 && (
         <div className="add-section-row" style={{ marginTop: '20px' }}>
-          <button className="add-btn" style={{ fontSize: '13px', padding: '10px 18px' }} onClick={addStair} id="add-stair-bottom">
+          <button className="add-btn" style={{ fontSize: '13px', padding: '12px 24px', borderStyle: 'dashed' }} onClick={addStair} id="add-stair-bottom">
             + Add Another Stair
           </button>
         </div>
