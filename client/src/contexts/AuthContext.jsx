@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         toast.success(isOwner ? 'Owner login successful!' : 'Login successful!');
-        navigate('/home');
+        navigate('/estimate/stair-railings');
 
         return { success: true, user: data.user };
       } else {
@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         toast.success(isOwner ? 'Owner account created!' : 'Account created!');
-        navigate(isOwner ? '/owner/dashboard' : '/dashboard');
+        navigate(isOwner ? '/owner/dashboard' : '/estimate/stair-railings');
 
         return { success: true, user: data.user };
       } else {

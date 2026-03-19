@@ -1,27 +1,30 @@
-// src/components/estimation/PlaceholderModule.jsx
 import React from 'react';
+import { 
+  Wrench, MoveUpRight, Square, DoorOpen, 
+  Construction, HardHat, Box
+} from 'lucide-react';
 
 const MODULE_META = {
   railings: {
-    icon: '🔧',
+    icon: <Wrench size={24} />,
     title: 'Railings',
     subtitle: 'Standalone railing configurations for platforms, elevated walkways, and mezzanines',
     items: ['Straight Railing Runs', 'Corner Configurations', 'Curved Sections', 'Post Bases'],
   },
   ladders: {
-    icon: '⬆',
+    icon: <MoveUpRight size={24} />,
     title: 'Ladders',
     subtitle: 'Fixed vertical and inclined ladder assemblies',
     items: ['Vertical Ladder Runs', 'Cage Configuration', 'Rest Platforms', 'Extension Brackets'],
   },
   bollards: {
-    icon: '🔳',
+    icon: <Square size={24} />,
     title: 'Bollards',
     subtitle: 'Pipe bollards, safety barriers, and protective post configurations',
     items: ['Standard Bollards', 'Removable Bollards', 'Decorative Bollards', 'Sleeve Configurations'],
   },
   gates: {
-    icon: '🚪',
+    icon: <DoorOpen size={24} />,
     title: 'Gates',
     subtitle: 'Personnel access gates, sliding gates, and swing gate hardware',
     items: ['Swing Gates', 'Sliding Gates', 'Safety Chain Gates', 'Latches & Hardware'],
@@ -34,7 +37,9 @@ export default function PlaceholderModule({ type }) {
   return (
     <div className="fade-in">
       <div className="page-header">
-        <h1 className="page-title">{meta.icon} {meta.title}</h1>
+        <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {meta.icon} {meta.title}
+        </h1>
         <p className="page-subtitle">{meta.subtitle}</p>
       </div>
 
@@ -45,7 +50,7 @@ export default function PlaceholderModule({ type }) {
             padding: '12px', borderRadius: 'var(--radius-md)',
             background: '#fffbeb', border: '1px solid #fde68a',
           }}>
-            <span style={{ fontSize: '20px' }}>🚧</span>
+            <Construction size={24} style={{ color: '#92400e' }} />
             <div>
               <div style={{ fontWeight: 600, color: '#92400e', fontSize: '13px' }}>Module Coming Soon</div>
               <div style={{ fontSize: '12px', color: '#b45309' }}>
@@ -78,10 +83,10 @@ export default function PlaceholderModule({ type }) {
 
       {/* Future 3D Viewer Placeholder */}
       <div className="eng-card">
-        <div className="eng-card-header">
-          <span className="eng-card-title">🎯 3D Structural Preview</span>
-          <span className="info-chip chip-gray">Future Feature</span>
-        </div>
+            <div className="eng-card-header">
+              <span className="eng-card-title"><Box size={14} /> 3D Structural Preview</span>
+              <span className="info-chip chip-gray">Future Feature</span>
+            </div>
         <div style={{
           height: '220px',
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
@@ -89,7 +94,7 @@ export default function PlaceholderModule({ type }) {
           flexDirection: 'column', gap: '12px',
           borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
         }}>
-          <span style={{ fontSize: '48px', opacity: 0.3 }}>🏗</span>
+          <HardHat size={48} style={{ opacity: 0.3, color: '#93c5fd' }} />
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '14px', fontWeight: 600, color: '#93c5fd' }}>3D Visualization</div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>

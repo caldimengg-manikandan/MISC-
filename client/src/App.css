@@ -1,9 +1,9 @@
-/* In your main layout component */
+/* Main Layout Styles */
 .main-content {
   transition: margin-left 0.3s ease;
-  margin-left: 280px; /* Default expanded width */
+  margin-left: 0; /* Let flexbox handle the layout */
 }
 
 .sidebar-collapsed .main-content {
-  margin-left: 80px; /* Collapsed width */
+  margin-left: 0;
 }

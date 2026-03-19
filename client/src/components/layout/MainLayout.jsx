@@ -4,28 +4,36 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   FolderOpen, ClipboardCheck, ArrowUpDown, BarChart3, Settings, 
   LogOut, ChevronRight, HelpCircle, Save, Share2, Menu, X,
-  LayoutDashboard, Database, Box, DollarSign, Info
+  LayoutDashboard, Database, Box, DollarSign, Info, History, ClipboardList,
+  Calculator, Construction, Spline, ArrowUpRight, Square, DoorOpen, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ── Nav Config ──────────────────────────────────────────────────────────────
 const NAV = [
   {
     id: 'project-info',
     label: 'Project Info',
-    icon: <ClipboardCheck size={18} />,
+    icon: <ClipboardList size={18} />,
     path: '/project-info',
+  },
+  {
+    id: 'project-history',
+    label: 'Project History',
+    icon: <History size={18} />,
+    path: '/project-history',
   },
   {
     id: 'estimate',
     label: 'Estimate',
-    icon: <ArrowUpDown size={18} />,
+    icon: <Calculator size={18} />,
     path: null,
     children: [
-      { id: 'stair-railings', label: 'Stair & Railings', icon: <Box size={14} />, path: '/estimate/stair-railings' },
-      { id: 'railings',       label: 'Railings',         icon: <Database size={14} />, path: '/estimate/railings' },
-      { id: 'ladders',        label: 'Ladders',           icon: <ArrowUpDown size={14} />, path: '/estimate/ladders' },
-      { id: 'bollards',       label: 'Bollards',          icon: <Box size={14} />, path: '/estimate/bollards' },
-      { id: 'gates',          label: 'Gates',             icon: <Box size={14} />, path: '/estimate/gates' },
+      { id: 'stair-railings', label: 'Stair & Railings', icon: <Construction size={16} />, path: '/estimate/stair-railings' },
+      { id: 'railings',       label: 'Railings',         icon: <Spline size={16} />,       path: '/estimate/railings' },
+      { id: 'ladders',        label: 'Ladders',           icon: <ArrowUpRight size={16} />,  path: '/estimate/ladders' },
+      { id: 'bollards',       label: 'Bollards',          icon: <Square size={16} />,        path: '/estimate/bollards' },
+      { id: 'gates',          label: 'Gates',             icon: <DoorOpen size={16} />,      path: '/estimate/gates' },
     ],
   },
   {
@@ -71,6 +79,7 @@ export default function MainLayout({ children }) {
 
   const activePath = location.pathname;
 
+  const isActive = (path) => activePath === path;
   const isEstimateActive = location.pathname.startsWith('/estimate');
 
   // Breadcrumb
@@ -78,7 +87,6 @@ export default function MainLayout({ children }) {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
   };
 
   const userInitials = user?.name
@@ -99,24 +107,23 @@ export default function MainLayout({ children }) {
         </div>
 
         {/* Navigation */}
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav"> 
           <div className="sidebar-section-label">Navigation</div>
 
           {NAV.map(item => {
             if (item.children) {
-              const isActive = item.children.some(c => activePath === c.path);
+              const estimateIsActive = item.children.some(c => activePath === c.path);
               return (
                 <div key={item.id}>
                   <div
-                    className={`sidebar-item has-children ${isActive ? 'active' : ''}`}
+                    className={`sidebar-item has-children ${estimateIsActive ? 'active' : ''}`}
                     onClick={() => setEstimateOpen(o => !o)}
                   >
                     <span className="sidebar-item-icon">{item.icon}</span>
-                    <span style={{ flex: 1 }}>{item.label}</span>
+                    <span className="sidebar-item-label">{item.label}</span>
                     <ChevronRight 
-                      size={16} 
-                      className={`sidebar-expand-icon ${estimateOpen ? 'open' : ''}`}
-                      style={{ transition: 'transform 0.2s' }}
+                      className={`sidebar-expand-icon ${estimateOpen ? 'open' : ''}`} 
+                      size={14} 
                     />
                   </div>
                   <AnimatePresence>
@@ -135,11 +142,11 @@ export default function MainLayout({ children }) {
             return (
               <div
                 key={item.id}
-                className={`sidebar-item ${activePath === item.path ? 'active' : ''}`}
+                className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
                 onClick={() => navigate(item.path)}
               >
                 <span className="sidebar-item-icon">{item.icon}</span>
-                {item.label}
+                <span className="sidebar-item-label">{item.label}</span>
               </div>
             );
           })}
@@ -155,15 +162,6 @@ export default function MainLayout({ children }) {
             </div>
           </div>
         </nav>
-
-        {/* Footer */}
-        <div className="sidebar-footer">
-          <div className="sidebar-footer-avatar">{userInitials}</div>
-          <div className="sidebar-footer-info">
-            <div className="user-name">{user?.name || user?.email || 'User'}</div>
-            <div className="user-role">{user?.role || 'Engineer'}</div>
-          </div>
-        </div>
       </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────── */}
@@ -171,27 +169,46 @@ export default function MainLayout({ children }) {
         {/* Header */}
         <header className="top-header">
           <nav className="header-breadcrumb">
-            <span className="header-breadcrumb-item">SteelSpec</span>
-            {crumbs.map((c, i) => (
-              <React.Fragment key={i}>
-                <span className="header-breadcrumb-sep">›</span>
-                <span className={`header-breadcrumb-item ${i === crumbs.length - 1 ? 'current' : ''}`}>
-                  {c}
-                </span>
-              </React.Fragment>
-            ))}
+            <span 
+              className="header-breadcrumb-item" 
+              onClick={() => navigate('/estimate/stair-railings')}
+              style={{ cursor: 'pointer' }}
+            >
+              SteelSpec
+            </span>
+            {crumbs.map((c, i) => {
+              const itemPath = crumbsToPath(crumbs.slice(0, i + 1));
+              const isLast = i === crumbs.length - 1;
+              return (
+                <React.Fragment key={i}>
+                  <span className="header-breadcrumb-sep">›</span>
+                  <span 
+                    className={`header-breadcrumb-item ${isLast ? 'current' : ''}`}
+                    onClick={() => !isLast && itemPath && navigate(itemPath)}
+                    style={{ cursor: !isLast && itemPath ? 'pointer' : 'default' }}
+                  >
+                    {c}
+                  </span>
+                </React.Fragment>
+              );
+            })}
           </nav>
 
           <div className="header-actions">
-            <button className="header-btn header-btn-outline">
+            <button className="header-btn header-btn-outline" id="header-help">
               <HelpCircle size={16} /> Help
             </button>
-            <button className="header-btn header-btn-outline">
-              <Share2 size={16} /> Export
-            </button>
-            <button className="header-btn header-btn-primary">
-              <Save size={16} /> Save Changes
-            </button>
+            <div className="header-profile" id="user-profile">
+              {userInitials}
+              <div className="header-profile-tooltip">
+                <span className="tooltip-name">{user?.name || 'User'}</span>
+                <span className="tooltip-email">{user?.email || 'No email provided'}</span>
+                <div className="tooltip-divider" />
+                <button className="tooltip-logout" onClick={handleLogout}>
+                  <LogOut size={14} /> Logout
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -199,6 +216,11 @@ export default function MainLayout({ children }) {
         <main className="workspace">
           {children}
         </main>
+
+        {/* Fixed Footer */}
+        <footer className="app-footer-fixed">
+          Developed by Caldim
+        </footer>
       </div>
     </div>
   );
@@ -208,6 +230,7 @@ export default function MainLayout({ children }) {
 function buildCrumbs(path) {
   const map = {
     '/project-info':           ['Project Info'],
+    '/project-history':        ['Project History'],
     '/estimate/stair-railings':['Estimate', 'Stair & Railings'],
     '/estimate/railings':      ['Estimate', 'Railings'],
     '/estimate/ladders':       ['Estimate', 'Ladders'],
@@ -216,4 +239,18 @@ function buildCrumbs(path) {
     '/reports':                ['Reports'],
   };
   return map[path] || ['Dashboard'];
+}
+
+function crumbsToPath(partialCrumbs) {
+  const s = partialCrumbs.join(' > ');
+  if (s === 'Project Info') return '/project-info';
+  if (s === 'Project History') return '/project-history';
+  if (s === 'Estimate') return '/estimate/stair-railings'; // Default for Estimate parent
+  if (s === 'Estimate > Stair & Railings') return '/estimate/stair-railings';
+  if (s === 'Estimate > Railings') return '/estimate/railings';
+  if (s === 'Estimate > Ladders') return '/estimate/ladders';
+  if (s === 'Estimate > Bollards') return '/estimate/bollards';
+  if (s === 'Estimate > Gates') return '/estimate/gates';
+  if (s === 'Reports') return '/reports';
+  return null;
 }
