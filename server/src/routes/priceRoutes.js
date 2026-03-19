@@ -1,42 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const Price = require('../models/Price');
+const db = require('../config/mssql');
 const auth = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 // GET all prices (only for authenticated users)
 router.get('/', auth, async (req, res) => {
   try {
-    const prices = await Price.find({ company: req.user.company })
-      .select('type steelPerLF shopMHPerLF fieldMHPerLF lastUpdated')
-      .lean();
-    
-    // Sanitize output (remove internal fields)
-    const sanitized = prices.map(price => ({
-      type: price.type,
-      steelPerLF: price.steelPerLF,
-      shopMHPerLF: price.shopMHPerLF,
-      fieldMHPerLF: price.fieldMHPerLF,
-      lastUpdated: price.lastUpdated
-    }));
+    const [rows] = await db.query(
+      'SELECT type, steelPerLF, shopMHPerLF, fieldMHPerLF, lastUpdated FROM pricing WHERE company = ? AND isActive = 1',
+      [req.user.company]
+    );
     
     res.json({
       success: true,
-      data: sanitized,
-      count: sanitized.length,
+      data: rows,
+      count: rows.length,
       company: req.user.company
     });
     
   } catch (error) {
     logger.error('Failed to fetch prices', {
       error: error.message,
-      userId: req.user._id
+      userId: req.userId
     });
     
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch price data'
+      error: 'Failed to fetch price data: ' + error.message
     });
   }
 });
@@ -44,11 +36,12 @@ router.get('/', auth, async (req, res) => {
 // GET specific price
 router.get('/:type', auth, async (req, res) => {
   try {
-    const price = await Price.findOne({
-      type: req.params.type,
-      company: req.user.company
-    }).select('-__v -_id -createdAt');
+    const [rows] = await db.query(
+      'SELECT type, description, steelPerLF, shopMHPerLF, fieldMHPerLF, lastUpdated FROM pricing WHERE type = ? AND company = ?',
+      [req.params.type, req.user.company]
+    );
     
+    const price = rows[0];
     if (!price) {
       return res.status(404).json({
         success: false,
@@ -64,7 +57,7 @@ router.get('/:type', auth, async (req, res) => {
   } catch (error) {
     logger.error('Failed to fetch specific price', {
       error: error.message,
-      userId: req.user._id,
+      userId: req.userId,
       type: req.params.type
     });
     
@@ -83,7 +76,6 @@ router.put('/:type', [
   body('fieldMHPerLF').isFloat({ min: 0, max: 10 })
 ], async (req, res) => {
   try {
-    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -92,53 +84,58 @@ router.put('/:type', [
       });
     }
     
-    // Check if user has permission to update prices
-    if (!req.user.isAdmin && req.user.email !== process.env.ADMIN_EMAIL) {
+    if (req.user.role !== 'admin' && req.user.role !== 'owner' && req.user.email !== process.env.ADMIN_EMAIL) {
       return res.status(403).json({
         success: false,
         error: 'Admin access required to update prices'
       });
     }
     
-    const { steelPerLF, shopMHPerLF, fieldMHPerLF } = req.body;
+    const { steelPerLF, shopMHPerLF, fieldMHPerLF, description } = req.body;
+    const type = req.params.type.toLowerCase();
+    const company = req.user.company;
     
-    // Update or create price
-    const price = await Price.findOneAndUpdate(
-      { type: req.params.type, company: req.user.company },
-      {
-        steelPerLF,
-        shopMHPerLF,
-        fieldMHPerLF,
-        lastUpdated: new Date(),
-        updatedBy: req.user._id
-      },
-      { new: true, upsert: true, runValidators: true }
-    ).select('-__v');
+    // Check if exists
+    const [existing] = await db.query(
+      'SELECT id FROM pricing WHERE type = ? AND company = ?',
+      [type, company]
+    );
+
+    if (existing.length > 0) {
+      // Update
+      await db.query(
+        'UPDATE pricing SET steelPerLF = ?, shopMHPerLF = ?, fieldMHPerLF = ?, description = ?, lastUpdated = GETDATE(), uploadedBy = ? WHERE type = ? AND company = ?',
+        [steelPerLF, shopMHPerLF, fieldMHPerLF, description || '', req.userId, type, company]
+      );
+    } else {
+      // Insert
+      await db.query(
+        'INSERT INTO pricing (type, description, steelPerLF, shopMHPerLF, fieldMHPerLF, company, uploadedBy) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [type, description || '', steelPerLF, shopMHPerLF, fieldMHPerLF, company, req.userId]
+      );
+    }
     
-    // Log the update
-    logger.info('Price updated', {
-      userId: req.user._id,
-      type: req.params.type,
-      oldValues: req.body,
-      newValues: { steelPerLF, shopMHPerLF, fieldMHPerLF }
-    });
+    const [updated] = await db.query(
+      'SELECT * FROM pricing WHERE type = ? AND company = ?',
+      [type, company]
+    );
     
     res.json({
       success: true,
       message: 'Price updated successfully',
-      data: price
+      data: updated[0]
     });
     
   } catch (error) {
     logger.error('Failed to update price', {
       error: error.message,
-      userId: req.user._id,
+      userId: req.userId,
       type: req.params.type
     });
     
     res.status(500).json({
       success: false,
-      error: 'Failed to update price'
+      error: 'Failed to update price: ' + error.message
     });
   }
 });

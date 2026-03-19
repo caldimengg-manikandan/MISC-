@@ -1,10 +1,20 @@
 require('dotenv').config();
+
+// Move handlers to top for earliest possible error catching
+process.on('uncaughtException', (error) => {
+  console.error('CRITICAL UNCAUGHT EXCEPTION:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL UNHANDLED REJECTION at:', promise, 'reason:', reason);
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const xss = require('xss-clean');
 const path = require('path');
@@ -12,7 +22,6 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 // Import configurations
-const connectDB = require('./src/config/database');
 const logger = require('./src/utils/logger');
 
 // Import routes
@@ -122,17 +131,7 @@ app.options('*', cors(corsOptions));
 
 // Security middlewares
 app.use(xss());
-app.use(hpp({
-  whitelist: [
-    'page',
-    'limit',
-    'sort',
-    'fields',
-    'search',
-    'filter'
-  ]
-}));
-app.use(mongoSanitize());
+app.use(hpp());
 
 // ================ REQUEST HANDLING ================
 
@@ -233,14 +232,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 // Serve templates
 app.use('/templates', express.static(path.join(__dirname, 'templates')));
 
-// ================ DATABASE CONNECTION ================
+// Database connection logic removed since MySQL pool is lazy-loaded or initialized in scripts
 
-connectDB().catch((error) => {
-  logger.error('Failed to connect to database:', error);
-  process.exit(1);
-});
-
+const calculationRoutes = require('./src/routes/calculationRoutes');
 // ================ ROUTES ================
+app.use('/api/calculate', calculationRoutes);
+app.use('/api/mysql', calculationRoutes); // Alias for backward compatibility
 
 // Health check (public) with detailed info
 app.get('/api/health', (req, res) => {
@@ -426,8 +423,6 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   📊 SECURITY FEATURES ENABLED:
     ✅ Helmet (Enhanced Security Headers)
     ✅ CORS (Restricted Origins)
-    ✅ Rate Limiting (API: 100/15min, Auth: 20/15min)
-    ✅ NoSQL Injection Protection
     ✅ XSS Protection
     ✅ HPP Protection
     ✅ Request Validation

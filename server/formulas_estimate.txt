@@ -1,0 +1,122 @@
+D3 | Project: | Takeoff!D3
+C4 |  | Takeoff!C4
+D5 | Project #: | Takeoff!D5
+B6 | Stair:      | Takeoff!B7
+B7 | Wall Rail | Takeoff!$C$8
+E7 |  | IF(ISBLANK(Takeoff!E8),"",VLOOKUP(Takeoff!E8,Wallrail,2,FALSE))
+F7 | 2.85 | IF(ISBLANK(Takeoff!E8),"",VLOOKUP(Takeoff!E8,Wallrail,3,FALSE))
+G7 | 0.275 | IF(ISBLANK(Takeoff!E8),"",VLOOKUP(Takeoff!E8,Wallrail,4,FALSE))
+H7 | 0.25 | IF(ISBLANK(Takeoff!$E$8),"",(Estimate!$E$7*Estimate!B7)*0.11)
+I7 | 6.2700000000000005 | IF(ISBLANK(Takeoff!E8),"",($F$7*$B$7))
+J7 | 5.5 | IF(ISBLANK(Takeoff!E8),"",($G$7*$B$7))
+E8 |  | PRODUCT($B$7,$E$7)
+F8 | 57 | (IF($A$48="yes",IF(ISBLANK(Takeoff!E8),"0",VLOOKUP(Takeoff!E8,GalvanizedLabor,2,FALSE)))*B7)
+G8 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E8),"0",VLOOKUP(Takeoff!E8,GalvanizedLabor,3,FALSE)))*B7)
+B9 | Grab Rail | Takeoff!$C$10
+E9 |  | IF(ISBLANK(Takeoff!E10),"",VLOOKUP(Takeoff!E10,grabrail,2,FALSE))
+F9 | 2.85 | IF(ISBLANK(Takeoff!E10),"",VLOOKUP(Takeoff!E10,grabrail,3,FALSE))
+G9 | 0.3 | IF(ISBLANK(Takeoff!E10),"",VLOOKUP(Takeoff!E10,grabrail,4,FALSE))
+H9 | 0.28 | IF(ISBLANK(Takeoff!E10),"",($E$9*Estimate!B9)*0.11)
+I9 | 6.2700000000000005 | IF(ISBLANK(Takeoff!E10),"",($F$9*$B$9))
+J9 | 6 | IF(ISBLANK(Takeoff!E10),"",($G$9*$B$9))
+E10 |  | PRODUCT(E9,B9)
+F10 | 57 | (IF($A$48="yes",IF(ISBLANK(Takeoff!E10),"0",VLOOKUP(Takeoff!E10,GalvanizedLabor,2,FALSE)))*B9)
+G10 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E10),"0",VLOOKUP(Takeoff!E10,GalvanizedLabor,3,FALSE)))*B9)
+B11 | Guard Rail | Takeoff!$C$12
+E11 |  | IF(ISBLANK(Takeoff!E12),"",VLOOKUP(Takeoff!E12,Guardrail,2,FALSE))
+F11 | 17.76 | IF(ISBLANK(Takeoff!E12),"",VLOOKUP(Takeoff!E12,Guardrail,3,FALSE))
+G11 | 0.9 | IF(ISBLANK(Takeoff!E12),"",VLOOKUP(Takeoff!E12,Guardrail,4,FALSE))
+H11 | 0.45 | IF(ISBLANK(Takeoff!E12),"",(E11*Estimate!B11)*0.11)
+I11 | 7.814400000000001 | IF(ISBLANK(Takeoff!E12),"",(F11*B11))
+J11 | 3.6 | IF(ISBLANK(Takeoff!E12),"",(G11*B11))
+B12 |  | Takeoff!C13
+C12 | 2 | SUM(Estimate!E38)
+F12 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E12),"0",VLOOKUP(Takeoff!E12,GalvanizedLabor,2,FALSE)))*B11)
+G12 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E12),"0",VLOOKUP(Takeoff!E12,GalvanizedLabor,3,FALSE)))*B11)
+B13 |  | Takeoff!C14
+B14 |  | QUOTIENT($B$11,$B$13)
+E15 |  | PRODUCT(E11,B11)
+B16 | Guard Rail | Takeoff!C22
+E16 |  | IF(ISBLANK(Takeoff!E22),"",VLOOKUP(Takeoff!E22,Guardrail,2,FALSE))
+F16 | 4.56 | IF(ISBLANK(Takeoff!E22),"",VLOOKUP(Takeoff!E22,Guardrail,3,FALSE))
+G16 | 0.375 | IF(ISBLANK(Takeoff!E22),"",VLOOKUP(Takeoff!E22,Guardrail,4,FALSE))
+H16 | 0.35 | IF(ISBLANK(Takeoff!E22),"",(E16*Estimate!B16)*0.11)
+I16 |  | IF(ISBLANK(Takeoff!E22),"",(F16*B16))
+J16 |  | IF(ISBLANK(Takeoff!E22),"",(G16*B16))
+B17 |  | Takeoff!C23
+F17 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E17),"0",VLOOKUP(Takeoff!E17,GalvanizedLabor,2,FALSE)))*B16)
+G17 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E17),"0",VLOOKUP(Takeoff!E17,GalvanizedLabor,3,FALSE)))*B16)
+B18 |  | Takeoff!C24
+B19 |  | QUOTIENT(B16,B18)
+E20 |  | PRODUCT(E16,B16)
+B21 | Optional | Takeoff!C17
+E21 |  | IF(ISBLANK(Takeoff!$F$17),"",VLOOKUP(Takeoff!$F$17,optionaldata,2,FALSE))
+F21 | 2.5 | IF(ISBLANK(Takeoff!$F$17),"",VLOOKUP(Takeoff!$F$17,optionaldata,3,FALSE))
+G21 | 1 | IF(ISBLANK(Takeoff!$F$17),"",VLOOKUP(Takeoff!$F$17,optionaldata,4,FALSE))
+H21 |  | IF(ISBLANK(Takeoff!F17),"",(E21*Estimate!B21)*0.11)
+I21 |  | IF(ISBLANK(Takeoff!$F$17),"",(F21*B21))
+J21 |  | IF(ISBLANK(Takeoff!F17),"",(G21*B21))
+B22 |  | Takeoff!$C$18
+E22 |  | IF(ISBLANK(Takeoff!$F$18),"",VLOOKUP(Takeoff!F18,optionaldata,2,FALSE))
+F22 | 2.5 | IF(ISBLANK(Takeoff!$F$18),"",VLOOKUP(Takeoff!$F$18,optionaldata,3,FALSE))
+H22 |  | IF(ISBLANK(Takeoff!F18),"",(E22*Estimate!B22)*0.11)
+I22 | 0.275 | IF(ISBLANK(Takeoff!$F$18),"",(F22*B22))
+E23 |  | SUM(PRODUCT($E$21,$B$21),PRODUCT($E$22,$B$22))
+B24 | Metal Platform | Takeoff!C28
+F24 | 15.64 | IF(ISBLANK(Takeoff!E28),"",VLOOKUP(Takeoff!E28,MetalPan,3,FALSE))
+G24 | 0.22 | IF(ISBLANK(Takeoff!E28),"",VLOOKUP(Takeoff!E28,MetalPan,4,FALSE))
+H24 | 0.25 | IF(ISBLANK(Takeoff!E28),"",(E24*Estimate!B24)*0.11)
+I24 | 24.0856 | IF(ISBLANK(Takeoff!E28),"",(F24*$B$27))
+J24 | 20.328 | IF(ISBLANK(Takeoff!E28),"",(G24*B27))
+B25 |  | Takeoff!C29
+B26 |  | Takeoff!C27
+B27 |  | PRODUCT($B$24,$B$25)*B26
+L27 |  | IF(ISBLANK($E$24),"",VLOOKUP($E$24,MetalPan,2,FALSE)*Estimate!B27*0.11)
+E28 |  | PRODUCT(E24,B27)
+G28 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E28),"0",VLOOKUP(Takeoff!E28,GalvanizedLabor,3,FALSE)))*B27)
+B29 | Metal Platform | Takeoff!C33
+E29 |  | IF(ISBLANK(Takeoff!E33),"",VLOOKUP(Takeoff!E33,MetalPan,2,FALSE))
+F29 | 14 | IF(ISBLANK(Takeoff!E33),"",VLOOKUP(Takeoff!E33,MetalPan,3,FALSE))
+G29 | 0.22 | IF(ISBLANK(Takeoff!E33),"",VLOOKUP(Takeoff!E33,MetalPan,4,FALSE))
+H29 | 0.25 | IF(ISBLANK(Takeoff!E33),"",(E29*Estimate!B32)*0.11)
+I29 |  | IF(ISBLANK(Takeoff!E33),"",(F29*B32))
+J29 |  | IF(ISBLANK(Takeoff!E33),"",(G29*B32))
+B30 |  | Takeoff!C34
+L30 |  | IF(ISBLANK($E$24),"",VLOOKUP($E$24,MetalPan,2,FALSE)*Estimate!B32*0.11)
+B31 |  | Takeoff!C32
+B32 |  | PRODUCT(B29,B30)*B31
+E33 |  | PRODUCT($E$29,$B$32)
+G33 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E33),"0",VLOOKUP(Takeoff!E33,GalvanizedLabor,3,FALSE)))*B32)
+B34 | Stair Stringers & Pans | Takeoff!C37
+G34 | 1.75 | IF(ISBLANK(Takeoff!E37),"",VLOOKUP(Takeoff!E37,Metalpanstairs,4,FALSE))
+H34 | 1.5 | IF(ISBLANK(Takeoff!E28),"",(E34*Estimate!B34)*0.11)
+I34 | 80.85 | IF(ISBLANK(Takeoff!E37),"",(F34*B34))
+J34 | 36.75 | IF(ISBLANK(Takeoff!E37),"",(G34*B34))
+B35 |  | Takeoff!C38
+B36 |  | Takeoff!C39
+B37 |  | Takeoff!C40
+B38 |  | (B34*B35)*B37
+F38 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E37),"0",VLOOKUP(Takeoff!E37,GalvanizedLabor,2,FALSE)))*B34)
+G38 |  | (IF($A$48="yes",IF(ISBLANK(Takeoff!E37),"0",VLOOKUP(Takeoff!E37,GalvanizedLabor,3,FALSE)))*B34)
+E39 |  | PRODUCT($E$34,$B$34)
+E40 |  | PRODUCT($E$35,$B$34,$B$37)
+C44 |  | SUM(E8,E10,E15,E23,E28,E33,E39,E20)
+F44 |  | SUM(F8,F10,F12,F17,F38)
+G44 |  | SUM(G8,G10,G12,G17,G28,G33,G38)
+H44 |  | SUM(H7:H38)
+I44 | 125.565 | SUM(I7:I38,F44)
+J44 | 73.178 | SUM(J7:J38,G44)
+C45 |  | PRODUCT($C$44,$L$6)
+H45 |  | PRODUCT($H$44,$L$6)
+I45 | 106.73025 | PRODUCT($I$44,$L$7)
+J45 | 6586.0199999999995 | PRODUCT($J$44,$L$8)
+C46 |  | IF(A47="YES","0",PRODUCT(Estimate!E40,'Pricing 021315'!$D$22))
+C47 | STAIR GRATING | IF(A47="Yes",PRODUCT($B$34,IF(Estimate!B37<=3.5,'Pricing 021315'!$D$32,IF(Estimate!B37<=4,'Pricing 021315'!$D$33,IF(Estimate!B37<=4.5,'Pricing 021315'!$D$34,IF(B37<=5,'Pricing 021315'!$D$35,'Pricing 021315'!$D$35))))),"")
+C48 |  | IF(ISBLANK($B$48),"",VLOOKUP($B$48,Finishdata,2,FALSE)*SUM($E$40,$C$44))
+C49 |  | PRODUCT(C44,'Pricing 021315'!$D$23)
+C50 |  | SUM(((IF(ISBLANK(Takeoff!F15),"0",VLOOKUP(Takeoff!F15,Post,2,FALSE)))*B14),((IF(ISBLANK(Takeoff!F25),"0",VLOOKUP(Takeoff!F25,Post,2,FALSE)))*B19))
+C51 |  | SUM(C45:D50)
+C52 |  | IFERROR(QUOTIENT(J55,B34),"0")
+J53 |  | SUM(H45,I45,J45,C50,C48,C45,C46,C47,C49)
+J54 | Tax | C51*6%
+J55 | Total Estimate | SUM(J53,J54)

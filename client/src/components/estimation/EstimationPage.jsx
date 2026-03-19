@@ -1358,7 +1358,7 @@ const vertical = parseArchitecturalInput(geo.nosingToNosingVertical) || 0;
       });
 
       const estimationData = {
-        _id: projectId, // Pass the existing project ID if editing
+        id: projectId, // Pass the existing project ID if editing
         ...formData,
         stairs: mergedStairs,
         guardRails: railsGuardRailData.guardRails,
@@ -1375,7 +1375,7 @@ const vertical = parseArchitecturalInput(geo.nosingToNosingVertical) || 0;
       
       toast.success('Estimation created and saved successfully!');
       // Navigate to costing page with the project ID
-      const savedProjectId = savedEstimation.data?._id || savedEstimation._id || savedEstimation.id;
+      const savedProjectId = savedEstimation.data?.id || savedEstimation.projectId || savedEstimation.id;
       if (savedProjectId) {
         navigate('/costing', { state: { projectId: savedProjectId } });
       } else {

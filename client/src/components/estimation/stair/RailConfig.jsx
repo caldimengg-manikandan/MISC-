@@ -3,8 +3,9 @@ import { Settings } from 'lucide-react';
 import API_BASE_URL from '../../../config/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import QuickManageModal from '../../common/QuickManageModal';
+import { GUARD_RAIL_DRAWINGS } from '../../../config/guardRailDrawings';
 
-const DEFAULT_FINISH_OPTIONS = ['PRIMER', 'PAINTED', 'GALVANIZED', 'GALV+PAINTED', 'POWDER COATED'];
+const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv+Painted', 'Powder Coated'];
 
 const RAIL_CONFIGS = {
   guardRail: {
@@ -81,19 +82,14 @@ const RAIL_CONFIGS = {
   },
 };
 
-const DEFAULT_MOUNTING_OPTIONS = ['Bolted to Stringer', 'Welded to Stringer', 'Side Mounted w/bolted', 'Side mounted w/welded', 'Embedded', 'Anchored'];
+const DEFAULT_MOUNTING_OPTIONS = ['Bolted to Stringer', 'Welded to Stringer', 'Side Mounted Bolted', 'Side Mounted Welded', 'Embedded', 'Anchored'];
 
 export default function RailConfig({ type = 'guardRail', data, onChange }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
   const [dropdowns, setDropdowns] = useState({
-    finishes: DEFAULT_FINISH_OPTIONS,
-    mountings: DEFAULT_MOUNTING_OPTIONS,
-    guardRailTypes: RAIL_CONFIGS.guardRail.types,
-    wallRailTypes: RAIL_CONFIGS.wallRail.types,
-    grabRailTypes: RAIL_CONFIGS.grabRail.types,
-    caneRailTypes: RAIL_CONFIGS.caneRail.types
+    steelGrades: ['A53', 'A500C', 'A500B', 'SS316', 'SS 304']
   });
 
   const [quickModal, setQuickModal] = useState({ isOpen: false, category: '', label: '', rect: null });
@@ -106,13 +102,14 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
       } catch (e) { return []; }
     };
 
-    const [fo, mo, grt, wrt, gbt, crt] = await Promise.all([
+    const [fo, mo, grt, wrt, gbt, crt, sg] = await Promise.all([
       fetchList('finish_option'),
       fetchList('mounting_type'),
       fetchList('guardRail_type'),
       fetchList('wallRail_type'),
       fetchList('grabRail_type'),
-      fetchList('caneRail_type')
+      fetchList('caneRail_type'),
+      fetchList('steel_grade_rail')
     ]);
     
     setDropdowns({ 
@@ -121,7 +118,8 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
       guardRailTypes: grt.length > 0 ? grt.map(i => i.label) : RAIL_CONFIGS.guardRail.types,
       wallRailTypes: wrt.length > 0 ? wrt.map(i => i.label) : RAIL_CONFIGS.wallRail.types,
       grabRailTypes: gbt.length > 0 ? gbt.map(i => i.label) : RAIL_CONFIGS.grabRail.types,
-      caneRailTypes: crt.length > 0 ? crt.map(i => i.label) : RAIL_CONFIGS.caneRail.types
+      caneRailTypes: crt.length > 0 ? crt.map(i => i.label) : RAIL_CONFIGS.caneRail.types,
+      steelGrades: sg.length > 0 ? sg.map(i => i.label) : ['A53', 'A500C', 'A500B', 'SS316', 'SS 304']
     });
   }, []);
 
@@ -139,15 +137,17 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
   const [form, setForm] = useState({
     railType:           data?.railType || (dropdowns[`${type}Types`][0] || config.types[0] || ''),
     railLength:         data?.railLength || '',
+    steelGrade:         data?.steelGrade || 'A53',
     mountingType:       data?.mountingType || (config.mountings[0] || ''),
     intermediateRails:  data?.intermediateRails || (type === 'caneRail' ? '0' : ''),
     postSpacing:        data?.postSpacing || '',
     postQty:            data?.postQty || '',
     toeplateRequired:   data?.toeplateRequired || 'No',
     toeplateLength:     data?.toeplateLength || '',
-    finish:             data?.finish || 'PRIMER',
+    finish:             data?.finish || 'Primer',
     ...data
   });
+
 
   // Sync state if data changes from outside (e.g. duplication)
   useEffect(() => {
@@ -175,10 +175,16 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
     }
   }, [type, form.intermediateRails]);
 
-  // Auto-calculation logic
-  const calculatedPostQty = (form.railLength && form.postSpacing)
-    ? Math.ceil(parseFloat(form.railLength) / parseFloat(form.postSpacing)) + 1 || ''
-    : '';
+  // ❌ NO FRONTEND MATH — postQty is computed by the backend via /api/calculate
+  // The API uses: Math.floor(length / spacing)  → Excel exact match
+  const calculatedPostQty = form.postQty || null; // display only if backend has set it
+
+  const currentDrawingSrc =
+    type === 'guardRail' && form.railType
+      ? GUARD_RAIL_DRAWINGS[form.railType] || null
+      : null;
+
+  const showDrawingPane = type === 'guardRail';
 
   return (
     <div>
@@ -188,8 +194,44 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           {type === 'guardRail' ? 'Guard Rail Specifications' : 'Rail Specifications'}
         </div>
         
-        {/* Row 1: Primary Inputs */}
-        <div className="rail-specs-grid">
+        <div style={{ display: 'grid', gridTemplateColumns: showDrawingPane ? 'minmax(180px, 220px) 1fr' : '1fr', gap: '16px', alignItems: 'flex-start' }}>
+          {/* Reference drawing preview for Guard Rails */}
+          {showDrawingPane && (
+            <div className="eng-card" style={{ padding: '12px', minHeight: '160px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                Reference Drawing
+              </div>
+              {currentDrawingSrc ? (
+                <img
+                  src={currentDrawingSrc}
+                  alt={`Reference for ${form.railType}`}
+                  style={{ width: '100%', borderRadius: 8, border: '1px solid var(--border-subtle)' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    background: 'var(--border-subtle)',
+                    borderRadius: 8,
+                    padding: '8px',
+                    minHeight: '120px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }}
+                >
+                  No drawing linked for this guard rail yet.
+                  <br />
+                  Select a type, then map it in `guardRailDrawings`.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Row 1: Primary Inputs */}
+          <div className="rail-specs-grid">
           <div className="form-field">
             <label className="form-label">
               {type === 'guardRail' ? 'Guard Rail Type' : 'Rail Type'} <span className="required">*</span>
@@ -231,6 +273,29 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
             </div>
           </div>
 
+          <div className="form-field">
+            <label className="form-label">
+              Steel Grade
+              {isAdmin && (
+                <button 
+                  onClick={(e) => openManage('steel_grade_rail', 'Rail Steel Grades', e)} 
+                  className="quick-edit-btn" 
+                  title="Manage Options"
+                >
+                  <Settings size={14} />
+                </button>
+              )}
+            </label>
+            <select
+              className="form-select compact-select"
+              value={form.steelGrade}
+              onChange={e => set('steelGrade', e.target.value)}
+            >
+              {dropdowns.steelGrades.map(sg => <option key={sg} value={sg}>{sg}</option>)}
+            </select>
+          </div>
+
+
           {config.hasIntermediateRails && (
             <div className="form-field">
               <label className="form-label">No. of Intermediate Rails</label>
@@ -268,7 +333,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
               <label className="form-label">{type === 'caneRail' ? 'Qty of Posts' : 'Post Qty'}</label>
               <div style={{ position: 'relative' }}>
                 <input
-                  className="form-input compact-input"
+                  className={`form-input compact-input ${calculatedPostQty && !form.postQty ? 'auto-calculation' : ''}`}
                   id={`${type}-post-qty`}
                   type="number"
                   value={form.postQty}
@@ -283,6 +348,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
               </div>
             </div>
           )}
+          </div>
         </div>
 
         {/* Row 2: Secondary Options */}
@@ -373,6 +439,49 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
         </div>
       </div>
 
+      {/* ── Backend Computed Results (Read-Only) — ALL values from /api/calculate ── */}
+      {(data?.calcPostQty !== undefined || data?.calcSteel !== undefined || data?.calcShop !== undefined) && (
+        <div style={{
+          marginTop: '16px',
+          padding: '12px 16px',
+          background: 'linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%)',
+          borderRadius: '8px',
+          border: '1px solid #c4b5fd',
+          display: 'grid',
+          gridTemplateColumns: `repeat(${config.hasPostSpacing || config.hasPostQty !== false ? '4' : '3'}, 1fr)`,
+          gap: '12px'
+        }}>
+          {(config.hasPostSpacing || config.hasPostQty !== false) && (
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Post Qty <span style={{ fontWeight: 400, color: '#a78bfa' }}>← Backend</span>
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#4c1d95', fontVariantNumeric: 'tabular-nums' }}>
+                {data?.calcPostQty ?? '—'}
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Steel Weight</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#4c1d95', fontVariantNumeric: 'tabular-nums' }}>
+              {data?.calcSteel ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>lb</span>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Shop Labor</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#4c1d95', fontVariantNumeric: 'tabular-nums' }}>
+              {data?.calcShop ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>hrs</span>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Field Labor</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#4c1d95', fontVariantNumeric: 'tabular-nums' }}>
+              {data?.calcField ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>hrs</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <QuickManageModal 
         isOpen={quickModal.isOpen}
         onClose={() => setQuickModal({ ...quickModal, isOpen: false })}
@@ -386,6 +495,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           (RAIL_CONFIGS[quickModal.category.split('_')[0]]?.types || [])
         }
       />
+
 
       <style jsx>{`
         .rail-specs-grid {
@@ -427,6 +537,11 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           color: white;
           transform: translateY(-1px) rotate(30deg);
           box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
+        }
+        .auto-calculation {
+          background-color: #f0f7ff !important;
+          border-color: #bcd9ff !important;
+          font-weight: 500;
         }
       `}</style>
     </div>

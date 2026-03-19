@@ -1,11 +1,13 @@
 // src/components/estimation/StairEstimation.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import StairConfig from './stair/StairConfig';
 import LandingConfig from './stair/LandingConfig';
 import RailConfig from './stair/RailConfig';
 import { motion, AnimatePresence } from 'framer-motion';
+import API_BASE_URL from '../../config/api';
+import toast from 'react-hot-toast';
 
-let uid = 1;
+let uid = 100; // Start from 100 to avoid collision with DB-restored IDs
 const makeId = () => uid++;
 
 const RAIL_TYPES = [
@@ -14,6 +16,37 @@ const RAIL_TYPES = [
   { key: 'grabRail', label: 'Grab Rail', badge: 'GRAB', icon: '✊' },
   { key: 'caneRail', label: 'Cane Rail', badge: 'CANE', icon: '🦯' },
 ];
+
+// Helper: restore numeric IDs from saved data, ensuring all fields required by the UI are present
+const restoreStairs = (savedStairs) => {
+  if (!Array.isArray(savedStairs)) return [];
+  return savedStairs.map((s, si) => ({
+    ...s,
+    id:      s.id      ?? makeId(),
+    label:   s.label   || s.stairName || `Stair ${si + 1}`,
+    history: s.history ?? { lastDeleted: null },
+    flights:  (s.flights  || []).map((f, fi) => ({
+      ...f,
+      id:    f.id    ?? makeId(),
+      label: f.label || `Flight ${fi + 2}`,
+    })),
+    landings: (s.landings || []).map((l, li) => ({
+      ...l,
+      id:    l.id    ?? makeId(),
+      label: l.label || `Landing ${li + 1}`,
+    })),
+    rails: (s.rails || []).map((r, ri) => {
+      const meta = RAIL_TYPES.find(t => t.key === r.type);
+      return {
+        ...r,
+        id:    r.id    ?? makeId(),
+        label: r.label || (meta ? `${meta.label} ${ri + 1}` : `Rail ${ri + 1}`),
+      };
+    }),
+  }));
+};
+
+
 
 // ── Collapsible Wrapper ─────────────────────────────────────────────────────
 function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true, headerClass = "" }) {
@@ -112,25 +145,15 @@ function StairItem({
 
       {/* ── Flights ────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-              Flights ({flights.length + 1})
-            </span>
-            {history.lastDeleted?.type === 'flight' && (
-              <button className="text-btn" onClick={() => onUndoDeleteSubItem('flight')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
-                ↩ Undo Delete
-              </button>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="add-btn ghost" onClick={onCopyLastFlight} id="copy-flight">
-              ⎘ Copy from Above
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+            Flights ({flights.length + 1})
+          </span>
+          {history.lastDeleted?.type === 'flight' && (
+            <button className="text-btn" onClick={() => onUndoDeleteSubItem('flight')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+              ↩ Undo Delete
             </button>
-            <button className="add-btn" onClick={onAddFlight} id="add-flight">
-              + Add Flight
-            </button>
-          </div>
+          )}
         </div>
 
         {flights.map(fl => (
@@ -151,6 +174,15 @@ function StairItem({
             />
           </CollapsibleSection>
         ))}
+        {/* Flight actions kept in a single linear row aligned with rails workflow */}
+        <div className="add-section-row" style={{ marginTop: flights.length ? '16px' : '8px', justifyContent: 'flex-start' }}>
+          <button className="add-btn ghost" onClick={onCopyLastFlight} id="copy-flight">
+            ⎘ Copy from Above
+          </button>
+          <button className="add-btn" onClick={onAddFlight} id="add-flight">
+            + Add Flight
+          </button>
+        </div>
       </div>
 
       {/* ── Landings ───────────────────────────────────────────────── */}
@@ -194,6 +226,15 @@ function StairItem({
             No landings added — click "+ Add Landing" to begin.
           </div>
         )}
+
+        {/* Add landing control below list */}
+        {landings.length > 0 && (
+          <div className="add-section-row" style={{ marginTop: '16px' }}>
+            <button className="add-btn" onClick={onAddLanding}>
+              + Add Landing
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Rails ──────────────────────────────────────────────────── */}
@@ -209,20 +250,6 @@ function StairItem({
               </button>
             )}
           </div>
-        </div>
-
-        {/* Rail type add buttons */}
-        <div className="add-section-row">
-          {RAIL_TYPES.map(rt => (
-            <button
-              key={rt.key}
-              className="add-btn"
-              onClick={() => onAddRail(rt.key)}
-              id={`add-${rt.key}`}
-            >
-              {rt.icon} + {rt.label}
-            </button>
-          ))}
         </div>
 
         <div style={{ marginTop: '12px' }}>
@@ -251,9 +278,23 @@ function StairItem({
 
         {rails.length === 0 && !history.lastDeleted?.type === 'rail' && (
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '4px', marginTop: '8px' }}>
-            No rails added — use the buttons above to add rail types.
+            No rails added — use the buttons below to add rail types.
           </div>
         )}
+
+        {/* Rail type add buttons (positioned after existing rails for easier workflow) */}
+        <div className="add-section-row" style={{ marginTop: rails.length ? '16px' : '8px' }}>
+          {RAIL_TYPES.map(rt => (
+            <button
+              key={rt.key}
+              className="add-btn"
+              onClick={() => onAddRail(rt.key)}
+              id={`add-${rt.key}`}
+            >
+              {rt.icon} + {rt.label}
+            </button>
+          ))}
+        </div>
       </div>
     </CollapsibleSection>
   );
@@ -270,44 +311,434 @@ export default function StairEstimation() {
       flights: [], 
       landings: [], 
       rails: [],
-      history: { lastDeleted: null }
+      history: { lastDeleted: null },
+      template: 'custom'
     }
   ]);
-  const [projectData, setProjectData] = useState({ projectName: '', projectNumber: '' });
+  const [projectData, setProjectData] = useState({ projectName: '', projectNumber: '', projectId: null });
+  const [templateModal, setTemplateModal] = useState({ isOpen: false, nextLabel: 'Stair 1' });
+  const [saving, setSaving] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const [estimationResult, setEstimationResult] = useState(null);
+  const stairsRef = useRef(stairs);
+  stairsRef.current = stairs;
 
+  // ── Load project info + stair data from DB on mount ───────────────────────
   useEffect(() => {
     const savedInfo = localStorage.getItem('steelProjectInfo');
-    if (savedInfo) {
-      try {
-        const parsed = JSON.parse(savedInfo);
-        setProjectData({
-          projectName: parsed.projectName || '',
-          projectNumber: parsed.projectNumber || ''
-        });
-      } catch (e) {
-        console.error('Failed to parse project info:', e);
-      }
+    if (!savedInfo) return;
+    try {
+      const parsed = JSON.parse(savedInfo);
+      setProjectData({
+        projectName:   parsed.projectName   || '',
+        projectNumber: parsed.projectNumber || '',
+        projectId:     parsed.id            || null,
+      });
+
+      const projectId = parsed.id;
+      if (!projectId) return;
+
+      const token = localStorage.getItem('steel_token');
+      if (!token) return;
+
+      // Fetch full project from DB to restore stairs/rails
+      fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.project) {
+            const proj = data.project;
+            // Update project data with full DB fields
+            setProjectData(prev => ({
+              ...prev,
+              projectId: proj.id,
+              projectName:   proj.projectName   || prev.projectName,
+              projectNumber: proj.projectNumber || prev.projectNumber,
+            }));
+
+            // Restore stairs from DB
+            const raw = proj.stairs;
+            const saved = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null);
+            if (saved && saved.length > 0) {
+              const restored = restoreStairs(saved);
+              if (restored.length > 0) {
+                setStairs(restored);
+                toast.success(`Loaded ${restored.length} stair(s) from database`);
+              }
+            }
+          }
+        })
+        .catch(err => console.error('Failed to load project stairs:', err));
+    } catch (e) {
+      console.error('Failed to parse project info:', e);
     }
   }, []);
 
-  const addStair = () => {
+  // ── Save stairs to DB ─────────────────────────────────────────────────────
+  const saveChanges = useCallback(async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('steel_token');
+      if (!token) { toast.error('Please log in first'); return; }
+
+      const savedInfo = localStorage.getItem('steelProjectInfo');
+      const parsed = savedInfo ? JSON.parse(savedInfo) : {};
+      const projectId = projectData.projectId || parsed.id;
+
+      if (!projectId) {
+        toast.error('No project selected. Please select a project from Project Info first.');
+        return;
+      }
+
+      // Strip history (not needed in DB)
+      const stairsToSave = stairsRef.current.map(({ history, ...s }) => s);
+
+      const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ stairs: stairsToSave })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Changes saved to database ✓');
+      } else {
+        toast.error(data.message || 'Save failed');
+      }
+    } catch (err) {
+      console.error('Save error:', err);
+      toast.error('Failed to save: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }, [projectData.projectId]);
+
+  // ── Calculate Estimation via backend ─────────────────────────────────────
+  const calculateEstimation = useCallback(async () => {
+    setCalculating(true);
+    try {
+      const token = localStorage.getItem('steel_token');
+
+      // Build rail payloads from stairs
+      const rails = [];
+      stairsRef.current.forEach(stair => {
+        (stair.rails || []).forEach(r => {
+          rails.push({
+            rail_type_id: r.railType || r.type || '',
+            length: parseFloat(r.railLength) || 0,
+            spacing: parseFloat(r.postSpacing) || 4,
+          });
+        });
+      });
+
+      const payload = {
+        rails,
+        platforms: [],
+        stringers: [],
+        pricing_map: {},
+        labor_rates: {},
+        finish_rate_per_lb: 0,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/calculate`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data.success !== false) {
+        setEstimationResult(data);
+        toast.success('Estimation calculated ✓');
+      } else {
+        toast.error(data.error || 'Calculation failed');
+      }
+    } catch (err) {
+      console.error('Calculation error:', err);
+      toast.error('Calculation failed: ' + err.message);
+    } finally {
+      setCalculating(false);
+    }
+  }, []);
+
+  // ── Live per-change calculation (debounced 400ms) ─────────────────────────
+  // Fires whenever stair data changes; embeds calc results back into each rail + landing.
+  const liveCalcTimer = useRef(null);
+  const isUpdatingFromCalc = useRef(false); // prevents infinite loop
+
+  const triggerLiveCalc = useCallback((latestStairs) => {
+    clearTimeout(liveCalcTimer.current);
+    liveCalcTimer.current = setTimeout(async () => {
+      const token = localStorage.getItem('steel_token');
+
+      // ── Build payloads for rails and platforms (generic /api/calculate) ──
+      const railPayloads = [];
+      latestStairs.forEach((stair, si) => {
+        (stair.rails || []).forEach((r, ri) => {
+          if (!r.rail_type_id && !r.railType) return;
+          railPayloads.push({
+            _ref: { si, ri },
+            rail_type_id: r.rail_type_id || r.railType || null,
+            length: parseFloat(r.railLength) || 0,
+            spacing: parseFloat(r.postSpacing) || 4,
+          });
+        });
+      });
+
+      const platformPayloads = [];
+      latestStairs.forEach((stair, si) => {
+        (stair.landings || []).forEach((l, li) => {
+          if (!l.platform_type_id && !l.platformType) return;
+          platformPayloads.push({
+            _ref: { si, li },
+            platform_type_id: l.platform_type_id || l.platformType || null,
+            length: parseFloat(l.platformLength) || 0,
+            width: parseFloat(l.platformWidth) || 0,
+          });
+        });
+      });
+
+      const stairPayloads = latestStairs
+        .filter(s => s.rise && s.run)
+        .map(s => ({
+          height: s.totalHeight ? parseFloat(s.totalHeight) : (parseFloat(s.rise) * (parseFloat(s.numRisers) || 1)),
+          rise: parseFloat(s.rise) || 0,
+          run: parseFloat(s.run) || 0,
+        }));
+
+      // ── Per-stair FLIGHT calculation (stringer + pan plate) ─────────────
+      // Only fires when enough inputs are provided
+      const flightPromises = latestStairs.map(async (stair, si) => {
+        const hasEnough = stair.rise && stair.run && stair.numRisers && stair.stairWidth && stair.stringerSize;
+        if (!hasEnough) return { si, result: null };
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/calculate/stair-flight`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({
+              stairWidthFt:      parseFloat(stair.stairWidth) || 0,
+              riseIn:            parseFloat(stair.rise) || 0,
+              runIn:             parseFloat(stair.run) || 0,
+              numRisers:         parseInt(stair.numRisers) || 0,
+              stringerProfileId: stair.stringerSize,
+              stairType:         stair.stairType || 'pan-concrete',
+              extentBotNSIn:     parseFloat(stair.nsStringerBot) || 0,
+              extentBotFSIn:     parseFloat(stair.fsStringerBot) || 0,
+              extentTopNSIn:     parseFloat(stair.nsStringerTop) || 0,
+              extentTopFSIn:     parseFloat(stair.fsStringerTop) || 0,
+              connectionTypeBot: stair.nsStringerConnBot || 'WELDED',
+              connectionTypeTop: stair.nsStringerConnTop || 'WELDED',
+              finish:            stair.finish || 'PRIMER',
+            }),
+          });
+          const data = await res.json();
+          return { si, result: data.success ? data : null };
+        } catch { return { si, result: null }; }
+      });
+
+      // ── Generic rails/platforms/geometry calc ────────────────────────────
+      const genericPromise = (railPayloads.length > 0 || platformPayloads.length > 0 || stairPayloads.length > 0)
+        ? fetch(`${API_BASE_URL}/api/calculate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({
+              rails: railPayloads,
+              platforms: platformPayloads,
+              stairs: stairPayloads,
+              stringers: [],
+              pricing_map: {},
+              labor_rates: {},
+              finish_rate_per_lb: 0,
+            }),
+          }).then(r => r.json()).catch(() => null)
+        : Promise.resolve(null);
+
+      const [flightResults, genericResult] = await Promise.all([
+        Promise.all(flightPromises),
+        genericPromise,
+      ]);
+
+      if (genericResult?.success === false && flightResults.every(f => !f.result)) return;
+
+      // Embed all results back into stair state
+      isUpdatingFromCalc.current = true;
+      setStairs(prev => {
+        const next = prev.map(s => ({ ...s, rails: [...(s.rails || [])], landings: [...(s.landings || [])] }));
+
+        // Rails from generic calc
+        (genericResult?.breakdown?.rail?.items || []).forEach((item, idx) => {
+          const ref = railPayloads[idx]?._ref;
+          if (!ref) return;
+          const rail = next[ref.si]?.rails?.[ref.ri];
+          if (rail) {
+            next[ref.si].rails[ref.ri] = {
+              ...rail,
+              calcPostQty: item.postQty   ?? 0,
+              calcSteel:   item.steelWeight ?? 0,
+              calcShop:    item.shopLabor  ?? 0,
+              calcField:   item.fieldLabor ?? 0,
+            };
+          }
+        });
+
+        // Platforms / landings from generic calc
+        (genericResult?.breakdown?.platform?.items || []).forEach((item, idx) => {
+          const ref = platformPayloads[idx]?._ref;
+          if (!ref) return;
+          const landing = next[ref.si]?.landings?.[ref.li];
+          if (landing) {
+            next[ref.si].landings[ref.li] = {
+              ...landing,
+              calcArea:  item.area ?? 0,
+              calcSteel: item.steelWeight ?? 0,
+              calcShop:  item.shopLabor  ?? 0,
+              calcField: item.fieldLabor ?? 0,
+            };
+          }
+        });
+
+        // Stair Geometry from generic calc
+        (genericResult?.breakdown?.stairGeometry || []).forEach((geo, idx) => {
+           // We don't have a direct ref because we mapped them sequentially
+           // But they are in the same order as latestStairs (filtered by rise/run)
+           // Actually, it's easier to find the index of the stair that has rise/run
+           const originalIndex = latestStairs.findIndex((s, i) => s.rise && s.run && !next[i]._processedGeometric);
+           if (originalIndex !== -1) {
+              const s = next[originalIndex];
+              next[originalIndex] = {
+                ...s,
+                _processedGeometric: true, // internal flag for this loop
+                // ONLY set if they are Auto or empty
+                numRisers: (s.numRisers === '' || !s.numRisers) ? String(geo.risers) : s.numRisers,
+                slope:     (s.slope === '' || !s.slope) ? String(geo.slope) : s.slope,
+                angle:     (s.angle === '' || !s.angle) ? String(geo.angle) : s.angle,
+              };
+           }
+        });
+
+        // Remove temp flags
+        next.forEach(s => delete s._processedGeometric);
+
+        // Stair flight results (stringer + pan plate + labor)
+        flightResults.forEach(({ si, result }) => {
+          if (!result) return;
+          next[si] = {
+            ...next[si],
+            // Geometry (read-only display fields)
+            calcSlopeIn:   result.geometry?.stepSlopeIn,
+            calcAngleDeg:  result.geometry?.angleDeg,
+            // Stringer
+            calcStringerLF:    result.stringer?.totalLF,
+            calcStringerSteel: result.stringer?.burdenedWeightLbs,
+            // Pan plate
+            calcPanArea:   result.panPlate?.areaSqFt,
+            calcPanSteel:  result.panPlate?.burdenedWeightLbs,
+            // Labor
+            calcShopHrs:   result.labor?.totalShopHrs,
+            calcFieldHrs:  result.labor?.totalFieldHrs,
+            calcShopCost:  result.labor?.shopLaborCost,
+            calcFieldCost: result.labor?.fieldLaborCost,
+            // Totals
+            calcTotalSteel:    result.summary?.totalSteelLbs,
+            calcSubtotal:      result.summary?.subtotal,
+            calcTax:           result.summary?.taxAmount,
+            calcTotalCost:     result.summary?.totalEstimatedCost,
+            // Full result for summary panel
+            flightCalcResult: result,
+          };
+        });
+
+        return next;
+      });
+
+      // Update global totals with generic calc result
+      if (genericResult) setEstimationResult(genericResult);
+
+    }, 400);
+  }, []);
+
+  // Trigger live calc whenever stairs change, but NOT when we wrote calc results ourselves
+  useEffect(() => {
+    if (isUpdatingFromCalc.current) {
+      isUpdatingFromCalc.current = false;
+      return;
+    }
+    if (stairs.length === 0) return;
+    triggerLiveCalc(stairs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stairs]);
+
+
+  const openTemplateModal = () => {
+
     const nextNum = stairs.length > 0 
       ? Math.max(...stairs.map(s => {
           const m = s.label.match(/\d+/);
           return m ? parseInt(m[0]) : 0;
         })) + 1 
       : 1;
+    setTemplateModal({
+      isOpen: true,
+      nextLabel: `Stair ${nextNum}`
+    });
+  };
+
+  const applyTemplateDefaults = (template) => {
+    // Lightweight geometry defaults per template. These act as sensible starting points
+    // and can be edited by the engineer in the main form.
+    switch (template) {
+      case 'commercial':
+        return {
+          stairCategory: 'Commercial',
+          stairType: 'pan-concrete',
+          stairWidth: '4.0',
+          run: '11.0',
+          rise: '7.0'
+        };
+      case 'industrial':
+        return {
+          stairCategory: 'Industrial',
+          stairType: 'grating-tread',
+          stairWidth: '3.0',
+          run: '10.0',
+          rise: '7.5'
+        };
+      default:
+        return {
+          stairCategory: 'Commercial',
+          stairType: 'pan-concrete'
+        };
+    }
+  };
+
+  const addStair = (template = 'custom') => {
+    const nextNum = stairs.length > 0 
+      ? Math.max(...stairs.map(s => {
+          const m = s.label.match(/\d+/);
+          return m ? parseInt(m[0]) : 0;
+        })) + 1 
+      : 1;
+
+    const templateDefaults = applyTemplateDefaults(template);
+
     setStairs(s => [
       ...s,
       { 
         id: makeId(), 
         label: `Stair ${nextNum}`, 
-        stairType: '', 
+        stairType: templateDefaults.stairType || '', 
         drawingRef: '',
         flights: [],
         landings: [],
         rails: [],
-        history: { lastDeleted: null }
+        history: { lastDeleted: null },
+        template,
+        ...templateDefaults
       }
     ]);
   };
@@ -473,6 +904,22 @@ export default function StairEstimation() {
 
   // Summary stats
   const totalStairs = stairs.length;
+  const totalGuardRails = stairs.reduce(
+    (sum, s) => sum + (s.rails?.filter(r => r.type === 'guardRail').length || 0),
+    0
+  );
+  const totalLandings = stairs.reduce(
+    (sum, s) => sum + (s.landings?.length || 0),
+    0
+  );
+  const totalRails = stairs.reduce(
+    (sum, s) => sum + (s.rails?.length || 0),
+    0
+  );
+
+  // Use estimation result for weight/cost if available
+  const estimatedSteelWeight = estimationResult?.totalSteel ?? stairs.reduce((sum, s) => sum + (s.estimatedSteelWeight || 0), 0);
+  const estimatedCost = estimationResult?.totalEstimatedCost ?? stairs.reduce((sum, s) => sum + (s.estimatedCost || 0), 0);
 
   return (
     <div className="fade-in">
@@ -485,7 +932,23 @@ export default function StairEstimation() {
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <span className="info-chip chip-blue">📐 {totalStairs} Stair{totalStairs !== 1 ? 's' : ''}</span>
-            <button className="header-btn header-btn-primary" id="btn-add-stair" onClick={addStair}>
+            <button
+              className="header-btn header-btn-outline"
+              id="btn-calculate"
+              onClick={calculateEstimation}
+              disabled={calculating}
+            >
+              {calculating ? '⏳ Calculating...' : '🔢 Calculate'}
+            </button>
+            <button
+              className="header-btn header-btn-accent"
+              id="btn-save-changes"
+              onClick={saveChanges}
+              disabled={saving}
+            >
+              {saving ? '⏳ Saving...' : '💾 Save Changes'}
+            </button>
+            <button className="header-btn header-btn-primary" id="btn-add-stair" onClick={openTemplateModal}>
               + Add Stair
             </button>
           </div>
@@ -515,47 +978,83 @@ export default function StairEstimation() {
       )}
 
       {/* Summary Row */}
-      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '32px', gap: '20px' }}>
+      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', marginBottom: '24px', gap: '12px' }}>
         {[
-          { icon: '🪜', label: 'Stairs',   value: stairs.length, color: 'hsl(220, 90%, 50%)' },
-          { icon: '🛡', label: 'Guard Rails', value: 0, color: 'hsl(0, 84%, 60%)' },
-          { icon: '🏗', label: 'Landings',  value: 0, color: 'hsl(160, 84%, 39%)' },
-          { icon: '🔧', label: 'Rails Total', value: 0, color: 'hsl(35, 100%, 55%)' },
+          { icon: '🪜', label: 'Stairs', value: totalStairs, color: 'hsl(220, 90%, 50%)' },
+          { icon: '🛡', label: 'Guard Rails', value: totalGuardRails, color: 'hsl(258, 90%, 60%)' },
+          { icon: '🏗', label: 'Landings', value: totalLandings, color: 'hsl(160, 84%, 39%)' },
+          { icon: '🔧', label: 'Total Rails', value: totalRails, color: 'hsl(35, 100%, 55%)' },
+          { icon: '⚖️', label: 'Weight', value: estimatedSteelWeight > 0 ? `${estimatedSteelWeight.toFixed(1)} lb` : '—', color: 'hsl(210, 70%, 40%)' },
+          { icon: '💲', label: 'Cost', value: estimatedCost > 0 ? `$${estimatedCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '$0', color: 'hsl(142, 76%, 36%)' },
         ].map((s, idx) => (
           <motion.div 
             key={s.label} 
             className="stat-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }}
-            style={{ borderLeft: `4px solid ${s.color}` }}
+            transition={{ delay: idx * 0.05 }}
+            whileHover={{ y: -2, boxShadow: 'var(--shadow-md)' }}
+            style={{ 
+              borderLeft: `3px solid ${s.color}`,
+              padding: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }}
           >
-            <div className="stat-card-icon" style={{ background: `${s.color}15`, padding: '8px', borderRadius: '8px', width: 'fit-content' }}>{s.icon}</div>
-            <div className="stat-card-label" style={{ fontWeight: 600 }}>{s.label}</div>
-            <div className="stat-card-value" style={{ color: s.color }}>{s.value}</div>
+            <div className="stat-card-icon" style={{ background: `${s.color}10`, padding: '6px', borderRadius: '8px', width: 'fit-content', fontSize: '16px' }}>{s.icon}</div>
+            <div className="stat-card-label" style={{ fontWeight: 600, fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
+            <div className="stat-card-value" style={{ color: s.color, fontSize: '16px', fontWeight: 800 }}>{s.value}</div>
           </motion.div>
         ))}
       </div>
 
+      {/* Quick Navigation for large projects */}
+      {stairs.length > 1 && (
+        <div className="eng-card" style={{ marginBottom: '24px' }}>
+          <div className="flex items-center justify-between mb-2" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <div className="text-sm font-semibold text-gray-800">Quick Navigation</div>
+            <div className="text-xs text-gray-500">Jump to a stair or rail section</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {stairs.map(stair => (
+              <button
+                key={stair.id}
+                type="button"
+                className="chip-outline"
+                onClick={() => {
+                  const el = document.getElementById(`stair-${stair.id}`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+              >
+                {stair.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Stair Sections */}
       {stairs.map(stair => (
-        <StairItem
-          key={stair.id}
-          stair={stair}
-          history={stair.history}
-          onDeleteStair={() => deleteStair(stair.id)}
-          onDuplicateStair={() => duplicateStair(stair.id)}
-          onUpdateStair={changes => updateStair(stair.id, changes)}
-          onAddFlight={() => addSubItem(stair.id, 'flight')}
-          onCopyLastFlight={() => copyLastFlight(stair.id)}
-          onAddLanding={() => addSubItem(stair.id, 'landing')}
-          onAddRail={(type) => addSubItem(stair.id, 'rail', { type })}
-          onUpdateSubItem={(type, id, data) => updateSubItem(stair.id, type, id, data)}
-          onDuplicateSubItem={(type, id) => duplicateSubItem(stair.id, type, id)}
-          onDeleteSubItem={(type, id) => deleteSubItem(stair.id, type, id)}
-          onUndoDeleteSubItem={(type) => undoDeleteSubItem(stair.id, type)}
-        />
+        <div key={stair.id} id={`stair-${stair.id}`}>
+          <StairItem
+            stair={stair}
+            history={stair.history}
+            onDeleteStair={() => deleteStair(stair.id)}
+            onDuplicateStair={() => duplicateStair(stair.id)}
+            onUpdateStair={changes => updateStair(stair.id, changes)}
+            onAddFlight={() => addSubItem(stair.id, 'flight')}
+            onCopyLastFlight={() => copyLastFlight(stair.id)}
+            onAddLanding={() => addSubItem(stair.id, 'landing')}
+            onAddRail={(type) => addSubItem(stair.id, 'rail', { type })}
+            onUpdateSubItem={(type, id, data) => updateSubItem(stair.id, type, id, data)}
+            onDuplicateSubItem={(type, id) => duplicateSubItem(stair.id, type, id)}
+            onDeleteSubItem={(type, id) => deleteSubItem(stair.id, type, id)}
+            onUndoDeleteSubItem={(type) => undoDeleteSubItem(stair.id, type)}
+          />
+        </div>
       ))}
 
       {stairs.length === 0 && (
@@ -564,7 +1063,7 @@ export default function StairEstimation() {
             <div className="empty-state-icon">🪜</div>
             <div className="empty-state-title">No Stairs Added</div>
             <div className="empty-state-sub">Click "+ Add Stair" to begin configuring your stair estimate.</div>
-            <button className="header-btn header-btn-primary" style={{ marginTop: '16px', display: 'inline-flex' }} onClick={addStair}>
+            <button className="header-btn header-btn-primary" style={{ marginTop: '16px', display: 'inline-flex' }} onClick={openTemplateModal}>
               + Add First Stair
             </button>
           </div>
@@ -574,9 +1073,68 @@ export default function StairEstimation() {
       {/* Bottom Add Row */}
       {stairs.length > 0 && (
         <div className="add-section-row" style={{ marginTop: '20px' }}>
-          <button className="add-btn" style={{ fontSize: '13px', padding: '10px 18px' }} onClick={addStair} id="add-stair-bottom">
+          <button className="add-btn" style={{ fontSize: '13px', padding: '10px 18px' }} onClick={openTemplateModal} id="add-stair-bottom">
             + Add Another Stair
           </button>
+        </div>
+      )}
+
+      {/* Stair Template Modal */}
+      {templateModal.isOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-panel">
+            <div className="modal-header">
+              <h2 className="modal-title">Select Stair Template</h2>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setTemplateModal(prev => ({ ...prev, isOpen: false }))}
+              >
+                ✕
+              </button>
+            </div>
+            <p className="modal-subtitle">
+              Choose a starting template for <strong>{templateModal.nextLabel}</strong>. All values can be refined after creation.
+            </p>
+            <div className="template-grid">
+              <button
+                type="button"
+                className="template-card"
+                onClick={() => {
+                  addStair('commercial');
+                  setTemplateModal(prev => ({ ...prev, isOpen: false }));
+                }}
+              >
+                <div className="template-icon">🏢</div>
+                <div className="template-title">Commercial Stair</div>
+                <div className="template-body">Standard width, pan concrete treads, office / public use.</div>
+              </button>
+              <button
+                type="button"
+                className="template-card"
+                onClick={() => {
+                  addStair('industrial');
+                  setTemplateModal(prev => ({ ...prev, isOpen: false }));
+                }}
+              >
+                <div className="template-icon">🏭</div>
+                <div className="template-title">Industrial Stair</div>
+                <div className="template-body">Grating treads, heavier duty geometry for plants.</div>
+              </button>
+              <button
+                type="button"
+                className="template-card"
+                onClick={() => {
+                  addStair('custom');
+                  setTemplateModal(prev => ({ ...prev, isOpen: false }));
+                }}
+              >
+                <div className="template-icon">✏️</div>
+                <div className="template-title">Custom Stair</div>
+                <div className="template-body">Start with a minimal configuration and define everything.</div>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -121,7 +121,7 @@ export default function ProjectHistory() {
                 </thead>
                 <tbody>
                   {filteredProjects.map(project => (
-                    <tr key={project._id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={project.id} className="hover:bg-slate-50 transition-colors">
                       <td>
                         <div style={{ fontWeight: 600, color: 'var(--color-primary-700)' }}>{project.projectName}</div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
@@ -160,7 +160,7 @@ export default function ProjectHistory() {
                             <ExternalLink className="w-3 h-3 mr-1" /> Open
                           </button>
                           <button 
-                            onClick={() => navigate('/reports', { state: { projectId: project._id } })}
+                            onClick={() => navigate('/reports', { state: { projectId: project.id } })}
                             className="header-btn header-btn-outline" 
                             style={{ padding: '4px 10px', fontSize: '11px' }}
                           >

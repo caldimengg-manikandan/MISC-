@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../config/api';
 
 const initialData = {
@@ -8,6 +9,7 @@ const initialData = {
 };
 
 export default function ProjectInfo() {
+  const navigate = useNavigate();
   const [form, setForm] = useState(() => {
     const saved = localStorage.getItem('steelProjectInfo');
     return saved ? JSON.parse(saved) : initialData;
@@ -42,10 +44,12 @@ export default function ProjectInfo() {
     fetchProjects();
   }, []);
 
-  // Auto-save form changes to localStorage
+  // Auto-save form changes to localStorage (include selectedId so other pages can load project data)
   useEffect(() => {
-    localStorage.setItem('steelProjectInfo', JSON.stringify(form));
-  }, [form]);
+    localStorage.setItem('steelProjectInfo', JSON.stringify(
+      selectedId ? { ...form, id: selectedId } : form
+    ));
+  }, [form, selectedId]);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
 
@@ -62,14 +66,18 @@ export default function ProjectInfo() {
         },
         body: JSON.stringify({
           ...form,
-          _id: selectedId // Include ID if we are editing an existing project
+          id: selectedId // Include ID if we are editing an existing project
         })
       });
 
       const data = await res.json();
       if (data.success) {
         setSaved(true);
-        if (data.projectId) setSelectedId(data.projectId);
+        if (data.projectId) {
+          setSelectedId(data.projectId);
+          // Update localStorage with the project id
+          localStorage.setItem('steelProjectInfo', JSON.stringify({ ...form, id: data.projectId }));
+        }
         setTimeout(() => setSaved(false), 3000);
       }
     } catch (e) {
@@ -78,12 +86,13 @@ export default function ProjectInfo() {
   };
 
   const handleLoadProject = (e) => {
-    const projId = typeof e === 'string' ? e : e.target.value;
+    if (!e) return;
+    const projId = typeof e === 'string' ? e : (e.target ? e.target.value : null);
     if (!projId) return;
 
-    const proj = dbProjects.find(p => p._id === projId);
+    const proj = dbProjects.find(p => p.id === projId);
     if (proj) {
-      setSelectedId(proj._id);
+      setSelectedId(proj.id);
       const updatedForm = {
         customerName: proj.customerName || '',
         projectName: proj.projectName || '',
@@ -99,7 +108,8 @@ export default function ProjectInfo() {
         notes: proj.notes || ''
       };
       setForm(updatedForm);
-      localStorage.setItem('steelProjectInfo', JSON.stringify(updatedForm));
+      // Persist with the project id so other pages can load stair data
+      localStorage.setItem('steelProjectInfo', JSON.stringify({ ...updatedForm, id: proj.id }));
     }
   };
 
@@ -156,8 +166,8 @@ export default function ProjectInfo() {
                     }}>
                       {filteredDBProjects.map(p => (
                         <div 
-                          key={p._id} 
-                          onClick={() => { handleLoadProject(p._id); setSearchQuery(''); }}
+                          key={p.id} 
+                          onClick={() => { handleLoadProject(p.id); setSearchQuery(''); }}
                           style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
                           className="hover:bg-slate-50 transition-colors"
                         >
@@ -178,7 +188,7 @@ export default function ProjectInfo() {
                   >
                     <option value="" disabled>☁ Select project...</option>
                     {dbProjects.map(p => (
-                      <option key={p._id} value={p._id}>
+                      <option key={p.id} value={p.id}>
                         {p.projectName}
                       </option>
                     ))}
@@ -350,7 +360,7 @@ export default function ProjectInfo() {
         {form.projectName && (
           <div className="eng-card fade-in" style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}>
             <div className="eng-card-body">
-              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Project</div>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-primary-700)' }}>{form.projectName}</div>
@@ -370,6 +380,16 @@ export default function ProjectInfo() {
                   <div style={{ fontSize: '15px', fontWeight: 700, color: form.aiscCertified === 'Yes' ? 'var(--color-success)' : 'var(--color-error)' }}>
                     {form.aiscCertified}
                   </div>
+                </div>
+                
+                <div style={{ marginLeft: 'auto' }}>
+                  <button 
+                    onClick={() => navigate('/estimate/stair-railings')}
+                    className="header-btn header-btn-primary"
+                    style={{ padding: '8px 16px', fontSize: '13px' }}
+                  >
+                    🚀 Open Project Estimation
+                  </button>
                 </div>
               </div>
             </div>

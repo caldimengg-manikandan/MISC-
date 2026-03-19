@@ -1,8 +1,8 @@
-// src/components/estimation/GuardRailEstimation.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Save, Calculator, Plus, Trash2, RefreshCw, ChevronDown, Upload, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import RailDropdown from './RailDropdown';
+import { calculateFull, debounce } from '../../services/estimationService';
 
 const GuardRailEstimation = () => {
   const [guardRailData, setGuardRailData] = useState({
@@ -127,18 +127,57 @@ const GuardRailEstimation = () => {
     setCategorizedRails(fallbackData);
   };
 
-  const calculateRailEstimation = (rail) => {
-    const steelWeight = rail.length * rail.steelPerLF;
-    const steelWithScrap = steelWeight * 1.10;
-    const shopHours = rail.length * rail.shopMHPerLF;
-    const fieldHours = rail.length * rail.fieldMHPerLF;
+  // ── API-based Calculation (NO FRONTEND MATH) ────────────────────────────
+  // Sends rails payload to backend, receives Excel-matched results
+  const callCalcAPI = useCallback(async (rails) => {
+    if (!rails || rails.every(r => !r.length || r.length === 0)) return;
 
-    return {
-      steelWithScrap: parseFloat(steelWithScrap.toFixed(3)),
-      shopHours: parseFloat(shopHours.toFixed(3)),
-      fieldHours: parseFloat(fieldHours.toFixed(3))
+    const payload = {
+      rails: rails
+        .filter(r => r.rail_type_id && r.length > 0)
+        .map(r => ({
+          rail_type_id: r.rail_type_id,
+          length: parseFloat(r.length) || 0,
+          spacing: parseFloat(r.spacing || guardRailData.details.maxPostSpacing) || 0,
+        })),
+      platforms: [],
+      stringers: [],
+      pricing_map: {},
+      labor_rates: {},
+      finish_rate_per_lb: 0,
     };
-  };
+
+    const result = await calculateFull(payload);
+    if (result.success) {
+      setCalculations({
+        totalLF: result.breakdown?.rail?.items?.reduce((s, i) => s + (i.length || 0), 0) || 0,
+        totalSteelWithScrap: result.totalSteel || 0,
+        totalShopHours: result.breakdown?.rail?.shopLabor || 0,
+        totalFieldHours: result.breakdown?.rail?.fieldLabor || 0,
+        totalCost: result.totalEstimatedCost || 0,
+        subtotal: result.subtotal || 0,
+        tax: result.tax || 0,
+      });
+
+      // Update per-row results from breakdown
+      if (result.breakdown?.rail?.items) {
+        setGuardRailData(prev => ({
+          ...prev,
+          guardRails: prev.guardRails.map((rail, idx) => {
+            const apiItem = result.breakdown.rail.items[idx];
+            if (!apiItem) return rail;
+            return {
+              ...rail,
+              steelWithScrap: apiItem.steelWeight ?? 0,
+              shopHours: apiItem.shopLabor ?? 0,
+              fieldHours: apiItem.fieldLabor ?? 0,
+              postQty: apiItem.postQty ?? 0,
+            };
+          })
+        }));
+      }
+    }
+  }, [guardRailData.details.maxPostSpacing]);
 
   const handleGuardRailChange = (railId, field, value) => {
     setGuardRailData(prev => {
@@ -147,30 +186,20 @@ const GuardRailEstimation = () => {
 
         if (field === 'type') {
           const selectedRail = categorizedRails.guardRail.find(r => r.id === value);
-          
-          const updatedRail = {
+          return {
             ...rail,
             type: value,
+            rail_type_id: value,          // sends to API
             steelPerLF: selectedRail?.steelLbsPerLF || 0,
             shopMHPerLF: selectedRail?.shopMHPerLF || 0,
-            fieldMHPerLF: selectedRail?.fieldMHPerLF || 0
+            fieldMHPerLF: selectedRail?.fieldMHPerLF || 0,
           };
-
-          const estimation = calculateRailEstimation(updatedRail);
-          return { ...updatedRail, ...estimation };
-        } else {
-          const updatedRail = { ...rail, [field]: value };
-          
-          if (field === 'length' || field === 'steelPerLF' || 
-              field === 'shopMHPerLF' || field === 'fieldMHPerLF') {
-            const estimation = calculateRailEstimation(updatedRail);
-            return { ...updatedRail, ...estimation };
-          }
-          
-          return updatedRail;
         }
+        return { ...rail, [field]: value };
       });
 
+      // Trigger debounced API calculation on next tick
+      debouncedRecalc(updatedRails);
       return { ...prev, guardRails: updatedRails };
     });
   };
@@ -225,33 +254,13 @@ const GuardRailEstimation = () => {
     }));
   };
 
-  const calculateGuardRailTotals = () => {
-    let totalLF = 0;
-    let totalSteelWithScrap = 0;
-    let totalShopHours = 0;
-    let totalFieldHours = 0;
+  // Debounced API recalculation reference
+  const debouncedRecalc = useRef(debounce(callCalcAPI, 400)).current;
 
-    guardRailData.guardRails.forEach(rail => {
-      totalLF += rail.length || 0;
-      totalSteelWithScrap += rail.steelWithScrap || 0;
-      totalShopHours += rail.shopHours || 0;
-      totalFieldHours += rail.fieldHours || 0;
-    });
-
-    const steelCostPerLB = 2.00;
-    const totalCost = totalSteelWithScrap * steelCostPerLB;
-
-    setCalculations({
-      totalLF: parseFloat(totalLF.toFixed(3)),
-      totalSteelWithScrap: parseFloat(totalSteelWithScrap.toFixed(3)),
-      totalShopHours: parseFloat(totalShopHours.toFixed(3)),
-      totalFieldHours: parseFloat(totalFieldHours.toFixed(3)),
-      totalCost: parseFloat(totalCost.toFixed(2))
-    });
-  };
-
+  // Recalculate whenever guard rails change
   useEffect(() => {
-    calculateGuardRailTotals();
+    debouncedRecalc(guardRailData.guardRails);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guardRailData.guardRails]);
 
   const handleSubmit = async () => {

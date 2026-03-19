@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { upload, scanFile } = require('../middleware/upload');
 const excelService = require('../services/excelService');
-const Price = require('../models/Price');
+const db = require('../config/mssql');
 const logger = require('../utils/logger');
 
 // Upload Excel file with prices
@@ -16,7 +16,7 @@ router.post('/upload', upload.single('excelFile'), scanFile, async (req, res) =>
     }
     
     // Process Excel file securely
-    const result = await excelService.processExcelFile(req.file.path, req.user._id);
+    const result = await excelService.processExcelFile(req.file.path, req.userId);
     
     // Save prices to database
     const savedPrices = [];
@@ -24,25 +24,30 @@ router.post('/upload', upload.single('excelFile'), scanFile, async (req, res) =>
     
     for (const [type, data] of Object.entries(result.data)) {
       try {
-        const price = await Price.findOneAndUpdate(
-          { 
-            type: type,
-            company: req.user.company 
-          },
-          {
-            ...data,
-            company: req.user.company,
-            uploadedBy: req.user._id,
-            sourceFile: req.file.originalname
-          },
-          { 
-            new: true, 
-            upsert: true,
-            runValidators: true 
-          }
-        );
+        const typeKey = type.toLowerCase().trim();
+        const company = req.user.company;
         
-        savedPrices.push(price.type);
+        // Check if exists
+        const [existing] = await db.query(
+          'SELECT id FROM pricing WHERE type = ? AND company = ?',
+          [typeKey, company]
+        );
+
+        if (existing.length > 0) {
+          // Update
+          await db.query(
+            'UPDATE pricing SET steelPerLF = ?, shopMHPerLF = ?, fieldMHPerLF = ?, description = ?, sourceFile = ?, lastUpdated = GETDATE(), uploadedBy = ? WHERE type = ? AND company = ?',
+            [data.steelPerLF, data.shopMHPerLF, data.fieldMHPerLF, data.description || '', req.file.originalname, req.userId, typeKey, company]
+          );
+        } else {
+          // Insert
+          await db.query(
+            'INSERT INTO pricing (type, description, steelPerLF, shopMHPerLF, fieldMHPerLF, company, uploadedBy, sourceFile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [typeKey, data.description || '', data.steelPerLF, data.shopMHPerLF, data.fieldMHPerLF, company, req.userId, req.file.originalname]
+          );
+        }
+        
+        savedPrices.push(typeKey);
       } catch (error) {
         errors.push({
           type,
@@ -66,7 +71,7 @@ router.post('/upload', upload.single('excelFile'), scanFile, async (req, res) =>
     
     // Log successful import
     logger.info('Excel import completed', {
-      userId: req.user._id,
+      userId: req.userId,
       company: req.user.company,
       file: req.file.originalname,
       savedCount: savedPrices.length,
@@ -76,13 +81,13 @@ router.post('/upload', upload.single('excelFile'), scanFile, async (req, res) =>
   } catch (error) {
     logger.error('Excel import failed', {
       error: error.message,
-      userId: req.user._id,
+      userId: req.userId,
       filename: req.file?.originalname
     });
     
     // Clean up file if it exists
     if (req.file?.path) {
-      require('fs').unlinkSync(req.file.path);
+      try { require('fs').unlinkSync(req.file.path); } catch (e) {}
     }
     
     res.status(500).json({
@@ -111,13 +116,12 @@ router.get('/template', (req, res) => {
     
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=steel_prices_template.csv');
-    
     res.send(csvContent);
     
   } catch (error) {
     logger.error('Template download failed', {
       error: error.message,
-      userId: req.user._id
+      userId: req.userId
     });
     
     res.status(500).json({

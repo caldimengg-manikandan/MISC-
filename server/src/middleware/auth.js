@@ -1,6 +1,5 @@
-// server/middleware/auth.js
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const db = require('../config/mssql');
 
 module.exports = async (req, res, next) => {
   try {
@@ -15,20 +14,21 @@ module.exports = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch user from DB
-    const user = await User.findById(decoded.userId);
+    // Fetch user from MySQL
+    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [decoded.userId]);
+    const user = rows[0];
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    // Attach user to request
-    req.user = user;
-    req.userId = user._id;
+    // Attach user to request (removing sensitive fields)
+    const { password, ...userWithoutPassword } = user;
+    req.user = userWithoutPassword;
+    req.userId = user.id;
     req.userRole = user.role;
 
-    // ✅ NOW it is safe to log
-    console.log('AUTH USER:', req.user.email, req.user.role);
+    // console.log('AUTH USER:', req.user.email, req.user.role);
 
     next();
   } catch (error) {

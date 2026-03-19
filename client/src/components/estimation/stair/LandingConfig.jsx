@@ -74,9 +74,12 @@ export default function LandingConfig({ data, onChange }) {
     if (onChange) onChange(updated);
   };
 
-  const area = (form.platformLength && form.platformWidth)
-    ? (parseFloat(form.platformLength) * parseFloat(form.platformWidth)).toFixed(2)
-    : null;
+  // Area and labor MUST come from backend — never computed in frontend.
+  // Parent passes backend results via data.calcArea, data.calcSteel, etc.
+  const calcArea      = data?.calcArea      ?? null;
+  const calcSteel     = data?.calcSteel     ?? null;
+  const calcShop      = data?.calcShop      ?? null;
+  const calcField     = data?.calcField     ?? null;
 
   return (
     <div>
@@ -118,13 +121,16 @@ export default function LandingConfig({ data, onChange }) {
           </div>
         </div>
         <div className="form-field">
-          <label className="form-label">Area (sq.ft)</label>
-          <div className="computed-field data-type-float" style={{ borderLeftWidth: '4px', height: '36px', opacity: area ? 1 : 0.5 }}>
-            <div className="computed-value" style={{ fontSize: '14px', fontWeight: '700' }}>{area || '0.00'}</div>
+          <label className="form-label">Area (sq.ft) <span style={{ fontSize: '10px', color: 'var(--color-primary-500)', fontWeight: 600 }}>← Backend</span></label>
+          <div className="computed-field data-type-float" style={{ borderLeftWidth: '4px', height: '36px', opacity: calcArea !== null ? 1 : 0.45 }}>
+            <div className="computed-value" style={{ fontSize: '14px', fontWeight: '700' }}>
+              {calcArea !== null ? calcArea : '—'}
+            </div>
             <span className="computed-unit">ft²</span>
           </div>
         </div>
       </div>
+
 
       <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div className="form-field">
@@ -166,6 +172,34 @@ export default function LandingConfig({ data, onChange }) {
           </select>
         </div>
       </div>
+
+      {/* ── Backend Computed Results (Read-Only) ────────────────────── */}
+      {(calcSteel !== null || calcShop !== null || calcField !== null) && (
+        <div style={{
+          marginTop: '16px',
+          padding: '12px 16px',
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          borderRadius: '8px',
+          border: '1px solid #bae6fd',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '12px'
+        }}>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Steel Weight</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0c4a6e', fontVariantNumeric: 'tabular-nums' }}>{calcSteel ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>lb</span></div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Shop Labor</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0c4a6e', fontVariantNumeric: 'tabular-nums' }}>{calcShop ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>hrs</span></div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Field Labor</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0c4a6e', fontVariantNumeric: 'tabular-nums' }}>{calcField ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>hrs</span></div>
+          </div>
+        </div>
+      )}
+
       <QuickManageModal 
         isOpen={quickModal.isOpen}
         onClose={() => setQuickModal({ ...quickModal, isOpen: false })}
@@ -174,6 +208,7 @@ export default function LandingConfig({ data, onChange }) {
         onUpdate={load}
         triggerRect={quickModal.rect}
       />
+
 
       <style jsx>{`
         .quick-edit-btn {

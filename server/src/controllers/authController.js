@@ -1,12 +1,11 @@
-// server/src/controllers/authController.js
-const User = require('../models/User');
+const db = require('../config/mssql');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const generateToken = (user) => {
   return jwt.sign(
     {
-      userId: user._id,
+      userId: user.id,
       role: user.role,
       email: user.email
     },
@@ -14,7 +13,6 @@ const generateToken = (user) => {
     { expiresIn: '7d' }
   );
 };
-
 
 const register = async (req, res) => {
   try {
@@ -27,56 +25,40 @@ const register = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+    if (existing.length > 0) {
       return res.status(400).json({
         success: false,
         error: 'Email already registered'
       });
     }
 
-    // 🔹 TRIAL SETUP (CRITICAL)
+    const hashedPassword = await bcrypt.hash(password, 12);
     const trialStart = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 30);
 
-    const user = new User({
-      email: email.toLowerCase(),
-      password,
-      company,
-      phone: phone || '',
-
-      // ✅ required trial fields
-      isPaid: false,
-      plan: 'trial',
-      trialStart,
-      trialEnd,
-      usageCount: 0
-    });
-
-    await user.save();
-
-    const token = generateToken(user);
-
-
-    const daysRemaining = Math.ceil(
-      (user.trialEnd - Date.now()) / (1000 * 60 * 60 * 24)
+    const [rows] = await db.query(
+      'INSERT INTO users (email, [password], company, phone, [role], [plan], isPaid, trialStart, trialEnd) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [email.toLowerCase(), hashedPassword, company, phone || '', 'user', 'trial', 0, trialStart, trialEnd]
     );
+
+    const userId = rows[0].id;
+    const token = generateToken({ id: userId, email, role: 'user' });
 
     res.status(201).json({
       success: true,
       message: 'Account created successfully! 30-day free trial started.',
-     user: {
-  id: user._id,
-  email: user.email,
-  company: user.company,
-  role: user.role,          // ✅ ADD THIS
-  trialStart: user.trialStart,
-  trialEnd: user.trialEnd,
-  isPaid: user.isPaid,
-  daysRemaining
-},
-
+      user: {
+        id: userId,
+        email: email.toLowerCase(),
+        company,
+        role: 'user',
+        trialStart,
+        trialEnd,
+        isPaid: false,
+        daysRemaining: 30
+      },
       token
     });
 
@@ -92,131 +74,85 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Login attempt for:', email, 'Password length:', password?.length);
-    // Validate input
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required'
-      });
+      return res.status(400).json({ success: false, error: 'Email and password are required' });
     }
 
-    // Find user
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+    const user = rows[0];
+
     if (!user) {
-      console.log(`Login failed: User ${email} not found`);
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password'
-      });
+      return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    // ⚡ AUTO-FIX: Ensure admin@steel.com is always owner
-    if (user.email === 'admin@steel.com' && user.role !== 'owner') {
-      console.log('⚡ Auto-fixing admin role for admin@steel.com');
-      user.role = 'owner';
-      await user.save();
-    }
-
-    // Check password
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log(`Login failed: Password mismatch for ${email}`);
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password'
-      });
+      return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    await db.query('UPDATE users SET lastLogin = GETDATE() WHERE id = ?', [user.id]);
 
-    // Generate token
     const token = generateToken(user);
-
-
-    // Calculate days remaining
-    const daysRemaining = Math.ceil((user.trialEnd - Date.now()) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / (1000 * 60 * 60 * 24)));
 
     res.json({
       success: true,
-      message: 'Login successful',
       user: {
-  id: user._id,
-  email: user.email,
-  company: user.company,
-  phone: user.phone,
-  role: user.role,         
-  plan: user.plan,
-  isPaid: user.isPaid,
-  trialStart: user.trialStart,
-  trialEnd: user.trialEnd,
-  usageCount: user.usageCount,
-  daysRemaining: daysRemaining > 0 ? daysRemaining : 0
-},
+        id: user.id,
+        email: user.email,
+        company: user.company,
+        phone: user.phone,
+        role: user.role,
+        plan: user.plan,
+        isPaid: !!user.isPaid,
+        trialStart: user.trialStart,
+        trialEnd: user.trialEnd,
+        usageCount: user.usageCount,
+        daysRemaining
+      },
       token
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Login failed. Please try again.'
-    });
+    res.status(500).json({ success: false, error: 'Login failed' });
   }
 };
 
 const checkTrialStatus = async (req, res) => {
   try {
     const user = req.user;
+    const trialEnd = new Date(user.trialEnd);
     const now = new Date();
-
-    const daysRemaining = Math.ceil((user.trialEnd - now) / (1000 * 60 * 60 * 24));
-    const daysUsed = 30 - daysRemaining;
+    const daysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)));
 
     res.json({
       success: true,
       trialStart: user.trialStart,
       trialEnd: user.trialEnd,
-      daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
-      daysUsed,
-      isActive: now <= user.trialEnd,
-      isPaid: user.isPaid,
+      daysRemaining,
+      isActive: now <= trialEnd,
+      isPaid: !!user.isPaid,
       usageCount: user.usageCount
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to check trial status'
-    });
+    res.status(500).json({ success: false, error: 'Failed to check trial status' });
   }
 };
 
 const verify = async (req, res) => {
   try {
-    const user = req.user; // Set by auth middleware
-    const daysRemaining = Math.ceil((user.trialEnd - Date.now()) / (1000 * 60 * 60 * 24));
+    const user = req.user;
+    const daysRemaining = Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / (1000 * 60 * 60 * 24)));
     
     res.json({
       success: true,
       user: {
-        id: user._id,
-        email: user.email,
-        company: user.company,
-        phone: user.phone,
-        role: user.role,
-        plan: user.plan,
-        isPaid: user.isPaid,
-        trialStart: user.trialStart,
-        trialEnd: user.trialEnd,
-        usageCount: user.usageCount,
-        daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
-        isTrialActive: user.isTrialActive, // Ensure these fields exist
-        subscriptionStatus: user.subscriptionStatus
+        ...user,
+        daysRemaining
       }
     });
   } catch (error) {
-    console.error('Verify error:', error);
     res.status(500).json({ success: false, error: 'Verification failed' });
   }
 };
@@ -224,40 +160,29 @@ const verify = async (req, res) => {
 const registerOwner = async (req, res) => {
   try {
     const { email, password, company, phone } = req.body;
-
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+    if (existing.length > 0) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // Check if owner exists (optional, maybe limit to 1)
-    // const existingOwner = await User.findOne({ role: 'owner' });
-    // if (existingOwner) { ... }
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const [rows] = await db.query(
+      'INSERT INTO users (email, [password], company, phone, [role], [plan], isPaid, subscriptionStatus) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [email.toLowerCase(), hashedPassword, company, phone || '', 'owner', 'owner', 1, 'active']
+    );
 
-    const owner = new User({
-      email: email.toLowerCase(),
-      password, // Will be hashed by pre-save hook
-      company,
-      phone,
-      role: 'owner',
-      subscriptionStatus: 'active',
-      isTrialActive: false, // Owners don't have trials
-      plan: 'owner',
-      isPaid: true
-    });
-
-    await owner.save();
-    const token = generateToken(owner);
+    const userId = rows[0].id;
+    const token = generateToken({ id: userId, email, role: 'owner' });
 
     res.status(201).json({
       success: true,
       token,
       user: {
-        id: owner._id,
-        email: owner.email,
-        company: owner.company,
-        role: owner.role,
-        subscriptionStatus: owner.subscriptionStatus
+        id: userId,
+        email: email.toLowerCase(),
+        company,
+        role: 'owner',
+        subscriptionStatus: 'active'
       }
     });
   } catch (error) {
@@ -266,18 +191,13 @@ const registerOwner = async (req, res) => {
 };
 
 const ownerLogin = async (req, res) => {
-  // Owner login can be same as regular login, but maybe we want to enforce role check?
-  // reusing login logic for now but ensuring role is owner
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase() });
-    
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ? AND [role] = 'owner'", [email.toLowerCase()]);
+    const user = rows[0];
 
-    if (user.role !== 'owner') {
-      return res.status(403).json({ error: 'Access denied. Owner privileges required.' });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const token = generateToken(user);
@@ -285,7 +205,7 @@ const ownerLogin = async (req, res) => {
       success: true,
       token,
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
         role: user.role,
         company: user.company
@@ -298,31 +218,14 @@ const ownerLogin = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const updates = req.body;
+    const userId = req.userId;
+    const { company, phone } = req.body;
     
-    // Filter allowed updates
-    const allowedUpdates = ['company', 'phone', 'specialty'];
-    const actualUpdates = {};
-    
-    Object.keys(updates).forEach(key => {
-      if (allowedUpdates.includes(key)) {
-        actualUpdates[key] = updates[key];
-      }
-    });
-
-    const user = await User.findByIdAndUpdate(userId, actualUpdates, { new: true });
+    await db.query('UPDATE users SET company = ?, phone = ? WHERE id = ?', [company, phone, userId]);
     
     res.json({
       success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        company: user.company,
-        phone: user.phone,
-        role: user.role,
-        // ... include other fields as needed
-      }
+      message: 'Profile updated'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
