@@ -1,4 +1,4 @@
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 
 /**
  * StairFlightCalculationService

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 const auth = require('../middleware/auth');
 const logger = require('../utils/logger');
 
@@ -104,7 +104,7 @@ router.put('/:type', [
     if (existing.length > 0) {
       // Update
       await db.query(
-        'UPDATE pricing SET steelPerLF = ?, shopMHPerLF = ?, fieldMHPerLF = ?, description = ?, lastUpdated = GETDATE(), uploadedBy = ? WHERE type = ? AND company = ?',
+        'UPDATE pricing SET steelPerLF = ?, shopMHPerLF = ?, fieldMHPerLF = ?, description = ?, lastUpdated = NOW(), uploadedBy = ? WHERE type = ? AND company = ?',
         [steelPerLF, shopMHPerLF, fieldMHPerLF, description || '', req.userId, type, company]
       );
     } else {

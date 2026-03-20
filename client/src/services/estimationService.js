@@ -110,36 +110,6 @@ export async function calculatePlatform(platformData, options = {}) {
   };
 }
 
-// ── 3. Stair Geometry Calculation ───────────────────────────────────────────
-/**
- * Sends rise/run/height to the backend and receives:
- *   { risers, slope, angle }
- * NO math is done in the frontend.
- *
- * @param {object} stairData - { height, rise, run }
- */
-export async function calculateStairGeometry(stairData) {
-  const payload = {
-    rails: [],
-    platforms: [],
-    stringers: [],
-    stairs: [stairData],
-    pricing_map: {},
-    labor_rates: {},
-    finish_rate_per_lb: 0,
-  };
-
-  const result = await callCalculateAPI(payload);
-  const geo = result.breakdown?.stairGeometry?.[0] || {};
-
-  return {
-    success: result.success,
-    risers: geo.risers ?? 0,
-    slope: geo.slope ?? 0,
-    angle: geo.angle ?? 0,
-  };
-}
-
 // ── 4. Full Estimation (All Components) ─────────────────────────────────────
 /**
  * Sends the complete estimation payload to get J53/J54/J55 totals.
@@ -148,69 +118,4 @@ export async function calculateStairGeometry(stairData) {
  */
 export async function calculateFull(payload) {
   return callCalculateAPI(payload);
-}
-
-// ── 5. Stair Flight Full Calculation ────────────────────────────────────────
-/**
- * Maps StairConfig UI fields → backend /api/calculate/stair-flight
- * and returns the complete breakdown (geometry, stringer, pan plate, labor, cost).
- *
- * UI Field              → API Field
- * ──────────────────────────────────────────────────────────────
- * stair.stairWidth      → stairWidthFt        (already in ft)
- * stair.rise            → riseIn              (in inches)
- * stair.run             → runIn               (in inches)
- * stair.numRisers       → numRisers
- * stair.stringerSize    → stringerProfileId   (e.g. "W8x31")
- * stair.stairType       → stairType           (e.g. "pan-concrete")
- * stair.nsStringerBot   → extentBotNSIn       (in inches)
- * stair.fsStringerBot   → extentBotFSIn       (in inches)
- * stair.nsStringerTop   → extentTopNSIn       (in inches)
- * stair.fsStringerTop   → extentTopFSIn       (in inches)
- * stair.nsStringerConnBot → connectionTypeBot
- * stair.nsStringerConnTop → connectionTypeTop
- * stair.finish          → finish
- *
- * @param {object} stair      - The stair state object from the UI
- * @param {number} [estimateId] - Optional: saves row to takeoff_items
- */
-export async function calculateStairFlight(stair, estimateId = null) {
-  const toIn = (v) => parseFloat(v) || 0;    // already inches
-  const toFt = (v) => parseFloat(v) || 0;    // already feet
-
-  const payload = {
-    stairWidthFt:      toFt(stair.stairWidth),
-    riseIn:            toIn(stair.rise),
-    runIn:             toIn(stair.run),
-    numRisers:         parseInt(stair.numRisers) || 0,
-    stringerProfileId: stair.stringerSize || '',
-    stairType:         stair.stairType   || 'pan-concrete',
-    extentBotNSIn:     toIn(stair.nsStringerBot),
-    extentBotFSIn:     toIn(stair.fsStringerBot),
-    extentTopNSIn:     toIn(stair.nsStringerTop),
-    extentTopFSIn:     toIn(stair.fsStringerTop),
-    connectionTypeBot: stair.nsStringerConnBot || 'WELDED',
-    connectionTypeTop: stair.nsStringerConnTop || 'WELDED',
-    finish:            stair.finish || 'PRIMER',
-    estimateId,
-  };
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/calculate/stair-flight`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errBody = await res.json().catch(() => ({}));
-      throw new Error(errBody.message || `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.error('[estimationService] stair-flight API error:', err.message);
-    return { success: false, error: err.message };
-  }
 }

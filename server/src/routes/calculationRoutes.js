@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 const calcService = require('../services/StairCalculationService');
 const flightCalcService = require('../services/StairFlightCalculationService');
 
@@ -80,7 +80,7 @@ router.post('/stair-flight-full', async (req, res) => {
  * API Endpoint for professional estimation calculation
  * 100% EXCEL MATCH LOGIC
  */
-router.post('/calculate', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { 
       rails = [], 

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { upload, scanFile } = require('../middleware/upload');
 const excelService = require('../services/excelService');
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 const logger = require('../utils/logger');
 
 // Upload Excel file with prices
@@ -36,7 +36,7 @@ router.post('/upload', upload.single('excelFile'), scanFile, async (req, res) =>
         if (existing.length > 0) {
           // Update
           await db.query(
-            'UPDATE pricing SET steelPerLF = ?, shopMHPerLF = ?, fieldMHPerLF = ?, description = ?, sourceFile = ?, lastUpdated = GETDATE(), uploadedBy = ? WHERE type = ? AND company = ?',
+            'UPDATE pricing SET steelPerLF = ?, shopMHPerLF = ?, fieldMHPerLF = ?, description = ?, sourceFile = ?, lastUpdated = NOW(), uploadedBy = ? WHERE type = ? AND company = ?',
             [data.steelPerLF, data.shopMHPerLF, data.fieldMHPerLF, data.description || '', req.file.originalname, req.userId, typeKey, company]
           );
         } else {

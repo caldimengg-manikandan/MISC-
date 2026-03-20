@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 const auth = require('../middleware/auth');
 
 // Middleware to check if user is admin
@@ -16,7 +16,7 @@ const adminOnly = (req, res, next) => {
 router.get('/:category', async (req, res) => {
   try {
     const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order] FROM dictionary WHERE category = ? AND isActive = 1 ORDER BY [order] ASC, label ASC',
+      'SELECT id, category, label, value, description, `order` FROM dictionary WHERE category = ? AND isActive = 1 ORDER BY `order` ASC, label ASC',
       [req.params.category]
     );
     
@@ -31,7 +31,7 @@ router.get('/:category', async (req, res) => {
 router.get('/all/categories', auth, adminOnly, async (req, res) => {
   try {
     const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order], isActive FROM dictionary ORDER BY category ASC, [order] ASC',
+      'SELECT id, category, label, value, description, `order`, isActive FROM dictionary ORDER BY category ASC, `order` ASC',
       []
     );
     res.json({ success: true, data: entries });
@@ -52,12 +52,12 @@ router.post('/', auth, adminOnly, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Value already exists in this category' });
     }
 
-    const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order]) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?)',
+    const [result] = await db.query(
+      'INSERT INTO dictionary (category, label, value, description, `order`) VALUES (?, ?, ?, ?, ?)',
       [category, label, value, description || '', order || 0]
     );
     
-    const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [rows[0].id]);
+    const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [result.insertId]);
     res.status(201).json({ success: true, data: newEntry[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -71,7 +71,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     const { category, label, value, description, order, isActive } = req.body;
     
     await db.query(
-      'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ? WHERE id = ?',
+      'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, `order` = ?, isActive = ? WHERE id = ?',
       [category, label, value, description || '', order || 0, isActive !== undefined ? (isActive ? 1 : 0) : 1, req.params.id]
     );
     
@@ -195,7 +195,7 @@ router.post('/seed/initial', auth, adminOnly, async (req, res) => {
     
     for (const item of initialData) {
       await db.query(
-        'INSERT INTO dictionary (category, label, value, [order]) VALUES (?, ?, ?, ?)',
+        'INSERT INTO dictionary (category, label, value, `order`) VALUES (?, ?, ?, ?)',
         item
       );
     }

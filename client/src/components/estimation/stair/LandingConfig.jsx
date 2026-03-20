@@ -86,15 +86,6 @@ export default function LandingConfig({ data, onChange }) {
       {/* ── Compressed Configuration Header ────────────────────────── */}
       <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
         <div className="form-field">
-          <label className="form-label">Landing Number</label>
-          <input
-            className="form-input data-type-string compact-input"
-            value={form.landingNumber}
-            onChange={e => set('landingNumber', e.target.value)}
-            placeholder="e.g. L-01"
-          />
-        </div>
-        <div className="form-field">
           <label className="form-label">Length (ft)</label>
           <div className="form-input-with-unit data-type-ft-in">
             <input
@@ -173,6 +164,19 @@ export default function LandingConfig({ data, onChange }) {
         </div>
       </div>
 
+      <div className="form-grid" style={{ marginTop: '16px' }}>
+        <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+          <label className="form-label">Remarks</label>
+          <textarea
+            className="form-input"
+            value={form.remarks || ''}
+            onChange={e => set('remarks', e.target.value)}
+            placeholder="Add any specific remarks or notes here..."
+            style={{ minHeight: '60px', resize: 'vertical', width: '100%' }}
+          />
+        </div>
+      </div>
+
       {/* ── Backend Computed Results (Read-Only) ────────────────────── */}
       {(calcSteel !== null || calcShop !== null || calcField !== null) && (
         <div style={{
@@ -208,24 +212,6 @@ export default function LandingConfig({ data, onChange }) {
         onUpdate={load}
         triggerRect={quickModal.rect}
       />
-
-
-      <style jsx>{`
-        .quick-edit-btn {
-          margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
-          border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
-          cursor: pointer; color: var(--color-primary-600); 
-          padding: 4px; border-radius: 6px;
-          display: inline-flex; align-items: center; vertical-align: middle;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .quick-edit-btn:hover { 
-          background: var(--color-primary-500); 
-          color: white;
-          transform: translateY(-1px) rotate(30deg);
-          box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
-        }
-      `}</style>
     </div>
   );
 }

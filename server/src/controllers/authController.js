@@ -1,4 +1,4 @@
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -38,12 +38,12 @@ const register = async (req, res) => {
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 30);
 
-    const [rows] = await db.query(
-      'INSERT INTO users (email, [password], company, phone, [role], [plan], isPaid, trialStart, trialEnd) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    const [result] = await db.query(
+      'INSERT INTO users (email, password, company, phone, role, plan, isPaid, trialStart, trialEnd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [email.toLowerCase(), hashedPassword, company, phone || '', 'user', 'trial', 0, trialStart, trialEnd]
     );
 
-    const userId = rows[0].id;
+    const userId = result.insertId;
     const token = generateToken({ id: userId, email, role: 'user' });
 
     res.status(201).json({
@@ -91,7 +91,7 @@ const login = async (req, res) => {
     }
 
     // Update last login
-    await db.query('UPDATE users SET lastLogin = GETDATE() WHERE id = ?', [user.id]);
+    await db.query('UPDATE users SET lastLogin = NOW() WHERE id = ?', [user.id]);
 
     const token = generateToken(user);
     const daysRemaining = Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / (1000 * 60 * 60 * 24)));
@@ -166,12 +166,12 @@ const registerOwner = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const [rows] = await db.query(
-      'INSERT INTO users (email, [password], company, phone, [role], [plan], isPaid, subscriptionStatus) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    const [result] = await db.query(
+      'INSERT INTO users (email, password, company, phone, role, plan, isPaid, subscriptionStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [email.toLowerCase(), hashedPassword, company, phone || '', 'owner', 'owner', 1, 'active']
     );
 
-    const userId = rows[0].id;
+    const userId = result.insertId;
     const token = generateToken({ id: userId, email, role: 'owner' });
 
     res.status(201).json({
@@ -193,7 +193,7 @@ const registerOwner = async (req, res) => {
 const ownerLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ? AND [role] = 'owner'", [email.toLowerCase()]);
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ? AND role = 'owner'", [email.toLowerCase()]);
     const user = rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password))) {

@@ -89,6 +89,12 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
   const [dropdowns, setDropdowns] = useState({
+    finishes: DEFAULT_FINISH_OPTIONS,
+    mountings: DEFAULT_MOUNTING_OPTIONS,
+    guardRailTypes: RAIL_CONFIGS.guardRail.types,
+    wallRailTypes: RAIL_CONFIGS.wallRail.types,
+    grabRailTypes: RAIL_CONFIGS.grabRail.types,
+    caneRailTypes: RAIL_CONFIGS.caneRail.types,
     steelGrades: ['A53', 'A500C', 'A500B', 'SS316', 'SS 304']
   });
 
@@ -135,7 +141,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
   const config = RAIL_CONFIGS[type] || RAIL_CONFIGS.guardRail;
 
   const [form, setForm] = useState({
-    railType:           data?.railType || (dropdowns[`${type}Types`][0] || config.types[0] || ''),
+    railType:           data?.railType || (dropdowns[`${type}Types`]?.[0] || config.types[0] || ''),
     railLength:         data?.railLength || '',
     steelGrade:         data?.steelGrade || 'A53',
     mountingType:       data?.mountingType || (config.mountings[0] || ''),
@@ -273,27 +279,29 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
             </div>
           </div>
 
-          <div className="form-field">
-            <label className="form-label">
-              Steel Grade
-              {isAdmin && (
-                <button 
-                  onClick={(e) => openManage('steel_grade_rail', 'Rail Steel Grades', e)} 
-                  className="quick-edit-btn" 
-                  title="Manage Options"
-                >
-                  <Settings size={14} />
-                </button>
-              )}
-            </label>
-            <select
-              className="form-select compact-select"
-              value={form.steelGrade}
-              onChange={e => set('steelGrade', e.target.value)}
-            >
-              {dropdowns.steelGrades.map(sg => <option key={sg} value={sg}>{sg}</option>)}
-            </select>
-          </div>
+          {type !== 'grabRail' && type !== 'wallRail' && (
+            <div className="form-field">
+              <label className="form-label">
+                Steel Grade
+                {isAdmin && (
+                  <button 
+                    onClick={(e) => openManage('steel_grade_rail', 'Rail Steel Grades', e)} 
+                    className="quick-edit-btn" 
+                    title="Manage Options"
+                  >
+                    <Settings size={14} />
+                  </button>
+                )}
+              </label>
+              <select
+                className="form-select compact-select"
+                value={form.steelGrade}
+                onChange={e => set('steelGrade', e.target.value)}
+              >
+                {dropdowns.steelGrades.map(sg => <option key={sg} value={sg}>{sg}</option>)}
+              </select>
+            </div>
+          )}
 
 
           {config.hasIntermediateRails && (
@@ -439,6 +447,19 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
         </div>
       </div>
 
+      <div className="form-grid mt-4">
+        <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+          <label className="form-label">Remarks</label>
+          <textarea
+            className="form-input"
+            value={form.remarks || ''}
+            onChange={e => set('remarks', e.target.value)}
+            placeholder="Add any specific remarks or notes here..."
+            style={{ minHeight: '60px', resize: 'vertical', width: '100%' }}
+          />
+        </div>
+      </div>
+
       {/* ── Backend Computed Results (Read-Only) — ALL values from /api/calculate ── */}
       {(data?.calcPostQty !== undefined || data?.calcSteel !== undefined || data?.calcShop !== undefined) && (
         <div style={{
@@ -497,53 +518,6 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
       />
 
 
-      <style jsx>{`
-        .rail-specs-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 12px;
-          align-items: start;
-        }
-        .rail-options-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 20px;
-          align-items: start;
-        }
-        .compact-input {
-          max-width: 100px;
-        }
-        .compact-select {
-          max-width: 100%;
-        }
-        .mt-4 { margin-top: 16px; }
-        .radio-group.compact {
-          gap: 4px;
-        }
-        .radio-group.compact .radio-option {
-          padding: 6px 12px;
-          font-size: 11px;
-        }
-        .quick-edit-btn {
-          margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
-          border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
-          cursor: pointer; color: var(--color-primary-600); 
-          padding: 4px; border-radius: 6px;
-          display: inline-flex; align-items: center; vertical-align: middle;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .quick-edit-btn:hover { 
-          background: var(--color-primary-500); 
-          color: white;
-          transform: translateY(-1px) rotate(30deg);
-          box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
-        }
-        .auto-calculation {
-          background-color: #f0f7ff !important;
-          border-color: #bcd9ff !important;
-          font-weight: 500;
-        }
-      `}</style>
     </div>
   );
 }

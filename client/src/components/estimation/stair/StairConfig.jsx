@@ -3,7 +3,8 @@ import { Settings } from 'lucide-react';
 import API_BASE_URL from '../../../config/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import QuickManageModal from '../../common/QuickManageModal';
-import { calculateStairGeometry, debounce } from '../../../services/estimationService';
+import { debounce } from '../../../services/estimationService';
+import { calculateStair } from '../../../services/stairService';
 
 // Fallback hardcoded lists (used while loading or if API fails)
 const DEFAULT_STAIR_TYPES = [
@@ -115,32 +116,6 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
       setForm(f => ({ ...f, ...stair }));
     }
   }, [stair]);
-
-  // ── Live geometry calculation via backend API (NO frontend math) ──────
-  // Debounced so we don't fire on every keystroke
-  const debouncedCalc = useRef(
-    debounce(async (run, rise, height) => {
-      if (!run || !rise || parseFloat(run) <= 0 || parseFloat(rise) <= 0) return;
-      const geo = await calculateStairGeometry({
-        height: height ? (parseFloat(height) || 0) : (parseFloat(rise) * (parseFloat(form.numRisers) || 1)),
-        rise: parseFloat(rise),
-        run: parseFloat(run),
-      });
-      if (geo.success !== false) {
-        setForm(f => ({
-          ...f,
-          numRisers: (f.numRisers === '' || !f.numRisers) ? String(geo.risers) : f.numRisers,
-          slope:     (f.slope === '' || !f.slope) ? String(geo.slope)   : f.slope,
-          angle:     (f.angle === '' || !f.angle) ? String(geo.angle)   : f.angle,
-        }));
-      }
-    }, 400)
-  ).current;
-
-  useEffect(() => {
-    debouncedCalc(form.run, form.rise, form.totalHeight);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.run, form.rise, form.totalHeight]);
 
   const set = (k, v) => {
     const updated = { ...form, [k]: v };
@@ -278,26 +253,51 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
         <div className="form-section-title">Stair Geometry</div>
         <div className="form-grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
           <UnitInput id="stair-width" label="Stair Width" value={form.stairWidth} onChange={v => set('stairWidth', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          
+          <div className="form-field">
+            <label className="form-label">Slope <span className="data-badge dt-float"></span></label>
+            <input className="form-input data-type-float" value={form.slope} onChange={e => set('slope', e.target.value)} placeholder="e.g. 1 : 1.5" />
+          </div>
+
           <UnitInput id="stair-run"   label="Run"         value={form.run} onChange={v => set('run', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           <UnitInput id="stair-rise"  label="Rise"        value={form.rise} onChange={v => set('rise', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           <UnitInput id="stair-height" label="Total Height" value={form.totalHeight} onChange={v => set('totalHeight', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           
           <div className="form-field">
             <label className="form-label">No. of Risers <span className="data-badge dt-int"></span></label>
-            <input className="form-input data-type-int auto-calculation" type="number" value={form.numRisers} onChange={e => set('numRisers', e.target.value)} placeholder="Auto" />
+            <input className="form-input data-type-int auto-calculation" 
+                   type="number" 
+                   value={form.numRisers} 
+                   readOnly 
+                   placeholder="Calc" 
+                   style={{ backgroundColor: 'var(--bg-subtle)' }}
+            />
           </div>
 
           <div className="form-field">
-            <label className="form-label">Slope <span className="data-badge dt-float"></span></label>
-            <input className="form-input data-type-float auto-calculation" value={form.slope} onChange={e => set('slope', e.target.value)} placeholder="e.g. 1 : 1.5" />
-          </div>
-
-          <div className="form-field">
-            <label className="form-label">Angle <span className="data-badge dt-float"></span></label>
-            <div className="form-input-with-unit data-type-float">
-               <input id="stair-angle" className="auto-calculation" type="number" step="0.1" value={form.angle} onChange={e => set('angle', e.target.value)} placeholder="Auto" />
-               <span className="form-input-unit">deg</span>
+            <label className="form-label" style={{ color: stair.angleWarning ? '#dc2626' : 'inherit' }}>
+              Angle <span className="data-badge dt-float"></span>
+            </label>
+            <div className={`form-input-with-unit data-type-float ${stair.angleWarning ? 'warning-glow' : ''}`}>
+               <input id="stair-angle" 
+                      className="auto-calculation" 
+                      type="number" 
+                      value={form.angle} 
+                      readOnly 
+                      placeholder="Calc" 
+                      style={{ 
+                        backgroundColor: stair.angleWarning ? '#fef2f2' : 'var(--bg-subtle)',
+                        color: stair.angleWarning ? '#b91c1c' : 'inherit',
+                        border: stair.angleWarning ? '1px solid #f87171' : 'none'
+                      }}
+               />
+               <span className="form-input-unit" style={{ color: stair.angleWarning ? '#f87171' : 'inherit' }}>deg</span>
             </div>
+            {stair.angleWarning && (
+              <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '4px', fontWeight: 'bold' }}>
+                ⚠️ {stair.angleWarning}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -427,49 +427,46 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
         </div>
       </div>
 
-      {/* ── Backend Calculation Results (Read-Only) ─────────────────────── */}
+      {/* ── Remarks ────────────────────────────────────────────────── */}
+      <div className="form-grid" style={{ marginTop: '16px' }}>
+        <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+          <label className="form-label">Remarks</label>
+          <textarea
+            className="form-input"
+            value={form.remarks || ''}
+            onChange={e => set('remarks', e.target.value)}
+            placeholder="Add any specific remarks or notes for this stair..."
+            style={{ minHeight: '60px', resize: 'vertical', width: '100%' }}
+          />
+        </div>
+      </div>
+
+      {/* ── Hardened Backend Calculation Results ─────────────────────── */}
       {stair.flightCalcResult && stair.flightCalcResult.success && (() => {
-        const r = stair.flightCalcResult;
+        const r = stair.flightCalcResult.data; // Using the 'data' field from the new endpoint
         const Cell = ({ label, value, unit, color = '#1e40af' }) => (
           <div>
             <div style={{ fontSize: '10px', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: color === '#1e40af' ? '#1e3a8a' : color, fontVariantNumeric: 'tabular-nums' }}>
-              {value !== undefined && value !== null ? value : '—'}
+            <div style={{ fontSize: '15px', fontWeight: 800, color: color === '#1e40af' ? '#1e3a8a' : color }}>
+              {value !== undefined && value !== null ? (typeof value === 'number' ? value.toLocaleString() : value) : '—'}
               {unit && <span style={{ fontSize: '11px', fontWeight: 400, marginLeft: 3 }}>{unit}</span>}
             </div>
           </div>
         );
         return (
           <div style={{ marginTop: 16 }}>
-            {/* Geometry Row */}
-            <div style={{ padding: '10px 16px', background: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', borderRadius: 8, border: '1px solid #bae6fd', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 10 }}>
-              <Cell label="Step Slope" value={r.geometry?.stepSlopeIn} unit="in" color="#0369a1" />
-              <Cell label="Angle" value={r.geometry?.angleDeg} unit="°" color="#0369a1" />
-              <Cell label="Stringer LF" value={r.stringer?.totalLF} unit="ft" color="#0369a1" />
-              <Cell label="Pan Area" value={r.panPlate?.areaSqFt} unit="ft²" color="#0369a1" />
+            {/* Engineering Metrics Row */}
+            <div style={{ padding: '12px 16px', background: 'var(--bg-subtle)', borderRadius: 8, border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 10 }}>
+              <Cell label="Number of Risers" value={r.numRisers} unit="" color="var(--text-muted)" />
+              <Cell label="Step Slope" value={r.slopeIn?.toFixed(3)} unit="in" color="var(--text-muted)" />
+              <Cell label="Stringer Length" value={r.totalStringerLengthFt?.toFixed(2)} unit="ft" color="var(--text-muted)" />
+              <Cell label="Angle" value={r.angleDeg?.toFixed(2)} unit="°" color="var(--text-muted)" />
             </div>
-            {/* Steel Weight Row */}
-            <div style={{ padding: '10px 16px', background: 'linear-gradient(135deg,#fff7ed,#ffedd5)', borderRadius: 8, border: '1px solid #fed7aa', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 10 }}>
-              <Cell label="Stringer Steel (w/11%)" value={r.stringer?.burdenedWeightLbs} unit="lb" color="#c2410c" />
-              <Cell label="Pan Steel (w/11%)" value={r.panPlate?.burdenedWeightLbs} unit="lb" color="#c2410c" />
-              <Cell label="Total Steel" value={r.summary?.totalSteelLbs} unit="lb" color="#9a3412" />
-              <Cell label="Galv Cost" value={r.finish?.galvMaterialCost || 0} unit="$" color="#c2410c" />
-            </div>
-            {/* Labor + Cost Row */}
-            <div style={{ padding: '10px 16px', background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', borderRadius: 8, border: '1px solid #86efac', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-              <Cell label="Shop Hrs" value={r.labor?.totalShopHrs} unit="hrs" color="#15803d" />
-              <Cell label="Field Hrs" value={r.labor?.totalFieldHrs} unit="hrs" color="#15803d" />
-              <Cell label={`Shop ($${r.labor?.shopRatePerHr}/hr)`} value={r.labor?.shopLaborCost} unit="$" color="#166534" />
-              <Cell label={`Field ($${r.labor?.fieldRatePerHr}/hr)`} value={r.labor?.fieldLaborCost} unit="$" color="#166534" />
-            </div>
-            {/* Grand Total */}
-            <div style={{ marginTop: 8, padding: '10px 16px', background: 'linear-gradient(135deg,#faf5ff,#ede9fe)', borderRadius: 8, border: '1px solid #c4b5fd', display: 'flex', gap: 32, alignItems: 'center' }}>
-              <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, textTransform: 'uppercase' }}>Subtotal</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#4c1d95' }}>${r.summary?.subtotal?.toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, textTransform: 'uppercase' }}>Tax ({(r.summary?.taxRate * 100).toFixed(0)}%)</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#6d28d9' }}>${r.summary?.taxAmount?.toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', marginLeft: 'auto' }}>TOTAL ESTIMATED COST</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#4c1d95' }}>${r.summary?.totalEstimatedCost?.toLocaleString()}</div>
+            {/* Weight Breakdown Row */}
+            <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', borderRadius: 8, border: '1px solid #cbd5e1', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+              <Cell label="Stringer Weight" value={r.stringerWeight?.toFixed(1)} unit="lb" color="#475569" />
+              <Cell label="Pan Weight" value={r.panWeight?.toFixed(1)} unit="lb" color="#475569" />
+              <Cell label="Total Weight (1.11 Scrap)" value={r.totalWeight?.toFixed(1)} unit="lb" color="var(--color-primary-700)" />
             </div>
           </div>
         );
@@ -483,34 +480,6 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
         onUpdate={loadAll}
         triggerRect={quickModal.rect}
       />
-
-      <style jsx>{`
-        .quick-edit-btn {
-          margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
-          border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
-          cursor: pointer; color: var(--color-primary-600); 
-          padding: 4px; border-radius: 6px;
-          display: inline-flex; align-items: center; vertical-align: middle;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .quick-edit-btn:hover { 
-          background: var(--color-primary-500); 
-          color: white;
-          transform: translateY(-1px) rotate(30deg);
-          box-shadow: 0 4px 12px hsla(var(--brand-h), var(--brand-s), 50%, 0.3);
-        }
-        .auto-calculation {
-          background-color: #f0f7ff !important;
-          border-color: #bcd9ff !important;
-          font-weight: 500;
-        }
-        .section-faded {
-          opacity: 0.6;
-          pointer-events: none;
-          filter: grayscale(0.5);
-          transition: all 0.3s ease;
-        }
-      `}</style>
     </div>
   );
 }

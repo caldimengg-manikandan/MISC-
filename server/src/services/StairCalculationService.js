@@ -85,10 +85,15 @@ class StairCalculationService {
    * 3. ── STAIR GEOMETRY ───────────────────────────────────────────────
    */
   calculateStairGeometry(input) {
-    const { height, rise, run } = input;
+    const { height, rise, run, category } = input;
 
-    // risers = height / rise
-    const risers = this.roundExcel(height / (rise || 1), 0);
+    let risers = 0;
+    if (height > 0) {
+      const limit = (category === 'Industrial') ? 12 : 7;
+      risers = Math.ceil((height * 12) / limit);
+    } else if (rise > 0) {
+      risers = this.roundExcel(height / rise, 0); 
+    }
     
     const slope = this.roundExcel((rise || 0) / (run || 1), this.PREC_SLOPE);
     const angle = this.roundExcel(Math.atan(slope || 0) * (180 / Math.PI), this.PREC_ANGLE);

@@ -1,5 +1,6 @@
-require('dotenv').config({ path: './server/.env' });
-const { query } = require('./server/src/config/mssql');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, 'server', '.env') });
+const db = require(path.join(__dirname, 'server', 'src', 'config', 'mysql'));
 
 const initialData = [
   ['stair_type', 'PAN PLATE CONC. FILLED', 'pan-concrete', 1],
@@ -89,17 +90,17 @@ const initialData = [
 
 async function seed() {
   try {
-    console.log('Seeding dictionary (MSSQL)...');
+    console.log('Seeding dictionary (MySQL)...');
     // Clear old data
-    await query('DELETE FROM dictionary');
+    await db.query('DELETE FROM dictionary');
     
     for (const item of initialData) {
-      await query(
-        'INSERT INTO dictionary (category, label, value, [order], isActive) VALUES (?, ?, ?, ?, 1)',
+      await db.query(
+        'INSERT INTO dictionary (category, label, value, `order`, isActive) VALUES (?, ?, ?, ?, 1)',
         [item[0], item[1], item[2], item[3]]
       );
     }
-    console.log('Dictionary seeded successfully (MSSQL)');
+    console.log('Dictionary seeded successfully (MySQL)');
     process.exit(0);
   } catch (err) {
     console.error('Seeding failed:', err);

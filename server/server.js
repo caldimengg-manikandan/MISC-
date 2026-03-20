@@ -35,6 +35,8 @@ const excelRoutes = require('./src/routes/excelRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 // Import auth routes ✅
 const authRoutes = require('./src/routes/authRoutes');
+const stairRoutes = require('./src/modules/stairs/stairs.routes');
+const railRoutes = require('./src/modules/rails/rails.routes');
 
 // Import debug routes
 const debugRoutes = require('./src/routes/debug');
@@ -281,6 +283,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', authMiddleware, projectRoutes);
 app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/debug', authMiddleware, debugRoutes);
+app.use('/api/stairs', stairRoutes);
+app.use('/api/rails', railRoutes);
 
 // Secure routes
 app.use('/api/secure/prices', authMiddleware, priceRoutes);

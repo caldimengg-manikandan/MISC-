@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 
 module.exports = async (req, res, next) => {
   try {

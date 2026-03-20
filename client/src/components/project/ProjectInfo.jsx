@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../config/api';
+import { useProject } from '../../contexts/ProjectContext';
 
 const initialData = {
   customerName: '', projectName: '', projectNumber: '', projectLocation: '',
@@ -10,6 +11,7 @@ const initialData = {
 
 export default function ProjectInfo() {
   const navigate = useNavigate();
+  const { setProjectInfo: setGlobalProjectInfo } = useProject();
   const [form, setForm] = useState(() => {
     const saved = localStorage.getItem('steelProjectInfo');
     return saved ? JSON.parse(saved) : initialData;
@@ -44,12 +46,12 @@ export default function ProjectInfo() {
     fetchProjects();
   }, []);
 
-  // Auto-save form changes to localStorage (include selectedId so other pages can load project data)
+  // Auto-save form changes to localStorage and GLOBAL CONTEXT
   useEffect(() => {
-    localStorage.setItem('steelProjectInfo', JSON.stringify(
-      selectedId ? { ...form, id: selectedId } : form
-    ));
-  }, [form, selectedId]);
+    const updated = selectedId ? { ...form, id: selectedId } : form;
+    localStorage.setItem('steelProjectInfo', JSON.stringify(updated));
+    setGlobalProjectInfo(updated);
+  }, [form, selectedId, setGlobalProjectInfo]);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
 
@@ -255,7 +257,7 @@ export default function ProjectInfo() {
         {/* ── Engineering Team ──────────────────────────────────────── */}
         <div className="eng-card">
           <div className="eng-card-header">
-            <span className="eng-card-title">🏗 Engineering Team</span>
+            <span className="eng-card-title">🏗 Project Team</span>
           </div>
           <div className="eng-card-body">
             <div className="form-grid form-grid-3">

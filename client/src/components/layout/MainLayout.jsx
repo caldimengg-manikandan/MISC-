@@ -5,9 +5,11 @@ import {
   FolderOpen, ClipboardCheck, ArrowUpDown, BarChart3, Settings, 
   LogOut, ChevronRight, HelpCircle, Save, Share2, Menu, X,
   LayoutDashboard, Database, Box, DollarSign, Info, History, ClipboardList,
-  Calculator, Construction, Spline, ArrowUpRight, Square, DoorOpen, Plus
+  Calculator, Construction, Spline, ArrowUpRight, Square, DoorOpen, Plus,
+  Hash, Briefcase, ChevronDown, Ruler, Shield, Layers, Wrench, Weight, DollarSign as Dollar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useProject } from '../../contexts/ProjectContext';
 
 // ── Nav Config ──────────────────────────────────────────────────────────────
 const NAV = [
@@ -72,6 +74,15 @@ export default function MainLayout({ children }) {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { user, logout } = useAuth();
+  const { projectInfo, stairs, estimationResult, requestAddStair, triggerSave, triggerCalc } = useProject();
+
+  // ── Compute KPI Totals ──────────────────────────────
+  const totalStairs = stairs.length;
+  const totalGuardRails = stairs.reduce((sum, s) => sum + (s.rails?.filter(r => r.type === 'guardRail')?.length || 0), 0);
+  const totalLandings = stairs.reduce((sum, s) => sum + (s.landings?.length || 0), 0);
+  const totalRails = stairs.reduce((sum, s) => sum + (s.rails?.length || 0), 0);
+  const estimatedSteelWeight = estimationResult?.totalSteel ?? stairs.reduce((sum, s) => sum + (s.estimatedSteelWeight || 0), 0);
+  const estimatedCost = estimationResult?.totalEstimatedCost ?? stairs.reduce((sum, s) => sum + (s.estimatedCost || 0), 0);
 
   const [estimateOpen, setEstimateOpen] = useState(
     location.pathname.startsWith('/estimate')
@@ -150,17 +161,6 @@ export default function MainLayout({ children }) {
               </div>
             );
           })}
-
-          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
-            <div
-              className="sidebar-item"
-              onClick={handleLogout}
-              style={{ color: '#fb7185' }}
-            >
-              <span className="sidebar-item-icon"><LogOut size={18} /></span>
-              Sign Out
-            </div>
-          </div>
         </nav>
       </aside>
 
@@ -168,31 +168,52 @@ export default function MainLayout({ children }) {
       <div className="main-content">
         {/* Header */}
         <header className="top-header">
-          <nav className="header-breadcrumb">
-            <span 
-              className="header-breadcrumb-item" 
-              onClick={() => navigate('/estimate/stair-railings')}
-              style={{ cursor: 'pointer' }}
-            >
-              SteelSpec
-            </span>
-            {crumbs.map((c, i) => {
-              const itemPath = crumbsToPath(crumbs.slice(0, i + 1));
-              const isLast = i === crumbs.length - 1;
-              return (
-                <React.Fragment key={i}>
-                  <span className="header-breadcrumb-sep">›</span>
-                  <span 
-                    className={`header-breadcrumb-item ${isLast ? 'current' : ''}`}
-                    onClick={() => !isLast && itemPath && navigate(itemPath)}
-                    style={{ cursor: !isLast && itemPath ? 'pointer' : 'default' }}
-                  >
-                    {c}
-                  </span>
-                </React.Fragment>
-              );
-            })}
-          </nav>
+          <div className="header-left">
+            <nav className="header-breadcrumb">
+              <span 
+                className="header-breadcrumb-item" 
+                onClick={() => navigate('/estimate/stair-railings')}
+                style={{ cursor: 'pointer' }}
+              >
+                SteelSpec
+              </span>
+              {crumbs.map((c, i) => {
+                const itemPath = crumbsToPath(crumbs.slice(0, i + 1));
+                const isLast = i === crumbs.length - 1;
+                return (
+                  <React.Fragment key={i}>
+                    <span className="header-breadcrumb-sep">›</span>
+                    <span 
+                      className={`header-breadcrumb-item ${isLast ? 'current' : ''}`}
+                      onClick={() => !isLast && itemPath && navigate(itemPath)}
+                      style={{ cursor: !isLast && itemPath ? 'pointer' : 'default' }}
+                    >
+                      {c}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
+            </nav>
+
+            {/* Project Info in Header */}
+            {(projectInfo.projectName || projectInfo.projectNumber) && (
+              <div className="header-project-info">
+                <div className="header-project-divider" />
+                <div className="header-project-details">
+                  <div className="header-project-item">
+                    <span className="header-project-label">Project Name:</span>
+                    <span className="header-project-value">{projectInfo.projectName || 'Unnamed Project'}</span>
+                  </div>
+                  {projectInfo.projectNumber && (
+                    <div className="header-project-item">
+                      <span className="header-project-label">Project No:</span>
+                      <span className="header-project-value">{projectInfo.projectNumber}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="header-actions">
             <button className="header-btn header-btn-outline" id="header-help">
@@ -211,6 +232,82 @@ export default function MainLayout({ children }) {
             </div>
           </div>
         </header>
+
+        {/* Sticky Sub-Header for Stair Navigation */}
+        {location.pathname === '/estimate/stair-railings' && (
+          <div className="sticky-sub-header">
+            <div className="sub-header-content">
+              <div className="stair-nav-group">
+                <span className="stair-nav-label">Quick Nav:</span>
+                <div className="stair-nav-chips">
+                  {stairs.map(stair => (
+                    <button
+                      key={stair.id}
+                      className="stair-nav-chip"
+                      onClick={() => {
+                        const el = document.getElementById(`stair-${stair.id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                    >
+                      {stair.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Compact KPIs */}
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  {[
+                    { icon: <Ruler size={14}/>, label: 'Stairs', value: totalStairs },
+                    { icon: <Shield size={14}/>, label: 'Guard Rails', value: totalGuardRails },
+                    { icon: <Layers size={14}/>, label: 'Landings', value: totalLandings },
+                    { icon: <Wrench size={14}/>, label: 'Rails', value: totalRails },
+                    { icon: <Weight size={14}/>, label: 'Weight', value: estimatedSteelWeight > 0 ? `${estimatedSteelWeight.toFixed(0)} lb` : '—' },
+                    { icon: <Dollar size={14}/>, label: 'Cost', value: estimatedCost > 0 ? `$${estimatedCost.toLocaleString()}` : '$0' },
+                  ].map((s, idx) => (
+                     <div key={idx} style={{ 
+                       display: 'flex', 
+                       alignItems: 'center', 
+                       gap: '8px',
+                       paddingRight: idx !== 5 ? '16px' : '0',
+                       borderRight: idx !== 5 ? '1px solid var(--border-color)' : 'none'
+                     }}>
+                       <span style={{ color: 'var(--text-muted)' }}>{s.icon}</span>
+                       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                         <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}>{s.label}</span>
+                         <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)' }}>{s.value}</span>
+                       </div>
+                     </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="sub-header-actions">
+                <button 
+                  className="header-btn header-btn-outline"
+                  onClick={triggerCalc}
+                >
+                  <Calculator size={14} /> Calculate
+                </button>
+                <button 
+                  className="header-btn header-btn-accent"
+                  onClick={triggerSave}
+                  style={{ background: '#f59e0b', color: 'white', border: 'none' }}
+                >
+                  <Save size={14} /> Save
+                </button>
+                <div className="sub-header-sep" />
+                <button 
+                  className="add-stair-btn"
+                  onClick={requestAddStair}
+                >
+                  <Plus size={16} /> Add Stair
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Page Workspace */}
         <main className="workspace">

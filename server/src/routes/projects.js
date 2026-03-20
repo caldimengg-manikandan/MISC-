@@ -1,7 +1,7 @@
 // server/routes/projects.js
 const express = require('express');
 const router = express.Router();
-const db = require('../config/mssql');
+const db = require('../config/mysql');
 const auth = require('../middleware/auth');
 
 const tryParseJson = (val) => {
@@ -107,7 +107,7 @@ router.post('/upsert', auth, async (req, res) => {
           projectNumber = ?, projectName = ?, customer_name = ?, project_location = ?, 
           architect = ?, eor = ?, gc_name = ?, detailer = ?, vendor_name = ?, 
           aisc_certified = ?, units = ?, notes = ?, stairs = ?, guardRails = ?, 
-          customRailValues = ?, updatedAt = GETDATE() 
+          customRailValues = ?, updatedAt = NOW() 
         WHERE id = ? AND userId = ?`,
         [
           projectNumber, projectName, customerName || '', projectLocation || '',
@@ -121,12 +121,11 @@ router.post('/upsert', auth, async (req, res) => {
       res.json({ success: true, projectId: id, project: updated[0] });
     } else {
       // Insert
-      const [rows] = await db.query(
+      const [result] = await db.query(
         `INSERT INTO projects 
           (projectNumber, projectName, userId, customer_name, project_location, 
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units, 
            notes, stairs, guardRails, customRailValues, status) 
-        OUTPUT INSERTED.id
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           projectNumber, projectName, userId, customerName || '', projectLocation || '',
@@ -136,7 +135,7 @@ router.post('/upsert', auth, async (req, res) => {
         ]
       );
       
-      const newId = rows[0].id;
+      const newId = result.insertId;
       const [inserted] = await db.query('SELECT * FROM projects WHERE id = ?', [newId]);
       res.json({ success: true, projectId: newId, project: inserted[0] });
     }
@@ -185,7 +184,7 @@ router.post('/:projectId/save-flight-geometry', auth, async (req, res) => {
     
     stairs[stairIndex].flightGeometries = removeEmptyGeometries(geometries);
     
-    await db.query('UPDATE projects SET stairs = ?, updatedAt = GETDATE() WHERE id = ?', [JSON.stringify(stairs), projectId]);
+    await db.query('UPDATE projects SET stairs = ?, updatedAt = NOW() WHERE id = ?', [JSON.stringify(stairs), projectId]);
     
     res.json({
       success: true,
@@ -272,7 +271,7 @@ router.put('/:projectId', auth, async (req, res) => {
     });
     
     if (setClause.length > 0) {
-      setClause.push('updatedAt = GETDATE()');
+      setClause.push('updatedAt = NOW()');
       const query = `UPDATE projects SET ${setClause.join(', ')} WHERE id = ? AND userId = ?`;
       queryParams.push(projectId, req.userId);
       await db.query(query, queryParams);

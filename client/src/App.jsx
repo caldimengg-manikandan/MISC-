@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider } from './contexts/AuthContext';
+import { ProjectProvider } from './contexts/ProjectContext';
 import PrivateRoute from './components/common/PrivateRoute';
 import MainLayout   from './components/layout/MainLayout';
 
@@ -51,52 +52,54 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: { background: '#363636', color: '#fff' },
-          }}
-        />
-
-        <Routes>
-          {/* PUBLIC */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/"      element={<Navigate to="/estimate/stair-railings" replace />} />
-
-          {/* OWNER / ADMIN */}
-          <Route
-            path="/owner/dashboard"
-            element={
-              <PrivateRoute requireOwner={true}>
-                <OwnerDashboard />
-              </PrivateRoute>
-            }
+        <ProjectProvider>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: { background: '#363636', color: '#fff' },
+            }}
           />
 
-          {/* REDIRECTS TO NEW PLATFORM */}
-          <Route path="/home"       element={<Navigate to="/estimate/stair-railings" replace />} />
-          <Route path="/dashboard"  element={<Navigate to="/estimate/stair-railings" replace />} />
+          <Routes>
+            {/* PUBLIC */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/"      element={<Navigate to="/estimate/stair-railings" replace />} />
 
-          {/* NEW ENGINEERING PLATFORM */}
-          <Route path="/project-history"         element={<EngRoute element={<ProjectHistory />} />} />
-          <Route path="/project-info"            element={<EngRoute element={<ProjectInfo />} />} />
-          <Route path="/estimate/stair-railings" element={<EngRoute element={<StairEstimation />} />} />
-          <Route path="/estimate/railings"       element={<EngRoute element={<PlaceholderModule type="railings" />} />} />
-          <Route path="/estimate/ladders"        element={<EngRoute element={<PlaceholderModule type="ladders" />} />} />
-          <Route path="/estimate/bollards"       element={<EngRoute element={<PlaceholderModule type="bollards" />} />} />
-          <Route path="/estimate/gates"          element={<EngRoute element={<PlaceholderModule type="gates" />} />} />
-          <Route path="/reports"                 element={<EngRoute element={<Reports />} />} />
+            {/* OWNER / ADMIN */}
+            <Route
+              path="/owner/dashboard"
+              element={
+                <PrivateRoute requireOwner={true}>
+                  <OwnerDashboard />
+                </PrivateRoute>
+              }
+            />
 
-          {/* ADMIN */}
-          <Route path="/admin/dictionary"        element={<AdminRoute element={<DictionaryManager />} />} />
+            {/* REDIRECTS TO NEW PLATFORM */}
+            <Route path="/home"       element={<Navigate to="/estimate/stair-railings" replace />} />
+            <Route path="/dashboard"  element={<Navigate to="/estimate/stair-railings" replace />} />
 
-          {/* DEBUG */}
-          <Route path="/debug/handrail" element={<PrivateRoute><DebugHandrail /></PrivateRoute>} />
+            {/* NEW ENGINEERING PLATFORM */}
+            <Route path="/project-history"         element={<EngRoute element={<ProjectHistory />} />} />
+            <Route path="/project-info"            element={<EngRoute element={<ProjectInfo />} />} />
+            <Route path="/estimate/stair-railings" element={<EngRoute element={<StairEstimation />} />} />
+            <Route path="/estimate/railings"       element={<EngRoute element={<PlaceholderModule type="railings" />} />} />
+            <Route path="/estimate/ladders"        element={<EngRoute element={<PlaceholderModule type="ladders" />} />} />
+            <Route path="/estimate/bollards"       element={<EngRoute element={<PlaceholderModule type="bollards" />} />} />
+            <Route path="/estimate/gates"          element={<EngRoute element={<PlaceholderModule type="gates" />} />} />
+            <Route path="/reports"                 element={<EngRoute element={<Reports />} />} />
 
-          {/* FALLBACK */}
-          <Route path="*" element={<Navigate to="/estimate/stair-railings" replace />} />
-        </Routes>
+            {/* ADMIN */}
+            <Route path="/admin/dictionary"        element={<AdminRoute element={<DictionaryManager />} />} />
+
+            {/* DEBUG */}
+            <Route path="/debug/handrail" element={<PrivateRoute><DebugHandrail /></PrivateRoute>} />
+
+            {/* FALLBACK */}
+            <Route path="*" element={<Navigate to="/estimate/stair-railings" replace />} />
+          </Routes>
+        </ProjectProvider>
       </AuthProvider>
     </Router>
   );
