@@ -57,7 +57,7 @@ const GuardRailEstimation = () => {
     try {
       setLoadingPrices(true);
       const token = localStorage.getItem('steel_token');
-      
+
       if (!token) {
         console.error('No auth token found in localStorage');
         toast.error('Please login first');
@@ -70,24 +70,24 @@ const GuardRailEstimation = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setCategorizedRails({
           guardRail: data.data.guardRail || []
         });
-        
+
         toast.success(`Loaded ${data.data.guardRail?.length || 0} guard rail items`);
       } else {
         console.error('API returned success:false', data.error);
         toast.error('Failed to load guard rail data');
       }
-      
+
     } catch (error) {
       console.error('Fetch error:', error);
       toast.error('Failed to fetch guard rail data: ' + error.message);
@@ -260,7 +260,7 @@ const GuardRailEstimation = () => {
   // Recalculate whenever guard rails change
   useEffect(() => {
     debouncedRecalc(guardRailData.guardRails);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guardRailData.guardRails]);
 
   const handleSubmit = async () => {
@@ -314,7 +314,7 @@ const GuardRailEstimation = () => {
       {/* Guard Rail Details Section */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Guard Rail Details</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {/* Line Type */}
           <div>
@@ -467,7 +467,7 @@ const GuardRailEstimation = () => {
                 FIELD MH/LF
               </th>
               <th className="py-2 px-3 text-center font-semibold border border-gray-600 whitespace-nowrap">
-                STEEL (+10% SCRAP) LBS
+                STEEL LBS/LF
               </th>
               <th className="py-2 px-3 text-center font-semibold border border-gray-600 whitespace-nowrap">
                 SHOP HOURS
@@ -550,18 +550,17 @@ const GuardRailEstimation = () => {
                 </td>
               </tr>
             ))}
-            
+
             {/* Add New Rail Row */}
             <tr>
               <td colSpan="8" className="py-2 px-3">
                 <button
                   onClick={addNewGuardRail}
                   disabled={guardRailData.guardRails.length > 5}
-                  className={`w-full px-3 py-2 text-xs rounded flex items-center justify-center ${
-                    guardRailData.guardRails.length > 5
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  }`}
+                  className={`w-full px-3 py-2 text-xs rounded flex items-center justify-center ${guardRailData.guardRails.length > 5
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                    }`}
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Add Guard Rail
@@ -600,7 +599,7 @@ const GuardRailEstimation = () => {
       {/* Additional Platforms Section */}
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Platforms</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Platform 1 */}
           <div className="space-y-3">

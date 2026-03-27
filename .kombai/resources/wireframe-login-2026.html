@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wireframe – Login Page Redesign</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Comic Sans MS", "Chalkboard SE", cursive; background: #f0f0f0; color: #222; font-size: 13px; }
+  .page-title { text-align: center; padding: 18px; background: #fff; border-bottom: 2px solid #ccc; font-family: Arial, sans-serif; font-size: 15px; color: #444; }
+  .badge { position: absolute; top: 4px; right: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-family: Arial, sans-serif; font-weight: bold; z-index: 10; }
+  .badge-reuse { background: #4CAF50; color: #fff; }
+  .badge-new { background: #FF9800; color: #fff; }
+  .rel { position: relative; }
+
+  /* Chrome */
+  .app-bar { background: #fff; border-bottom: 2px dashed #999; display: flex; align-items: center; justify-content: space-between; padding: 12px 32px; }
+  .logo-box { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 40px; height: 40px; border: 2px solid #555; background: #ddd; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { font-size: 16px; font-weight: bold; }
+  .logo-text span { font-style: italic; }
+  .nav-badges { display: flex; gap: 14px; }
+  .nav-badge { border: 1.5px solid #888; border-radius: 4px; padding: 3px 10px; font-size: 11px; color: #555; background: #f5f5f5; }
+
+  /* Two-column layout */
+  .split { display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 60px); }
+  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } .left-col { display: none; } }
+
+  /* Left — visual / marketing */
+  .left-col { background: #e8e8e8; border-right: 2px dashed #bbb; padding: 40px 32px; display: flex; flex-direction: column; gap: 24px; }
+  .feature-hero { border: 2px solid #999; border-radius: 8px; padding: 20px; background: #d4d4d4; text-align: center; }
+  .feature-hero .img-placeholder { width: 100%; height: 180px; background: #bbb; border: 2px dashed #888; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 12px; margin-bottom: 14px; }
+  .feature-hero h3 { font-size: 15px; margin-bottom: 6px; }
+  .feature-hero p { font-size: 12px; color: #555; }
+  .spec-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .spec-card { border: 1.5px solid #aaa; border-radius: 6px; background: #f5f5f5; padding: 10px; text-align: center; }
+  .spec-card .val { font-size: 17px; font-weight: bold; }
+  .spec-card .lbl { font-size: 10px; color: #666; }
+  .spec-card .std { font-size: 9px; color: #888; }
+  .trust-bar { display: flex; gap: 16px; flex-wrap: wrap; }
+  .trust-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #555; }
+  .trust-icon { width: 22px; height: 22px; border: 1.5px solid #888; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+
+  /* Right — login form */
+  .right-col { background: #fff; padding: 48px 40px; display: flex; flex-direction: column; justify-content: center; }
+  .form-header { margin-bottom: 28px; }
+  .form-header h2 { font-size: 20px; margin-bottom: 6px; }
+  .form-header p { font-size: 12px; color: #666; }
+  .tab-group { display: flex; border: 1.5px solid #999; border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+  .tab-group button { flex: 1; border: none; background: #f5f5f5; padding: 8px; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .tab-group button.active { background: #333; color: #fff; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #444; }
+  .field input, .field select { width: 100%; height: 38px; border: 1.5px dashed #888; border-radius: 5px; padding: 0 10px; font-family: inherit; font-size: 12px; background: #fafafa; }
+  .field input:focus, .field select:focus { border-style: solid; border-color: #555; outline: none; }
+  .field .hint { font-size: 10px; color: #888; margin-top: 3px; }
+  .form-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .form-row .remember { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+  .form-row .link { font-size: 11px; color: #555; text-decoration: underline; }
+  .submit-btn { width: 100%; height: 42px; border: 2px solid #333; border-radius: 6px; background: #333; color: #fff; font-family: inherit; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .submit-btn:hover { background: #555; }
+  .divider { text-align: center; color: #999; font-size: 11px; margin: 14px 0; position: relative; }
+  .divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 42%; height: 1px; background: #ddd; }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+  .social-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .social-btn { border: 1.5px solid #ccc; border-radius: 5px; background: #fafafa; padding: 8px; font-family: inherit; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .footer-links { font-size: 10px; color: #888; text-align: center; margin-top: 14px; }
+  .footer-links a { color: #555; }
+  .section-note { font-size: 10px; font-style: italic; color: #999; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  📐 Wireframe Option — Login Page Redesign (Balsamiq Style) &nbsp;|&nbsp; Focus: Clean two-column, lazy 3D, MUI-aligned forms
+</div>
+
+<!-- App Bar -->
+<div class="app-bar rel">
+  <!-- REUSABLE: branding from MainLayout header -->
+  <span class="badge badge-reuse" style="position:relative;top:auto;right:auto;display:inline-flex;margin-right:8px;">[REUSE] AppBar brand</span>
+  <div class="logo-box">
+    <div class="logo-icon">S</div>
+    <div class="logo-text">Steel<span>Spec</span> <span style="font-size:11px;font-weight:normal;color:#888;">Engineering</span></div>
+  </div>
+  <div class="nav-badges">
+    <div class="nav-badge">🛡 IBC Compliant</div>
+    <div class="nav-badge">📐 3D Estimation</div>
+  </div>
+</div>
+
+<div class="split">
+
+  <!-- ── LEFT COL: Feature showcase ─────────────────── -->
+  <div class="left-col">
+
+    <!-- Hero image / 3D preview (lazy loaded) -->
+    <!-- NEW COMPONENT: LazyStairPreview – loads 3D canvas on demand -->
+    <div class="feature-hero rel">
+      <span class="badge badge-new">[NEW] LazyStairPreview</span>
+      <div class="img-placeholder">
+        [ 3D Stair Preview — loaded lazily after button click ]<br/>
+        <small>React.lazy(() => import('./StairCanvas'))</small>
+      </div>
+      <button style="border:1.5px dashed #888;background:#e8e8e8;padding:6px 16px;border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;">▶ View Live 3D Assembly</button>
+      <p class="section-note">3D bundle (~1.8MB) loaded only when user clicks, not on page load</p>
+    </div>
+
+    <!-- Stair specification cards -->
+    <!-- NEW COMPONENT: SpecBadgeGrid -->
+    <div class="rel">
+      <span class="badge badge-new">[NEW] SpecBadgeGrid</span>
+      <div style="font-size:11px;font-weight:bold;margin-bottom:8px;color:#555;">IBC / OSHA Compliance Specs</div>
+      <div class="spec-grid">
+        <div class="spec-card"><div class="val">7"</div><div class="lbl">Riser Height</div><div class="std">IBC 1011.5</div></div>
+        <div class="spec-card"><div class="val">11"</div><div class="lbl">Tread Depth</div><div class="std">IBC 1011.5.2</div></div>
+        <div class="spec-card"><div class="val">38"</div><div class="lbl">Handrail Ht</div><div class="std">IBC 1014</div></div>
+        <div class="spec-card"><div class="val">42"</div><div class="lbl">Guardrail Ht</div><div class="std">OSHA 1910.29</div></div>
+        <div class="spec-card"><div class="val">44"</div><div class="lbl">Stair Width</div><div class="std">IBC 1011.2</div></div>
+        <div class="spec-card"><div class="val">32°</div><div class="lbl">Slope</div><div class="std">IBC 1011.5</div></div>
+      </div>
+    </div>
+
+    <!-- Trust indicators -->
+    <div class="trust-bar">
+      <div class="trust-item"><div class="trust-icon">✓</div> AISC Certified</div>
+      <div class="trust-item"><div class="trust-icon">⚙</div> Auto BOM</div>
+      <div class="trust-item"><div class="trust-icon">📊</div> PDF / Excel Export</div>
+      <div class="trust-item"><div class="trust-icon">🔒</div> Secure / JWT Auth</div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT COL: Auth form ───────────────────────── -->
+  <div class="right-col">
+
+    <div class="form-header">
+      <h2>Welcome to SteelSpec</h2>
+      <p>Sign in to access your engineering projects</p>
+    </div>
+
+    <!-- Sign In / Sign Up tabs -->
+    <!-- REUSABLE: Tabs from MUI -->
+    <div class="rel">
+      <span class="badge badge-reuse">[REUSE] MUI Tabs</span>
+      <div class="tab-group">
+        <button class="active">Sign In</button>
+        <button>Create Account</button>
+      </div>
+    </div>
+
+    <!-- Email field -->
+    <!-- REUSABLE: MUI TextField -->
+    <div class="field rel">
+      <span class="badge badge-reuse">[REUSE] MUI TextField</span>
+      <label>Email Address *</label>
+      <input type="email" placeholder="engineer@company.com" />
+    </div>
+
+    <!-- Password field -->
+    <div class="field rel">
+      <span class="badge badge-reuse">[REUSE] MUI TextField</span>
+      <label>Password *</label>
+      <input type="password" placeholder="••••••••" />
+      <div class="hint">min 8 characters</div>
+    </div>
+
+    <!-- Remember + forgot -->
+    <div class="form-row">
+      <div class="remember">
+        <!-- REUSABLE: MUI Checkbox -->
+        <input type="checkbox" id="rem" />
+        <label for="rem">Remember me</label>
+      </div>
+      <!-- NEW COMPONENT: ForgotPasswordModal (dialog flow) -->
+      <div class="rel" style="display:inline-block;">
+        <span class="badge badge-new" style="position:relative;display:inline;top:auto;right:auto;">[NEW] ForgotPasswordModal</span>
+        <span class="link">Forgot password?</span>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <!-- REUSABLE: MUI Button (variant="contained") -->
+    <div class="rel">
+      <span class="badge badge-reuse">[REUSE] MUI Button</span>
+      <button class="submit-btn">Sign In →</button>
+    </div>
+
+    <!-- Account type note -->
+    <div style="margin-top:12px;padding:10px;border:1.5px dashed #ccc;border-radius:5px;font-size:11px;color:#666;">
+      ℹ Owner accounts: append <code>/owner</code> to URL or use the Owner portal link sent by admin.
+    </div>
+
+    <div class="footer-links">
+      By signing in you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a><br/>
+      Need help? <a href="#">Contact support</a>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

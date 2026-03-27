@@ -7,13 +7,25 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newLabel, setNewLabel] = useState('');
+  const [steelLbsLf, setSteelLbsLf] = useState('');
+  const [shopLaborMhLf, setShopLaborMhLf] = useState('');
+  const [fieldLaborMhLf, setFieldLaborMhLf] = useState('');
+  const [description, setDescription] = useState('');
+
+  const hasBenchmarkFields = category && (
+    category.toLowerCase().includes('rail_type') || 
+    category === 'stair_type' || 
+    category === 'platform_type' || 
+    category === 'grating_type' ||
+    category === 'stringer_size'
+  );
 
   // Calculate position based on triggerRect
   const getModalStyle = () => {
     if (!triggerRect) return {};
     const margin = 10;
-    const modalWidth = 440;
-    const modalHeight = 400; // Estimated max height
+    const modalWidth = 900;
+    const modalHeight = 500; // Estimated max height
     let left = triggerRect.left;
     let top = triggerRect.bottom + margin;
     if (left + modalWidth > window.innerWidth) left = window.innerWidth - modalWidth - 20;
@@ -71,7 +83,11 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           category,
           label: newLabel,
           value: autoValue,
-          order: entries.length + defaultOptions.length + 1
+          order: entries.length + defaultOptions.length + 1,
+          steelLbsLf: hasBenchmarkFields ? parseFloat(steelLbsLf) || 0 : null,
+          shopLaborMhLf: hasBenchmarkFields ? parseFloat(shopLaborMhLf) || 0 : null,
+          fieldLaborMhLf: hasBenchmarkFields ? parseFloat(fieldLaborMhLf) || 0 : null,
+          description: (category === 'platform_type') ? description : null
         })
       });
       
@@ -79,6 +95,10 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
       if (data.success) {
         toast.success('Added successfully');
         setNewLabel('');
+        setSteelLbsLf('');
+        setShopLaborMhLf('');
+        setFieldLaborMhLf('');
+        setDescription('');
         fetchEntries();
         if (onUpdate) onUpdate();
       } else {
@@ -97,7 +117,8 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if ((await res.json()).success) {
+      const data = await res.json();
+      if (data.success) {
         toast.success('Deleted');
         fetchEntries();
         if (onUpdate) onUpdate();
@@ -120,26 +141,100 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         <div className="quick-modal-body">
           <form onSubmit={handleAdd} className="quick-add-form">
             <input 
-              placeholder="Enter New Option (Display Name)" 
+              className="form-input"
+              style={{ gridColumn: hasBenchmarkFields ? 'span 3' : 'span 2' }}
+              placeholder="Enter New Option (Display Name)"
               value={newLabel} 
               onChange={e => setNewLabel(e.target.value)}
-              className="form-input"
-              style={{ gridColumn: 'span 2' }}
               autoFocus
             />
-            <button type="submit" className="add-btn"><Plus size={16} /> Add</button>
+            
+            {hasBenchmarkFields && (
+              <>
+                <input 
+                  type="number" step="0.001"
+                  placeholder="STEEL (+10% SCRAP) LBS" 
+                  value={steelLbsLf} 
+                  onChange={e => setSteelLbsLf(e.target.value)}
+                  className="form-input"
+                  title="Steel Weight with Scrap"
+                />
+                <input 
+                  type="number" step="0.001"
+                  placeholder="SHOP HOURS" 
+                  value={shopLaborMhLf} 
+                  onChange={e => setShopLaborMhLf(e.target.value)}
+                  className="form-input"
+                  title="Shop Labor (MH/LF)"
+                />
+                <input 
+                  type="number" step="0.001"
+                  placeholder="FIELD HOURS" 
+                  value={fieldLaborMhLf} 
+                  onChange={e => setFieldLaborMhLf(e.target.value)}
+                  className="form-input"
+                  title="Field Labor (MH/LF)"
+                />
+                {category === 'platform_type' && (
+                  <input 
+                    type="number" step="0.001"
+                    placeholder="PAN RISER LB/FT" 
+                    value={description} 
+                    onChange={e => setDescription(e.target.value)}
+                    className="form-input"
+                    title="Pan Riser Weight (LB/FT)"
+                  />
+                )}
+              </>
+            )}
+
+            <button type="submit" className="add-btn" style={{ gridColumn: (hasBenchmarkFields && category !== 'platform_type') ? 'span 3' : 'auto' }}>
+              <Plus size={16} /> Add {categoryLabel.replace(' Types', '')}
+            </button>
           </form>
 
           <div className="quick-entries-list">
-            <div className="list-header">Existing List (Delete to remove)</div>
+            <div className="list-header" style={{ 
+              display: 'grid', 
+              gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 40px' : '40px 1fr 140px 140px 140px 40px', 
+              padding: '0 14px', 
+              fontSize: '10px' 
+            }}>
+              <span>S.No.</span>
+              <span>Description</span>
+              {hasBenchmarkFields && (
+                <>
+                  <span style={{ textAlign: 'center' }}>STEEL ({category === 'platform_type' ? 'LBS/SF' : '+10% SCRAP'})</span>
+                  <span style={{ textAlign: 'center' }}>SHOP HOURS</span>
+                  <span style={{ textAlign: 'center' }}>FIELD HOURS</span>
+                  {category === 'platform_type' && <span style={{ textAlign: 'center' }}>PAN RISER</span>}
+                </>
+              )}
+              <span></span>
+            </div>
             {loading ? <div className="loading-txt">Loading...</div> : (
               <>
-                {entries.map(entry => (
-                  <div key={entry._id} className="quick-entry-item">
-                    <div className="entry-info">
-                      <span className="entry-label">{entry.label}</span>
-                    </div>
-                    <button onClick={() => handleDelete(entry._id)} className="del-btn" title="Delete">
+                {entries.map((entry, index) => (
+                  <div key={entry.id || entry._id || index} className="quick-entry-item" style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 40px' : '40px 1fr 140px 140px 140px 40px', 
+                    fontSize: '12px' 
+                  }}>
+                    <div className="sno" style={{ opacity: 0.5, fontWeight: 700 }}>{index + 1}.</div>
+                    <div className="entry-label" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.label}</div>
+                    
+                    {hasBenchmarkFields ? (
+                      <>
+                        <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.steelLbsLf || 0).toFixed(3)}</div>
+                        <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.shopLaborMhLf || 0).toFixed(3)}</div>
+                        <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.fieldLaborMhLf || 0).toFixed(3)}</div>
+                        {category === 'platform_type' && (
+                          <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.description || 0).toFixed(3)}</div>
+                        )}
+                      </>
+                    ) : <><div></div><div></div><div></div>{category === 'platform_type' && <div></div>}</>}
+
+                    <button onClick={() => handleDelete(entry.id || entry._id)} className="del-btn" title="Delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -148,8 +243,11 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                 {showDefaults && defaultOptions.map((opt, idx) => (
                   <div key={`def-${idx}`} className="quick-entry-item default-item">
                     <div className="entry-info">
-                      <span className="entry-label">{opt}</span>
-                      <span className="default-badge">System Default</span>
+                      <span className="entry-label">
+                        <span style={{ marginRight: '8px', opacity: 0.4, fontSize: '11px', fontWeight: 600 }}>{entries.length + idx + 1}.</span>
+                        {opt}
+                      </span>
+                      <span className="default-badge" style={{ marginLeft: '12px' }}>System Default</span>
                     </div>
                     <div className="del-placeholder" title="System defaults cannot be deleted. Add as custom to manage.">
                       <Trash2 size={14} style={{ opacity: 0.3 }} />
@@ -173,7 +271,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           backdrop-filter: blur(2px);
         }
         .quick-modal {
-          background: white; width: 440px; border-radius: 12px;
+          background: white; width: 900px; border-radius: 12px;
           box-shadow: 0 10px 40px rgba(0,0,0,0.3);
           overflow: hidden; animation: modalPop 0.2s ease-out;
         }
@@ -191,7 +289,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         .close-btn:hover { color: #ef4444; }
         
         .quick-modal-body { padding: 20px; }
-        .quick-add-form { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 10px; margin-bottom: 20px; }
+        .quick-add-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
         .quick-add-form .form-input { padding: 10px 14px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; }
         .quick-add-form .form-input:focus { border-color: var(--color-primary-500); outline: none; box-shadow: 0 0 0 2px var(--color-primary-50); }
         .add-btn { 

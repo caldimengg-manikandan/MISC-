@@ -523,40 +523,11 @@ textarea.form-input {
   position: relative;
 }
 
-/* Custom Radio Indicator */
-.radio-option::before {
-  content: '';
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 50%;
-  background: white;
-  transition: all var(--transition);
-  flex-shrink: 0;
-}
-
-.radio-option:hover::before { border-color: var(--color-primary-300); }
+.radio-option:hover { color: var(--color-primary-600); }
 
 .radio-option.selected {
   color: var(--color-primary-600);
   font-weight: 600;
-}
-
-.radio-option.selected::before {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-50);
-}
-
-.radio-option.selected::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-primary-600);
 }
 
 /* ===================== COLLAPSIBLE SECTIONS ===================== */

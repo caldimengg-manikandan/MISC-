@@ -1,0 +1,1905 @@
+{
+"Pricing 021315":[
+ {
+  "Galvanize": "Material Type"
+ },
+ {
+  "Galvanize": "New Jersey Galvanizing rev.02\/2015 800-631-9044",
+  "Column4": "Average"
+ },
+ {
+  "Galvanize": "Structural Steel",
+  "Column2": 0.4,
+  "Column3": "per lbs.",
+  "Column4": 0.9,
+  "Column5": "Handrail"
+ },
+ {
+  "Galvanize": "Handrails",
+  "Column2": 0.9,
+  "Column3": "per lbs.",
+  "Column4": 0.4666666666666666,
+  "Column5": "Structural Steel"
+ },
+ {
+  "Galvanize": "V & S Lebanon Galvanizing rev. 06\/2009 717-861-7777",
+  "Column4": 0.9,
+  "Column5": "Ladders, Cages"
+ },
+ {
+  "Galvanize": "Structural Steel"
+ },
+ {
+  "Galvanize": "1,000-4,999 lbs",
+  "Column2": 0.5,
+  "Column3": "per lbs.",
+  "Column4": 0.9,
+  "Column5": "Misc."
+ },
+ {
+  "Galvanize": "5,000-9,999 lbs",
+  "Column2": 0.45,
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "Over 10,000 lbs.",
+  "Column2": "Please call",
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "All Handrails 1, 2, & 3-Line",
+  "Column2": 0.9,
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "All Solid Picket Rails & Flat Bar Ladders",
+  "Column2": 0.9,
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "All Pipe Ladders & Cage Ladders",
+  "Column2": 0.9,
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "Southern Galvanizing rev.12\/2012 410-837-3838"
+ },
+ {
+  "Galvanize": "Misc. & Structural Steel",
+  "Column2": 0.5,
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "Handrails, Ladders w\/ cages, platforms, returns",
+  "Column2": 0.9,
+  "Column3": "per lbs."
+ },
+ {
+  "Galvanize": "Call for Special Pricing"
+ },
+ {
+  "Galvanize": "Powder Craft, Inc Rev. 2\/2015 610-280-3770"
+ },
+ {
+  "Galvanize": "2-Line Piperail Coated Silver Bengal #49\/99999 polyester",
+  "Column2": 15,
+  "Column3": "per LF",
+  "Column4": 1.7587,
+  "Column5": "Handrail"
+ },
+ {
+  "Column2": 1.7587,
+  "Column3": "per lbs."
+ },
+ null,
+ {
+  "Galvanize": "Stair Pan ",
+  "Column2": 1.5,
+  "Column3": "per lbs.",
+  "Column4": 1.5,
+  "Column5": "changed per KDF 4\/23\/24"
+ },
+ {
+  "Galvanize": "Anchor Bolts",
+  "Column2": 0.03,
+  "Column3": "per lbs.",
+  "Column4": 0.03
+ },
+ null,
+ {
+  "Galvanize": "Grating"
+ },
+ {
+  "Galvanize": "Ohio Grating"
+ },
+ {
+  "Galvanize": "1' 1\/8\" X 3'-6\" 19W4 1-1\/2\"(A123) x 3\/16\" Std. End Plates AGN-CS AND 3\" 3\/16\" STD END PLATE",
+  "Column2": 85,
+  "Column3": "each",
+  "Column4": 81.66666666666667,
+  "Column5": 3.5,
+  "Column6": "Galvanize"
+ },
+ {
+  "Galvanize": "1' 1\/8\" X 4' 19W4 1-1\/2\"(A123) x 3\/16\" Std. End Plates AGN-CS AND 3\" 3\/16\" STD END PLATE",
+  "Column2": 88,
+  "Column4": 89.33333333333333,
+  "Column5": 4,
+  "Column6": "Galvanize"
+ },
+ {
+  "Galvanize": "1' 1\/8\" X 4'-6\" 19W4 1-1\/2\"(A123) x 3\/16\" Std. End Plates AGN-CS AND 3\" 3\/16\" STD END PLATE",
+  "Column2": 93,
+  "Column4": 93.6,
+  "Column5": 4.5,
+  "Column6": "Galvanize"
+ },
+ {
+  "Galvanize": "1' 1\/8\" X 5' 19W4 1-1\/2\"(A123) x 3\/16\" Std. End Plates AGN-CS AND 3\" 3\/16\" STD END PLATE",
+  "Column2": 102,
+  "Column4": 101.76666666666667,
+  "Column5": 5,
+  "Column6": "Galvanize"
+ },
+ null,
+ {
+  "Galvanize": "Brown-Campbell Company",
+  "Column4": 75,
+  "Column5": 3.5,
+  "Column6": "Mill Finish"
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1\/8\"x 3'-6\"",
+  "Column2": 75,
+  "Column4": 80,
+  "Column5": 4,
+  "Column6": "Mill Finish"
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1\/8\"x 4'-0\"",
+  "Column2": 85,
+  "Column4": 85,
+  "Column5": 4.5,
+  "Column6": "Mill Finish"
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1\/8\"x 4'-6\"",
+  "Column2": 87.8,
+  "Column4": 90,
+  "Column5": 5,
+  "Column6": "Mill Finish"
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1\/8\"x 5'-0\"",
+  "Column2": 95.3
+ },
+ {
+  "Column6": " "
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 3'-6\""
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 4'-0\""
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 4'-6\""
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 5'-0\""
+ },
+ {
+  "Galvanize": "Fisher Ludlow a NUCOR Company"
+ },
+ {
+  "Galvanize": "12 1\/8” x 3’-6” long w\/ CAAN w\/ end plates, galvanized 19w4 plain 1 ½” x 3\/16”",
+  "Column2": 85,
+  "Column3": "44.84#"
+ },
+ {
+  "Galvanize": "12 1\/8” x 4’-0” long w\/ CAAN w\/ end plates, galvanized 19w4 plain 1 ½” x 3\/16”",
+  "Column2": 95,
+  "Column3": "50.06#"
+ },
+ {
+  "Galvanize": "12 1\/8” x 4’-6” long w\/ CAAN w\/ end plates, galvanized 19w4 plain 1 ½” x 3\/16”              ",
+  "Column2": 100,
+  "Column3": "56.42#"
+ },
+ {
+  "Galvanize": "12 1\/8” x 5’-0” long w\/ CAAN w\/ end plates, galvanized 19w4 plain 1 ½” x 3\/16”",
+  "Column2": 108,
+  "Column3": 0
+ },
+ null,
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 3'-6\"",
+  "Column2": 75,
+  "Column3": "each"
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 4'-0\"",
+  "Column2": 80
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 4'-6\"",
+  "Column2": 85
+ },
+ {
+  "Galvanize": "1 1\/2 x 3\/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates 12 1\/8\"x 5'-0\"",
+  "Column2": 90
+ }
+],
+"SFE FINAL ESTIMATE":[
+ null,
+ {
+  "Miscellaneous Metal Final Estimate Form": "Project:",
+  "Column4": 0,
+  "Column7": "Date:",
+  "Column8": "11\/17\/2025"
+ },
+ {
+  "Miscellaneous Metal Final Estimate Form": 0,
+  "Column7": "Notes:"
+ },
+ {
+  "Miscellaneous Metal Final Estimate Form": "Project No.",
+  "Column4": 0
+ },
+ {
+  "Column6": "GALVANIZE SHOP HOURS\/LF",
+  "Column7": "GALVANIZE FIELD HOURS\/LF",
+  "Column8": "TOTAL STEEL (+10% SCRAP) LBS",
+  "Column9": "TOTAL SHOP HOURS",
+  "Rev. 02\/06\/15": "TOTAL FIELD HOURS",
+  "Column11": "PRICE PER LB:",
+  "Column12": 0.75
+ },
+ {
+  "#REF!": "TOTAL STEEL LBS.",
+  "Column4": 0,
+  "Column6": "",
+  "Column7": "",
+  "Column8": "STEEL (+10% SCRAP) LBS",
+  "Column9": "SHOP HOURS",
+  "Rev. 02\/06\/15": "FIELD HOURS"
+ },
+ {
+  "#REF!": "TOTAL MATERIAL PRICE",
+  "Column4": 0,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 02\/06\/15": 0
+ },
+ {
+  "#REF!": "STAIR PAN STOTAL PRICE",
+  "Column4": 0,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 02\/06\/15": 0,
+  "Column11": "SHOP HOURLY RATE:",
+  "Column12": 70
+ },
+ {
+  "#REF!": "STAIR PANS TOTAL STEEL LBS. ",
+  "Column4": 0,
+  "Column11": "FIELD HOURLY RATE:",
+  "Column12": 70
+ },
+ {
+  "#REF!": "No",
+  "Column2": "STAIR GRATING",
+  "Column4": "",
+  "Column11": "SALES TAX:",
+  "Column12": 0.06
+ },
+ {
+  "#REF!": "No",
+  "Column4": ""
+ },
+ {
+  "#REF!": "ANCHOR BOLTS",
+  "Column4": 0,
+  "Column9": " "
+ },
+ {
+  "#REF!": "POR ROK ANCHORS",
+  "Column4": 0
+ },
+ null,
+ null,
+ {
+  "Column7": "SUB TOTAL WITH OUT TAX",
+  "Column9": 0
+ },
+ {
+  "Column7": "SALES TAX",
+  "Column9": 0
+ },
+ {
+  "Column7": "TOTAL ESTIMATE",
+  "Column9": 0
+ },
+ null,
+ null,
+ null,
+ null,
+ null,
+ null,
+ null,
+ {
+  "Column12": "Formulas"
+ },
+ {
+  "Column12": "#REF!",
+  "Column13": "lbs Steel Scrap"
+ },
+ null,
+ {
+  "Column12": "Formulas"
+ },
+ {
+  "Column12": "#REF!",
+  "Column13": "lbs Steel Scrap"
+ }
+],
+"Table Data":[
+ {
+  "Description": "1-Line Handrailing on Guardrail - 1 1\/4\" SCH 40 pipe"
+ },
+ {
+  "Description": "1-Line Handrailing on Guardrail - 1 1\/2\" SCH 40 pipe"
+ },
+ {
+  "Description": "1-Line Hand Railing wall bolted - 1 1\/4\" SCH 40 pipe"
+ },
+ {
+  "Description": "1-Line Hand Railing wall bolted - 1 1\/2\" SCH 40  pipe"
+ },
+ {
+  "Description": "1-Line Steel Floor Mounted Handrail 1 1\/4\" SCH. 40 pipe"
+ },
+ {
+  "Description": "1-Line Steel Floor Mounted Handrail 1 1\/2\" SCH. 40 pipe"
+ },
+ {
+  "Description": "1-Line Steel Floor Mounted Handrail 1 1\/4\" SCH. 40 Rail and 1 1\/4\" SCH. 80 Post"
+ },
+ {
+  "Description": "1-Line Steel Floor Mounted Handrail 1 1\/2\" SCH. 40 Rail and 1 1\/2\" SCH. 80 Post"
+ },
+ {
+  "Description": "2-Line Steel Pipe Guardrail 1 1\/4\" Sch. 40 Pipe Rails and Post"
+ },
+ {
+  "Description": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and Post"
+ },
+ {
+  "Description": "2-Line Steel Pipe Guardrail 1 1\/4\" Sch. 40 Pipe Rails and SCH. 80 Post",
+  "Column3": 0
+ },
+ {
+  "Description": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and SCH. 80 Post"
+ },
+ {
+  "Description": "3-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and Posts"
+ },
+ {
+  "Description": "3-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and Posts"
+ },
+ {
+  "Description": "3-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and SCH 80 Posts"
+ },
+ {
+  "Description": "3-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and SCH. 80 Posts"
+ },
+ {
+  "Description": "8-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and Posts"
+ },
+ {
+  "Description": "8-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and Posts"
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" Pipe Rails and Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and SCH 80 Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" Pipe Rails and SCH 80 Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" Pipe Rails and Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" Pipe Rails and Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" Pipe Rails and SCH 80 Post "
+ },
+ {
+  "Description": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" Pipe Rails and SCH 80 Post "
+ },
+ {
+  "Description": "Optional Kick Plate 4'x4'"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" SCH 40 Rails and Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" SCH 40 Rails and Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" SCH 40 Rails and SCH 80 Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" SCH 40 Rails and SCH 80 Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" SCH 40 Rails and Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" SCH 40 Rails and Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" SCH 40 Rails and SCH. 80 Post"
+ },
+ {
+  "Description": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" SCH 40 Rails and SCH. 80 Post"
+ },
+ {
+  "Description": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/4 SCH 40 RAILS AND POST"
+ },
+ {
+  "Description": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/2 SCH 40 RAILS AND POST"
+ },
+ {
+  "Description": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/4 SCH 40 RAILS AND SCH 80 POST"
+ },
+ {
+  "Description": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/2\" SCH 40 RAILS AND SCH 80 POST"
+ },
+ null,
+ {
+  "Description": "Post",
+  "picture": "Price"
+ },
+ {
+  "Description": "Embedded ",
+  "picture": 5
+ },
+ {
+  "Description": "Anchored",
+  "picture": 6
+ },
+ null,
+ {
+  "Description": "METAL PAN PLATFORM "
+ },
+ {
+  "Description": "TYPE",
+  "picture": "DESCRIPTION",
+  "Column3": "STEEL LBS\/SF",
+  "Column4": "SHOP LABOR MH\/SF",
+  "Column5": "FIELD LABOR MH\/SF",
+  "Column6": "PAN RISERLB\/FT"
+ },
+ {
+  "Description": "AP",
+  "picture": "Metal pan stair platform 8'-0\" wide",
+  "Column3": 14,
+  "Column4": 0.22,
+  "Column5": 0.25,
+  "Column6": 5
+ },
+ {
+  "Description": "BP",
+  "picture": "Metal pan stair platform 10'-0\" wide",
+  "Column3": 15.5,
+  "Column4": 0.22,
+  "Column5": 0.25,
+  "Column6": 5
+ },
+ {
+  "Description": "CP",
+  "picture": "Metal pan stair platform 12'-0\" wide",
+  "Column3": 16.5,
+  "Column4": 0.22,
+  "Column5": 0.25,
+  "Column6": 5
+ },
+ {
+  "picture": "Grating pan stair platform 8'-0\" wide",
+  "Column3": 14.5,
+  "Column4": 0.22,
+  "Column5": 0.25
+ },
+ {
+  "picture": "Grating pan stair platform 10'-0\" wide",
+  "Column3": 15.5,
+  "Column4": 0.22,
+  "Column5": 0.25
+ },
+ {
+  "picture": "Description",
+  "Column3": "STEEL LBS\/LF",
+  "Column4": "SHOP LABOR MH\/LF",
+  "Column5": "FIELD LABOR MH\/LF"
+ },
+ {
+  "picture": "1-Line Handrailing on Guardrail - 1 1\/4\" SCH 40 pipe",
+  "Column3": 2.85,
+  "Column4": 0.3,
+  "Column5": 0.28,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Handrailing on Guardrail - 1 1\/2\" SCH 40 pipe",
+  "Column3": 3.3,
+  "Column4": 0.32,
+  "Column5": 0.28,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Hand Railing wall bolted - 1 1\/4\" SCH 40 pipe",
+  "Column3": 2.85,
+  "Column4": 0.275,
+  "Column5": 0.25,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Hand Railing wall bolted - 1 1\/2\" SCH 40  pipe",
+  "Column3": 3.3,
+  "Column4": 0.3,
+  "Column5": 0.25,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/4\" SCH. 40 pipe",
+  "Column3": 4.56,
+  "Column4": 0.375,
+  "Column5": 0.35,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/2\" SCH. 40 pipe",
+  "Column3": 5.44,
+  "Column4": 0.4,
+  "Column5": 0.35,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/4\" SCH. 40 Rail and 1 1\/4\" SCH. 80 Post",
+  "Column3": 5.28,
+  "Column4": 0.425,
+  "Column5": 0.35,
+  "Column6": 0
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/2\" SCH. 40 Rail and 1 1\/2\" SCH. 80 Post",
+  "Column3": 6.35,
+  "Column4": 0.45,
+  "Column5": 0.35,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/4\" Sch. 40 Pipe Rails and Post",
+  "Column3": 6.84,
+  "Column4": 0.5,
+  "Column5": 0.35,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and Post",
+  "Column3": 8.16,
+  "Column4": 0.6,
+  "Column5": 0.375,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/4\" Sch. 40 Pipe Rails and SCH. 80 Post",
+  "Column3": 7.56,
+  "Column4": 0.55,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and SCH. 80 Post",
+  "Column3": 9.07,
+  "Column4": 0.65,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 9.12,
+  "Column4": 0.75,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 10.88,
+  "Column4": 0.775,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and SCH 80 Posts",
+  "Column3": 9.84,
+  "Column4": 0.775,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and SCH. 80 Posts",
+  "Column3": 11.75,
+  "Column4": 0.8,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "8-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 20.52,
+  "Column4": 2.25,
+  "Column5": 0.75,
+  "Column6": 0
+ },
+ {
+  "picture": "8-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 24.48,
+  "Column4": 2.5,
+  "Column5": 0.85,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and Post ",
+  "Column3": 17.04,
+  "Column4": 0.875,
+  "Column5": 0.45,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" Pipe Rails and Post ",
+  "Column3": 18.36,
+  "Column4": 0.9,
+  "Column5": 0.45,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and SCH 80 Post ",
+  "Column3": 17.76,
+  "Column4": 0.9,
+  "Column5": 0.45,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" Pipe Rails and SCH 80 Post ",
+  "Column3": 19.27,
+  "Column4": 0.925,
+  "Column5": 0.45,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" Pipe Rails and Post ",
+  "Column3": 26.89,
+  "Column4": 1,
+  "Column5": 0.6,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" Pipe Rails and Post ",
+  "Column3": 28.21,
+  "Column4": 1,
+  "Column5": 0.6,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" Pipe Rails and SCH 80 Post ",
+  "Column3": 27.61,
+  "Column4": 1,
+  "Column5": 0.6,
+  "Column6": 0
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" Pipe Rails and SCH 80 Post ",
+  "Column3": 29.12,
+  "Column4": 1,
+  "Column5": 0.6,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" SCH 40 Rails and Post",
+  "Column3": 16.78,
+  "Column4": 1.2,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" SCH 40 Rails and Post",
+  "Column3": 18.57,
+  "Column4": 1.25,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" SCH 40 Rails and SCH 80 Post",
+  "Column3": 17.51,
+  "Column4": 1.25,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" SCH 40 Rails and SCH 80 Post",
+  "Column3": 19.48,
+  "Column4": 1.25,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" SCH 40 Rails and Post",
+  "Column3": 26.47,
+  "Column4": 1.3,
+  "Column5": 0.425,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" SCH 40 Rails and Post",
+  "Column3": 28.23,
+  "Column4": 1.3,
+  "Column5": 0.45,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" SCH 40 Rails and SCH. 80 Post",
+  "Column3": 27.19,
+  "Column4": 1.3,
+  "Column5": 0.425,
+  "Column6": 0
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" SCH 40 Rails and SCH. 80 Post",
+  "Column3": 29.14,
+  "Column4": 1.3,
+  "Column5": 0.45,
+  "Column6": 0
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/4 SCH 40 RAILS AND POST",
+  "Column3": 6.84,
+  "Column4": 1,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/2 SCH 40 RAILS AND POST",
+  "Column3": 8.16,
+  "Column4": 1,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/4 SCH 40 RAILS AND SCH 80 POST",
+  "Column3": 7.56,
+  "Column4": 1,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/2\" SCH 40 RAILS AND SCH 80 POST",
+  "Column3": 9.07,
+  "Column4": 1,
+  "Column5": 0.4,
+  "Column6": 0
+ },
+ {
+  "picture": "Optional Kick Plate 4'x4'",
+  "Column3": 3.4,
+  "Column4": 0.125,
+  "Column5": 0.05,
+  "Column6": 0
+ },
+ {
+  "Description": "OPTIONAL",
+  "Column3": "STEEL LBS\/LF",
+  "Column4": "SHOP LABOR MH\/LF"
+ },
+ {
+  "Description": "KP",
+  "picture": "Optional Kick Plate 4'x4'",
+  "Column3": 3.4,
+  "Column4": 0.125,
+  "Column5": 0.1
+ },
+ {
+  "Description": "PR",
+  "picture": "Pipe Returns",
+  "Column3": 2.5,
+  "Column4": 1
+ },
+ null,
+ {
+  "picture": "Std.3'-8\" to  4'-0\" wide < 14'-0\" Stingers\/MC 12 X 10.6",
+  "Column3": 25.32,
+  "Column4": 1.6,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 4'-0\" wide 14'-0 - 19'-0\" Long Stringer\/MC 12 X 14.3",
+  "Column3": 71.8,
+  "Column4": 1.65,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 19'-0\" Long Stringer\/C 12 X 20.7",
+  "Column3": 45.52,
+  "Column4": 1.75,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 14'-0\" Long Stringer\/TS 12 X 2 x 3\/16",
+  "Column3": 39,
+  "Column4": 1.75,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 14'-0\" to 19'-0\" Long Stringer\/TS 12 X 2 x 1\/4\"",
+  "Column3": 50,
+  "Column4": 1.75,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 5'-0\" wide < 14'-0\" Long Stringers \/MC 12 X 10.6",
+  "Column3": 25.32,
+  "Column4": 1.6,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 Long Stringers\/TS 12 X 2 X 3\/16",
+  "Column3": 39,
+  "Column4": 1.75,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 UP TO 19'-0\" Long Stringers\/ TS 12 X 2 X 1\/4\"",
+  "Column3": 50,
+  "Column4": 1.75,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 over 19'-0\" Long Stringers\/ C12 X 20.7",
+  "Column3": 45.52,
+  "Column4": 1.75,
+  "Column5": 1
+ },
+ {
+  "picture": "Std. 6'-0\" wide < 14'-0\" span metal pan stairs\/MC 12 X 10.6",
+  "Column3": 85.8,
+  "Column4": 3.5,
+  "Column5": 1.5
+ },
+ {
+  "picture": "Std. 6'-0\" wide 14'-0 - 19'-0\" span metal pan stairs\/MC 12 X 14.3",
+  "Column3": 89.2,
+  "Column4": 4,
+  "Column5": 1.5
+ },
+ {
+  "picture": "Std. 6'-0\" wide > 19'-0\" span metal pan stairs",
+  "Column3": 106,
+  "Column4": 5,
+  "Column5": 2
+ },
+ {
+  "picture": "Std. 4'-0\" wide < 14'-0\" span grating tread stairs\/MC 12 X 10.6",
+  "Column3": 23.2,
+  "Column4": 1.5,
+  "Column5": 0.75
+ },
+ {
+  "picture": "Std. 4'-0\" wide 14'-0 - 19'-0\" span grating tread stairs\/MC 12 X 14.3",
+  "Column3": 30.6,
+  "Column4": 1.5,
+  "Column5": 0.75
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 19'-0\" span grating tread stairs",
+  "Column3": 43.4,
+  "Column4": 1.5,
+  "Column5": 0.75
+ },
+ {
+  "picture": "Std. 5'-0\" wide < 14'-0\" span grating tread stairs\/MC 12 X 10.6",
+  "Column3": 23.2,
+  "Column4": 1.5,
+  "Column5": 0.75
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 - 19'-0\" span grating tread stairs\/MC 12 X 14.3",
+  "Column3": 30.6,
+  "Column4": 1.5,
+  "Column5": 0.75
+ },
+ {
+  "picture": "Std. 5'-0\" wide > 19'-0\" span grating tread stairs",
+  "Column3": 23.2,
+  "Column4": 1.5,
+  "Column5": 0.75
+ },
+ null,
+ null,
+ {
+  "picture": "Galvanize",
+  "Column3": 0.75
+ },
+ {
+  "picture": "Powder Coat",
+  "Column3": 1.7587
+ },
+ {
+  "picture": "Galvanizing Labor",
+  "Column3": "SHOP LABOR MH\/LF",
+  "Column4": "FIELD LABOR MH\/LF"
+ },
+ {
+  "picture": "1-Line Handrailing on Guardrail - 1 1\/4\" SCH 40 pipe",
+  "Column3": 0.25,
+  "Column4": 0.25
+ },
+ {
+  "picture": "1-Line Handrailing on Guardrail - 1 1\/2\" SCH 40 pipe",
+  "Column3": 0.25,
+  "Column4": 0.25
+ },
+ {
+  "picture": "1-Line Hand Railing wall bolted - 1 1\/4\" SCH 40 pipe",
+  "Column3": 0.25,
+  "Column4": 0.25
+ },
+ {
+  "picture": "1-Line Hand Railing wall bolted - 1 1\/2\" SCH 40  pipe",
+  "Column3": 0.25,
+  "Column4": 0.25
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/4\" SCH. 40 pipe",
+  "Column3": 0.035,
+  "Column4": 0.05
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/2\" SCH. 40 pipe",
+  "Column3": 0.035,
+  "Column4": 0.05
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/4\" SCH. 40 Rail and 1 1\/4\" SCH. 80 Post",
+  "Column3": 0.035,
+  "Column4": 0.05
+ },
+ {
+  "picture": "1-Line Steel Floor Mounted Handrail 1 1\/2\" SCH. 40 Rail and 1 1\/2\" SCH. 80 Post",
+  "Column3": 0.035,
+  "Column4": 0.05
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/4\" Sch. 40 Pipe Rails and Post",
+  "Column3": 0.04,
+  "Column4": 0.065
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and Post",
+  "Column3": 0.04,
+  "Column4": 0.065
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/4\" Sch. 40 Pipe Rails and SCH. 80 Post",
+  "Column3": 0.04,
+  "Column4": 0.065
+ },
+ {
+  "picture": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and SCH. 80 Post",
+  "Column3": 0.04,
+  "Column4": 0.065
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and SCH 80 Posts",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "3-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and SCH. 80 Posts",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "8-Line Steel Pipe Guardrail 1 1\/4\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 0.15,
+  "Column4": 0.25
+ },
+ {
+  "picture": "8-Line Steel Pipe Guardrail 1 1\/2\" SCH. 40 Pipe Rails and Posts",
+  "Column3": 0.15,
+  "Column4": 0.25
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" Pipe Rails and Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and SCH 80 Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" Pipe Rails and SCH 80 Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" Pipe Rails and Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" Pipe Rails and Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" Pipe Rails and SCH 80 Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "2-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" Pipe Rails and SCH 80 Post ",
+  "Column3": 0.05,
+  "Column4": 0.075
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" SCH 40 Rails and Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" SCH 40 Rails and Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" SCH 40 Rails and SCH 80 Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/2\" SCH 40 Rails and SCH 80 Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" SCH 40 Rails and Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" SCH 40 Rails and Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/4\" SCH 40 Rails and SCH. 80 Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "3-Line Picket Guardrail w\/3\/4\" pickets - 1 1\/2\" SCH 40 Rails and SCH. 80 Post",
+  "Column3": 0.06,
+  "Column4": 0.085
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/4 SCH 40 RAILS AND POST",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/2 SCH 40 RAILS AND POST",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/4 SCH 40 RAILS AND SCH 80 POST",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "2-LINE STEEL PIPE GUARDRAIL W\/ MESH PANEL INFILLS- 1 1\/2\" SCH 40 RAILS AND SCH 80 POST",
+  "Column3": 0.045,
+  "Column4": 0.07
+ },
+ {
+  "picture": "Metal pan stair platform 8'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 10'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 12'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Grating pan stair platform 8'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Grating pan stair platform 10'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 8'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 10'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 12'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Grating pan stair platform 8'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Grating pan stair platform 10'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 8'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 10'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Metal pan stair platform 12'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Grating pan stair platform 8'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Grating pan stair platform 10'-0\" wide",
+  "Column4": 0.05
+ },
+ {
+  "picture": "Std.3'-8\" to  4'-0\" wide < 14'-0\" Stingers\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide 14'-0 - 19'-0\" Long Stringer\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 19'-0\" Long Stringer\/C 12 X 20.7",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 14'-0\" Long Stringer\/TS 12 X 2 x 3\/16",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 14'-0\" to 19'-0\" Long Stringer\/TS 12 X 2 x 1\/4\"",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide < 14'-0\" Long Stringers \/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 Long Stringers\/TS 12 X 2 X 3\/16",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 UP TO 19'-0\" Long Stringers\/ TS 12 X 2 X 1\/4\"",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 over 19'-0\" Long Stringers\/ C12 X 20.7",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 6'-0\" wide < 14'-0\" span metal pan stairs\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 6'-0\" wide 14'-0 - 19'-0\" span metal pan stairs\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 6'-0\" wide > 19'-0\" span metal pan stairs",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide < 14'-0\" span grating tread stairs\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide 14'-0 - 19'-0\" span grating tread stairs\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 19'-0\" span grating tread stairs",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide < 14'-0\" span grating tread stairs\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 - 19'-0\" span grating tread stairs\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide > 19'-0\" span grating tread stairs",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std.3'-8\" to  4'-0\" wide < 14'-0\" Stingers\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide 14'-0 - 19'-0\" Long Stringer\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 19'-0\" Long Stringer\/C 12 X 20.7",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 14'-0\" Long Stringer\/TS 12 X 2 x 3\/16",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 14'-0\" to 19'-0\" Long Stringer\/TS 12 X 2 x 1\/4\"",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide < 14'-0\" Long Stringers \/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 Long Stringers\/TS 12 X 2 X 3\/16",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 UP TO 19'-0\" Long Stringers\/ TS 12 X 2 X 1\/4\"",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 over 19'-0\" Long Stringers\/ C12 X 20.7",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 6'-0\" wide < 14'-0\" span metal pan stairs\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 6'-0\" wide 14'-0 - 19'-0\" span metal pan stairs\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 6'-0\" wide > 19'-0\" span metal pan stairs",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide < 14'-0\" span grating tread stairs\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide 14'-0 - 19'-0\" span grating tread stairs\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 4'-0\" wide > 19'-0\" span grating tread stairs",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide < 14'-0\" span grating tread stairs\/MC 12 X 10.6",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide 14'-0 - 19'-0\" span grating tread stairs\/MC 12 X 14.3",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ {
+  "picture": "Std. 5'-0\" wide > 19'-0\" span grating tread stairs",
+  "Column3": 0.15,
+  "Column4": 0.1
+ },
+ null,
+ {
+  "picture": "Yes"
+ },
+ {
+  "picture": "No"
+ }
+],
+"Fabsuite Data":[
+ null,
+ {
+  "Page #": 1,
+  "Item #": 10,
+  "Quantity": 40,
+  "Shape": "L",
+  "Dimensions": "6 x 6 x 3\/8",
+  "Length": "18'-4",
+  "Grade": "A36",
+  "Labor Code": "B",
+  "Copes": 0,
+  "Holes": 0,
+  "Holes w\/o Bolts": 0,
+  "Stiffeners": 0,
+  "TF Holes": 0,
+  "Web Holes": 0,
+  "BF Holes": 0,
+  "MHrs\/Pc": 0,
+  "Cost\/Pc": 0,
+  "Manual Unit Cost": "0\/Item",
+  "Finish": "PNT",
+  "Sub-Category": "a",
+  "Main Pc": "F",
+  "Erect Hours\/Pc": 0,
+  "Erect Cost\/Pc": 0
+ }
+],
+"Takeoff":[
+ {
+  "KEY NOTES": "DROPDOWN LIST"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Project:",
+  "Column7": "Date:",
+  "KEY NOTES": "INPUT FIELD"
+ },
+ {
+  "Column7": "Notes:"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Project #:"
+ },
+ {
+  "Column13": 0,
+  "Column14": "POR ROK"
+ },
+ {
+  "Column1": "Stair:     "
+ },
+ {
+  "Column2": "Wall Rail",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "LF",
+  "Column5": "1-Line Hand Railing wall bolted - 1 1\/2\" SCH 40  pipe"
+ },
+ {
+  "Column4": "(pick from dropdown list above to identify type of rail)"
+ },
+ {
+  "Column2": "Grab Rail",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "LF",
+  "Column5": "1-Line Handrailing on Guardrail - 1 1\/4\" SCH 40 pipe"
+ },
+ {
+  "Column4": "(pick from dropdown list above to identify type of rail)"
+ },
+ {
+  "Column2": "Guard Rail",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "LF",
+  "Column5": "2-Line Picket Guardrail w\/1\/2\" pickets - 1 1\/4\" Pipe Rails and Post "
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "# of Intermediate Rails"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 4,
+  "Column4": "Ft. Max Post Spacing",
+  "Column9": 0
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Qty. of Post",
+  "Column6": "Anchored"
+ },
+ {
+  "Column4": "(pick from dropdown list above)"
+ },
+ {
+  "Column2": "Optional",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "LF Kick Plate"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Qty. of Pipe Return ",
+  "Column6": "Pipe Returns"
+ },
+ {
+  "Column4": "(pick from dropdown list above)"
+ },
+ {
+  "Column5": "Rail Type",
+  "Column6": "2-Line Steel Pipe Guardrail 1 1\/2\" Sch. 40 Pipe Rails and Post"
+ },
+ {
+  "Column8": "(pick from dropdown list above to view image)",
+  "Column13": "Formulas"
+ },
+ {
+  "Column2": "Guard Rail",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "LF",
+  "Column13": 0,
+  "Column14": "lbs Steel Scrap"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "# of Intermediate Rails",
+  "Column13": 0,
+  "Column14": "Mhrs per pound"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 4,
+  "Column4": "Ft. Max Post Spacing",
+  "Column13": 0,
+  "Column14": "Field labor "
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 4,
+  "Column4": "Qty. of Post"
+ },
+ {
+  "Column4": "(pick from dropdown list above)"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Qty. of Platforms"
+ },
+ {
+  "Column1": "Metal Platform",
+  "Miscellaneous Metal Estimate Form": 9.66,
+  "Column4": "Length",
+  "Column5": "Metal pan stair platform 10'-0\" wide"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 4.33,
+  "Column4": "Width",
+  "Column5": "(pick from dropdown list above the width of platform)"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "SQ. FT."
+ },
+ null,
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Qty. of Platforms"
+ },
+ {
+  "Column1": "Metal Platform",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Length"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Width",
+  "Column5": "(pick from dropdown list above the width of platform)"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "SQ. FT."
+ },
+ null,
+ {
+  "Column1": "Stair Metal Pans",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column4": "Qty. Riser",
+  "Column5": "Std. 4'-0\" wide 14'-0 - 19'-0\" Long Stringer\/MC 12 X 14.3"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 11,
+  "Column4": "in. Tread",
+  "Column5": "(pick from dropdown list above the width of stairs)"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 7,
+  "Column4": "in. Riser"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 4.33,
+  "Column4": "Width of Stairs"
+ },
+ null,
+ {
+  "Column1": "Notes:"
+ }
+],
+"Estimate":[
+ null,
+ {
+  "Miscellaneous Metal Estimate Form": "Project:",
+  "Column4": 0,
+  "Column7": "Date:"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column7": "Notes:"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Project #:",
+  "Column4": 0
+ },
+ {
+  "Column1": "Stair:     ",
+  "Column2": 0,
+  "Column5": "STEEL LBS\/LF\/SF\/RISER",
+  "Column6": "SHOP MH\/LF\/ SF",
+  "Column7": "FIELD MH\/LF\/ SF",
+  "Column8": "STEEL (+10% SCRAP) LBS",
+  "Column9": "SHOP HOURS",
+  "Rev. 09-27-18": "FIELD HOURS",
+  "Column11": "PRICE PER LB:",
+  "Column12": 0.85
+ },
+ {
+  "Column1": "Wall Rail",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "LF",
+  "Column5": 3.3,
+  "Column6": 0.3,
+  "Column7": 0.25,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0,
+  "Column11": "SHOP HOURLY RATE:",
+  "Column12": 90
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0,
+  "Column6": 0,
+  "Column7": 0,
+  "Column11": "FIELD HOURLY RATE:",
+  "Column12": 125
+ },
+ {
+  "Column1": "Grab Rail",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "LF",
+  "Column5": 2.85,
+  "Column6": 0.3,
+  "Column7": 0.28,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0,
+  "Column11": "SALES TAX:",
+  "Column12": 0.06
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0,
+  "Column6": 0,
+  "Column7": 0,
+  "Column11": "Galvanize:",
+  "Column12": 0.1
+ },
+ {
+  "Column1": "Guard Rail",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "LF",
+  "Column5": 21,
+  "Column6": 0.875,
+  "Column7": 0.45,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column6": 0,
+  "Column7": 0
+ },
+ {
+  "Column2": 4,
+  "Miscellaneous Metal Estimate Form": "Ft. Max Post Spacing"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Qty. of Post"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0
+ },
+ {
+  "Column1": "Guard Rail",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "LF",
+  "Column5": "",
+  "Column6": "",
+  "Column7": "",
+  "Column8": "",
+  "Column9": "",
+  "Rev. 09-27-18": ""
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "# of Intermediate Rails",
+  "Column6": 0,
+  "Column7": 0
+ },
+ {
+  "Column2": 4,
+  "Miscellaneous Metal Estimate Form": "Ft. Max Post Spacing"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Qty. of Post"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0
+ },
+ {
+  "Column1": "Optional",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "LF Kick Plate",
+  "Column5": "",
+  "Column6": "",
+  "Column7": "",
+  "Column8": "",
+  "Column9": "",
+  "Rev. 09-27-18": ""
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Pipe Return Each",
+  "Column5": 2.5,
+  "Column6": 1,
+  "Column8": 0,
+  "Column9": 0
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0
+ },
+ {
+  "Column1": "Metal Platform",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Length",
+  "Column5": 15.64,
+  "Column6": 0.22,
+  "Column7": 0.25,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Width",
+  "Column12": "Formulas"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Qty. of Platforms"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "SQ. FT.",
+  "Column12": "#N\/A",
+  "Column13": "lbs Steel Scrap"
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0,
+  "Column7": 0
+ },
+ {
+  "Column1": "Metal Platform",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Length",
+  "Column5": "",
+  "Column6": "",
+  "Column7": "",
+  "Column8": "",
+  "Column9": "",
+  "Rev. 09-27-18": "",
+  "Column12": "Formulas"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Width",
+  "Column12": "#N\/A",
+  "Column13": "lbs Steel Scrap"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Qty. of Platforms"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "SQ. FT."
+ },
+ {
+  "Miscellaneous Metal Estimate Form": "Total Steel lbs.",
+  "Column5": 0,
+  "Column7": 0
+ },
+ {
+  "Column1": "Stair Stringers & Pans",
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "Qty. Riser",
+  "Column5": 35,
+  "Column6": 1.75,
+  "Column7": 1,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column2": 11,
+  "Miscellaneous Metal Estimate Form": "in. Tread",
+  "Column5": 10
+ },
+ {
+  "Column2": 7,
+  "Miscellaneous Metal Estimate Form": "in. Riser"
+ },
+ {
+  "Column2": 4.33,
+  "Miscellaneous Metal Estimate Form": "Width of Stair"
+ },
+ {
+  "Column2": 0,
+  "Miscellaneous Metal Estimate Form": "SQ. FT.",
+  "Column6": 0,
+  "Column7": 0
+ },
+ {
+  "Column2": "Stringer Total Steel lbs.",
+  "Column5": 0
+ },
+ {
+  "Column2": "Pans Total Steel lbs.",
+  "Column5": 0
+ },
+ null,
+ null,
+ {
+  "Miscellaneous Metal Estimate Form": "Steel lbs",
+  "Column6": "Galvanize Shop Hours\/ LF",
+  "Column7": "Galvanize Field Hours\/ LF",
+  "Column8": "STEEL (+10% SCRAP) LBS",
+  "Column9": "SHOP HOURS",
+  "Rev. 09-27-18": "FIELD HOURS"
+ },
+ {
+  "Column1": "SUB TOTAL",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column6": 0,
+  "Column7": 0,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column1": "STEEL PRICE",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column8": 0,
+  "Column9": 0,
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column1": "Stair Pans TOTAL PRICE",
+  "Miscellaneous Metal Estimate Form": 0
+ },
+ {
+  "Column1": "No",
+  "Column2": "STAIR GRATING",
+  "Miscellaneous Metal Estimate Form": ""
+ },
+ {
+  "Column1": "No",
+  "Miscellaneous Metal Estimate Form": ""
+ },
+ {
+  "Column1": "Anchor Bolts",
+  "Miscellaneous Metal Estimate Form": 0,
+  "Column9": " "
+ },
+ {
+  "Column1": "POR ROK ANCHORS",
+  "Miscellaneous Metal Estimate Form": 0
+ },
+ {
+  "Column1": "TOTAL MATERIAL PRICE",
+  "Miscellaneous Metal Estimate Form": 0
+ },
+ {
+  "Column1": "PRICE PER RISER",
+  "Miscellaneous Metal Estimate Form": "0"
+ },
+ {
+  "Column7": "SUB TOTAL WITH OUT TAX",
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column9": "Tax",
+  "Rev. 09-27-18": 0
+ },
+ {
+  "Column9": "Total Estimate",
+  "Rev. 09-27-18": 0
+ }
+]
+}

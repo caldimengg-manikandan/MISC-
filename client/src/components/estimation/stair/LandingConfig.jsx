@@ -14,6 +14,36 @@ const DEFAULT_PLATFORM_TYPES = [
 
 const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv + Painted', 'Powder Coated'];
 
+// ── Unit Input Helper (Consistent with StairConfig) ─────────
+const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
+  const { value: val, unit } = value || { value: '', unit: 'FT' };
+  
+  return (
+    <div className="form-field">
+      <label className="form-label">{label}</label>
+      <div className="form-input-with-unit">
+        <input
+          id={id}
+          type="text"
+          className="arch-input"
+          value={val}
+          onChange={e => onChange({ value: e.target.value, unit })}
+          placeholder={placeholder || '0'}
+        />
+        <button 
+          type="button"
+          className="form-input-unit unit-active"
+          style={{ cursor: 'pointer', border: 'none' }}
+          onClick={() => onChange({ value: val, unit: unit === 'FT' ? 'IN' : 'FT' })}
+        >
+          {unit}
+        </button>
+      </div>
+      {hint && <span className="form-hint">{hint}</span>}
+    </div>
+  );
+};
+
 export default function LandingConfig({ data, onChange }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
@@ -54,8 +84,8 @@ export default function LandingConfig({ data, onChange }) {
 
   const [form, setForm] = useState({
     landingNumber: data?.landingNumber || '',
-    platformLength: data?.platformLength || '',
-    platformWidth: data?.platformWidth || '',
+    platformLength: data?.platformLength || { value: '', unit: 'FT' },
+    platformWidth: data?.platformWidth || { value: '', unit: 'FT' },
     platformType: data?.platformType || '',
     finish: data?.finish || 'Primer',
     ...data
@@ -94,39 +124,32 @@ export default function LandingConfig({ data, onChange }) {
             placeholder="e.g. L-01"
           />
         </div>
+        <UnitInput 
+          id="landing-length"
+          label="Length"
+          value={form.platformLength}
+          onChange={v => set('platformLength', v)}
+        />
+        <UnitInput 
+          id="landing-width"
+          label="Width"
+          value={form.platformWidth}
+          onChange={v => set('platformWidth', v)}
+        />
         <div className="form-field">
-          <label className="form-label">Length (ft)</label>
-          <div className="form-input-with-unit data-type-ft-in">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>🔒 Area (sq.ft)</span>
+            <span className="system-calc-badge">SYSTEM-CALC</span>
+          </label>
+          <div className="form-input-with-unit">
             <input
               type="number"
-              step="0.1"
-              value={form.platformLength}
-              onChange={e => set('platformLength', e.target.value)}
+              className="auto-calculation field-auto"
+              value={data?.systemCalc?.area || ''}
+              readOnly
               placeholder="0.0"
             />
-            <span className="form-input-unit">ft</span>
-          </div>
-        </div>
-        <div className="form-field">
-          <label className="form-label">Width (ft)</label>
-          <div className="form-input-with-unit data-type-ft-in">
-            <input
-              type="number"
-              step="0.1"
-              value={form.platformWidth}
-              onChange={e => set('platformWidth', e.target.value)}
-              placeholder="0.0"
-            />
-            <span className="form-input-unit">ft</span>
-          </div>
-        </div>
-        <div className="form-field">
-          <label className="form-label">Area (sq.ft) <span style={{ fontSize: '10px', color: 'var(--color-primary-500)', fontWeight: 600 }}>← Backend</span></label>
-          <div className="computed-field data-type-float" style={{ borderLeftWidth: '4px', height: '36px', opacity: calcArea !== null ? 1 : 0.45 }}>
-            <div className="computed-value" style={{ fontSize: '14px', fontWeight: '700' }}>
-              {calcArea !== null ? calcArea : '—'}
-            </div>
-            <span className="computed-unit">ft²</span>
+            <span className="form-input-unit">FT²</span>
           </div>
         </div>
       </div>
@@ -173,29 +196,60 @@ export default function LandingConfig({ data, onChange }) {
         </div>
       </div>
 
-      {/* ── Backend Computed Results (Read-Only) ────────────────────── */}
-      {(calcSteel !== null || calcShop !== null || calcField !== null) && (
-        <div style={{
-          marginTop: '16px',
-          padding: '12px 16px',
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-          borderRadius: '8px',
-          border: '1px solid #bae6fd',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '12px'
-        }}>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Steel Weight</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0c4a6e', fontVariantNumeric: 'tabular-nums' }}>{calcSteel ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>lb</span></div>
+      {/* ── Real-time Preview Engine Results (EXCEL SFE ALIGNED) ─────────────────────── */}
+      {data?.systemCalc && (
+        <div style={{ marginTop: 24, display: 'grid', gap: '16px' }}>
+          <div className="summary-card card-glow-purple" style={{ 
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '20px',
+            borderTop: '4px solid #8B5CF6'
+          }}>
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {/* 🛡️ SFE PER UNIT SECTION (EXCEL ALIGNED) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, paddingBottom: 16, borderBottom: '1px dashed #CBD5E1' }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>STEEL LBS/LF/<br/>SF/RISER</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.steelPerLF || 12.000).toFixed(3)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>SHOP<br/>MH/LF/ SF</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.shopMHPF || 0).toFixed(3)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>FIELD<br/>MH/LF/ SF</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.fieldMHPF || 0).toFixed(3)}</div>
+                </div>
+              </div>
+
+              {/* 🛡️ SFE TOTALS SECTION (EXCEL ALIGNED) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Total Steel lbs.</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#F97316' }}>{Number(data.systemCalc.baseSteelLbs || 0).toFixed(3)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>STEEL (+10% SCRAP) LBS</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#7C3AED' }}>{Number(data.systemCalc.finalScrapWeight || 0).toFixed(3)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>SHOP HOURS</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.shopTotalHrs || 0).toFixed(3)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>FIELD HOURS</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.fieldTotalHrs || 0).toFixed(3)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Galvanize Cost</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#EA580C' }}>${Number(data.systemCalc.galvanizeTotalCost || 0).toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Shop Labor</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0c4a6e', fontVariantNumeric: 'tabular-nums' }}>{calcShop ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>hrs</span></div>
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Field Labor</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0c4a6e', fontVariantNumeric: 'tabular-nums' }}>{calcField ?? '—'} <span style={{ fontSize: '11px', fontWeight: 400 }}>hrs</span></div>
+          <div style={{ marginTop: '8px', textAlign: 'right' }}>
+             <span className="system-calc-badge" style={{ opacity: 0.6, background: '#A78BFA', fontSize: '9px', padding: '2px 8px', borderRadius: '100px', color: '#0F172A', fontWeight: 900 }}>ENGINE v1.02 • INDUSTRY STANDARD FLOW</span>
           </div>
         </div>
       )}

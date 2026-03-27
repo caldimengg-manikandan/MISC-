@@ -1,0 +1,1172 @@
+[
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$4",
+  "Formula": "=AVERAGE(B5,B11,B16)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$5",
+  "Formula": "=AVERAGE(B4,B8,B15)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$6",
+  "Formula": "=AVERAGE(B13,B16,B12)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$8",
+  "Formula": "=AVERAGE(D4,D6)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$19",
+  "Formula": "=AVERAGE(B20)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$27",
+  "Formula": "=AVERAGE(B27,B33,B43)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$28",
+  "Formula": "=AVERAGE(B28,B34,B44)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$29",
+  "Formula": "=AVERAGE(B29,B35,B45)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$30",
+  "Formula": "=AVERAGE(B30,B36,B46)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$32",
+  "Formula": "=AVERAGE(B48)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$33",
+  "Formula": "=AVERAGE(B49)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$34",
+  "Formula": "=AVERAGE(B50)"
+ },
+ {
+  "Sheet Name": "Pricing 021315",
+  "Cell Address": "$D$35",
+  "Formula": "=AVERAGE(B51)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$A$1",
+  "Formula": "=SUM(Estimate!$C$44:$D$44,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!,#REF!)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$3",
+  "Formula": "=Takeoff!D3"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$3"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$F$3"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$H$3",
+  "Formula": "=TODAY()"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$C$4",
+  "Formula": "=Takeoff!C4"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$4"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$4"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$F$4"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$5",
+  "Formula": "=Takeoff!D5"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$5"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$F$5"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$F$7",
+  "Formula": "=IF(A12=\"Yes\",SUM(Estimate!F42),\"\")"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$G$7",
+  "Formula": "=IF(A12=\"yes\",SUM(Estimate!G42),\"\")"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$H$8",
+  "Formula": "=SUM(Estimate!H44)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$I$8",
+  "Formula": "=SUM(Estimate!I44,F7)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$J$8",
+  "Formula": "=SUM(Estimate!J44,G7)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$H$9",
+  "Formula": "=SUM(Estimate!H45)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$I$9",
+  "Formula": "=SUM(Estimate!I45)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$J$9",
+  "Formula": "=SUM(Estimate!J45)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$7",
+  "Formula": "=SUM(Estimate!C44)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$7"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$8",
+  "Formula": "=PRODUCT($D$7,$L$6)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$8"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$9",
+  "Formula": "=PRODUCT(D10,'Pricing 021315'!$D$22)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$9"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$10",
+  "Formula": "=IF(A11=\"Yes\",\"\",SUM(Estimate!E40))"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$10"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$11",
+  "Formula": "=IF(A11=\"YES\",SUM(Estimate!C45),\"\")"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$11"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$12",
+  "Formula": "=IF(ISBLANK($B$12),\"\",VLOOKUP($B$12,Finishdata,2,FALSE)*$D$7)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$12"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$13",
+  "Formula": "=PRODUCT(D7,'Pricing 021315'!$D$23)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$13"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$D$14",
+  "Formula": "=SUM(Estimate!C48)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$E$14"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$I$17",
+  "Formula": "=SUM(H9,I9,J9,D14,D12,D8,D9,D11,D13)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$J$17"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$I$18",
+  "Formula": "=I17*6%"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$J$18"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$I$19",
+  "Formula": "=SUM(I17,I18)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$J$19"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$L$28",
+  "Formula": "=IF(ISBLANK(#REF!),\"\",VLOOKUP(#REF!,MetalPan,2,FALSE)*'SFE FINAL ESTIMATE'!#REF!*0.11)"
+ },
+ {
+  "Sheet Name": "SFE FINAL ESTIMATE",
+  "Cell Address": "$L$31",
+  "Formula": "=IF(ISBLANK(#REF!),\"\",VLOOKUP(#REF!,MetalPan,2,FALSE)*'SFE FINAL ESTIMATE'!#REF!*0.11)"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$C$12",
+  "Formula": "=SUM(Estimate!E38)"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$54",
+  "Formula": "=C54*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$55",
+  "Formula": "=C55*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$56",
+  "Formula": "=C56*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$57",
+  "Formula": "=C57*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$58",
+  "Formula": "=C58*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$59",
+  "Formula": "=C59*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$60",
+  "Formula": "=C60*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$61",
+  "Formula": "=C61*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$62",
+  "Formula": "=C62*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$63",
+  "Formula": "=C63*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$64",
+  "Formula": "=C64*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$65",
+  "Formula": "=C65*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$66",
+  "Formula": "=C66*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$67",
+  "Formula": "=C67*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$68",
+  "Formula": "=C68*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$69",
+  "Formula": "=C69*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$70",
+  "Formula": "=C70*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$71",
+  "Formula": "=C71*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$72",
+  "Formula": "=C72*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$73",
+  "Formula": "=C73*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$74",
+  "Formula": "=C74*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$75",
+  "Formula": "=C75*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$76",
+  "Formula": "=C76*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$77",
+  "Formula": "=C77*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$78",
+  "Formula": "=C78*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$79",
+  "Formula": "=C79*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$80",
+  "Formula": "=C80*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$81",
+  "Formula": "=C81*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$82",
+  "Formula": "=C82*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$83",
+  "Formula": "=C83*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$84",
+  "Formula": "=C84*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$85",
+  "Formula": "=C85*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$86",
+  "Formula": "=C86*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$87",
+  "Formula": "=C87*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$88",
+  "Formula": "=C88*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$89",
+  "Formula": "=C89*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$90",
+  "Formula": "=C90*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$91",
+  "Formula": "=C91*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$F$92",
+  "Formula": "=C92*$F$2"
+ },
+ {
+  "Sheet Name": "Table Data",
+  "Cell Address": "$C$118",
+  "Formula": "='Pricing 021315'!$D$19"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$M$6",
+  "Formula": "=IF(ISBLANK($F$15),\"\",VLOOKUP($F$15,Post,2,FALSE)*$C$15)"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$I$14",
+  "Formula": "=INDEX('Table Data'!$A$2:$B$40,MATCH(Takeoff!$F$20,'Table Data'!$A$2:$A$40,0),2)"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$C$15",
+  "Formula": "=QUOTIENT($C$12,$C$14)"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$M$22",
+  "Formula": "=IF(ISBLANK($E$28),\"\",VLOOKUP($E$28,MetalPan,2,FALSE)*Takeoff!C30*0.11)"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$M$23",
+  "Formula": "=IF(ISBLANK($E$28),\"\",VLOOKUP($E$28,MetalPan,3,FALSE)*Takeoff!C30)"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$M$24",
+  "Formula": "=IF(ISBLANK($E$28),\"\",VLOOKUP($E$28,MetalPan,4,FALSE)*Takeoff!C30)"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$C$30",
+  "Formula": "=PRODUCT($C$28,$C$29)*C27"
+ },
+ {
+  "Sheet Name": "Takeoff",
+  "Cell Address": "$C$35",
+  "Formula": "=PRODUCT(C33,C34)*C32"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$3",
+  "Formula": "=Takeoff!D3"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$3"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$3"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$4",
+  "Formula": "=Takeoff!C4"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$4"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$4"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$4"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$5",
+  "Formula": "=Takeoff!D5"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$5"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$5"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$6",
+  "Formula": "=Takeoff!B7"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$7",
+  "Formula": "=Takeoff!$C$8"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$7",
+  "Formula": "=IF(ISBLANK(Takeoff!E8),\"\",VLOOKUP(Takeoff!E8,Wallrail,2,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$7",
+  "Formula": "=IF(ISBLANK(Takeoff!E8),\"\",VLOOKUP(Takeoff!E8,Wallrail,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$7",
+  "Formula": "=IF(ISBLANK(Takeoff!E8),\"\",VLOOKUP(Takeoff!E8,Wallrail,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$7",
+  "Formula": "=IF(ISBLANK(Takeoff!$E$8),\"\",(Estimate!$E$7*Estimate!B7)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$7",
+  "Formula": "=IF(ISBLANK(Takeoff!E8),\"\",($F$7*$B$7))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$7",
+  "Formula": "=IF(ISBLANK(Takeoff!E8),\"\",($G$7*$B$7))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$8",
+  "Formula": "=PRODUCT($B$7,$E$7)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$8",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E8),\"0\",VLOOKUP(Takeoff!E8,GalvanizedLabor,2,FALSE)))*B7)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$8",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E8),\"0\",VLOOKUP(Takeoff!E8,GalvanizedLabor,3,FALSE)))*B7)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$9",
+  "Formula": "=Takeoff!$C$10"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$9",
+  "Formula": "=IF(ISBLANK(Takeoff!E10),\"\",VLOOKUP(Takeoff!E10,grabrail,2,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$9",
+  "Formula": "=IF(ISBLANK(Takeoff!E10),\"\",VLOOKUP(Takeoff!E10,grabrail,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$9",
+  "Formula": "=IF(ISBLANK(Takeoff!E10),\"\",VLOOKUP(Takeoff!E10,grabrail,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$9",
+  "Formula": "=IF(ISBLANK(Takeoff!E10),\"\",($E$9*Estimate!B9)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$9",
+  "Formula": "=IF(ISBLANK(Takeoff!E10),\"\",($F$9*$B$9))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$9",
+  "Formula": "=IF(ISBLANK(Takeoff!E10),\"\",($G$9*$B$9))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$10",
+  "Formula": "=PRODUCT(E9,B9)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$10",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E10),\"0\",VLOOKUP(Takeoff!E10,GalvanizedLabor,2,FALSE)))*B9)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$10",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E10),\"0\",VLOOKUP(Takeoff!E10,GalvanizedLabor,3,FALSE)))*B9)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$11",
+  "Formula": "=IF(ISBLANK(Takeoff!E12),\"\",VLOOKUP(Takeoff!E12,Guardrail,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$11",
+  "Formula": "=IF(ISBLANK(Takeoff!E12),\"\",VLOOKUP(Takeoff!E12,Guardrail,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$11",
+  "Formula": "=IF(ISBLANK(Takeoff!E12),\"\",(E11*Estimate!B11)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$11",
+  "Formula": "=IF(ISBLANK(Takeoff!E12),\"\",(F11*B11))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$11",
+  "Formula": "=IF(ISBLANK(Takeoff!E12),\"\",(G11*B11))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$12",
+  "Formula": "=SUM(Estimate!E38)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$12"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$12",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E12),\"0\",VLOOKUP(Takeoff!E12,GalvanizedLabor,2,FALSE)))*B11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$12",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E12),\"0\",VLOOKUP(Takeoff!E12,GalvanizedLabor,3,FALSE)))*B11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$12",
+  "Formula": "=Takeoff!C13"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$13",
+  "Formula": "=Takeoff!C14"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$14",
+  "Formula": "=QUOTIENT($B$11,$B$13)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$15",
+  "Formula": "=PRODUCT(E11,B11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$16",
+  "Formula": "=IF(ISBLANK(Takeoff!E22),\"\",VLOOKUP(Takeoff!E22,Guardrail,2,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$16",
+  "Formula": "=IF(ISBLANK(Takeoff!E22),\"\",VLOOKUP(Takeoff!E22,Guardrail,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$16",
+  "Formula": "=IF(ISBLANK(Takeoff!E22),\"\",VLOOKUP(Takeoff!E22,Guardrail,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$16",
+  "Formula": "=IF(ISBLANK(Takeoff!E22),\"\",(E16*Estimate!B16)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$16",
+  "Formula": "=IF(ISBLANK(Takeoff!E22),\"\",(F16*B16))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$16",
+  "Formula": "=IF(ISBLANK(Takeoff!E22),\"\",(G16*B16))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$17",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E17),\"0\",VLOOKUP(Takeoff!E17,GalvanizedLabor,2,FALSE)))*B16)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$17",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E17),\"0\",VLOOKUP(Takeoff!E17,GalvanizedLabor,3,FALSE)))*B16)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$16",
+  "Formula": "=Takeoff!C22"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$17",
+  "Formula": "=Takeoff!C23"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$18",
+  "Formula": "=Takeoff!C24"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$19",
+  "Formula": "=QUOTIENT(B16,B18)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$21",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$17),\"\",VLOOKUP(Takeoff!$F$17,optionaldata,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$21",
+  "Formula": "=IF(ISBLANK(Takeoff!F17),\"\",(E21*Estimate!B21)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$21",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$17),\"\",(F21*B21))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$21",
+  "Formula": "=IF(ISBLANK(Takeoff!F17),\"\",(G21*B21))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$21",
+  "Formula": "=Takeoff!C17"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$22",
+  "Formula": "=Takeoff!$C$18"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$21",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$17),\"\",VLOOKUP(Takeoff!$F$17,optionaldata,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$22",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$18),\"\",VLOOKUP(Takeoff!$F$18,optionaldata,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$22",
+  "Formula": "=IF(ISBLANK(Takeoff!F18),\"\",(E22*Estimate!B22)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$22",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$18),\"\",(F22*B22))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$20",
+  "Formula": "=PRODUCT(E16,B16)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$21",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$17),\"\",VLOOKUP(Takeoff!$F$17,optionaldata,2,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$22",
+  "Formula": "=IF(ISBLANK(Takeoff!$F$18),\"\",VLOOKUP(Takeoff!F18,optionaldata,2,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$23",
+  "Formula": "=SUM(PRODUCT($E$21,$B$21),PRODUCT($E$22,$B$22))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$24",
+  "Formula": "=IF(ISBLANK(Takeoff!E28),\"\",VLOOKUP(Takeoff!E28,MetalPan,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$24",
+  "Formula": "=IF(ISBLANK(Takeoff!E28),\"\",VLOOKUP(Takeoff!E28,MetalPan,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$24",
+  "Formula": "=IF(ISBLANK(Takeoff!E28),\"\",(E24*Estimate!B24)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$24",
+  "Formula": "=IF(ISBLANK(Takeoff!E28),\"\",(F24*$B$27))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$24",
+  "Formula": "=IF(ISBLANK(Takeoff!E28),\"\",(G24*B27))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$26",
+  "Formula": "=Takeoff!C27"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$27",
+  "Formula": "=PRODUCT($B$24,$B$25)*B26"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$L$27",
+  "Formula": "=IF(ISBLANK($E$24),\"\",VLOOKUP($E$24,MetalPan,2,FALSE)*Estimate!B27*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$28",
+  "Formula": "=PRODUCT(E24,B27)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$28",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E28),\"0\",VLOOKUP(Takeoff!E28,GalvanizedLabor,3,FALSE)))*B27)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$29",
+  "Formula": "=IF(ISBLANK(Takeoff!E33),\"\",VLOOKUP(Takeoff!E33,MetalPan,2,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$29",
+  "Formula": "=IF(ISBLANK(Takeoff!E33),\"\",VLOOKUP(Takeoff!E33,MetalPan,3,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$29",
+  "Formula": "=IF(ISBLANK(Takeoff!E33),\"\",VLOOKUP(Takeoff!E33,MetalPan,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$29",
+  "Formula": "=IF(ISBLANK(Takeoff!E33),\"\",(E29*Estimate!B32)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$29",
+  "Formula": "=IF(ISBLANK(Takeoff!E33),\"\",(F29*B32))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$29",
+  "Formula": "=IF(ISBLANK(Takeoff!E33),\"\",(G29*B32))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$L$30",
+  "Formula": "=IF(ISBLANK($E$24),\"\",VLOOKUP($E$24,MetalPan,2,FALSE)*Estimate!B32*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$29",
+  "Formula": "=Takeoff!C33"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$30",
+  "Formula": "=Takeoff!C34"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$31",
+  "Formula": "=Takeoff!C32"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$32",
+  "Formula": "=PRODUCT(B29,B30)*B31"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$33",
+  "Formula": "=PRODUCT($E$29,$B$32)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$33",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E33),\"0\",VLOOKUP(Takeoff!E33,GalvanizedLabor,3,FALSE)))*B32)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$34",
+  "Formula": "=IF(ISBLANK(Takeoff!E37),\"\",VLOOKUP(Takeoff!E37,Metalpanstairs,4,FALSE))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$34",
+  "Formula": "=IF(ISBLANK(Takeoff!E28),\"\",(E34*Estimate!B34)*0.11)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$34",
+  "Formula": "=IF(ISBLANK(Takeoff!E37),\"\",(F34*B34))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$34",
+  "Formula": "=IF(ISBLANK(Takeoff!E37),\"\",(G34*B34))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$34",
+  "Formula": "=Takeoff!C37"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$35",
+  "Formula": "=Takeoff!C38"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$36",
+  "Formula": "=Takeoff!C39"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$37",
+  "Formula": "=Takeoff!C40"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$B$38",
+  "Formula": "=(B34*B35)*B37"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$38",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E37),\"0\",VLOOKUP(Takeoff!E37,GalvanizedLabor,2,FALSE)))*B34)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$38",
+  "Formula": "=(IF($A$48=\"yes\",IF(ISBLANK(Takeoff!E37),\"0\",VLOOKUP(Takeoff!E37,GalvanizedLabor,3,FALSE)))*B34)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$39",
+  "Formula": "=PRODUCT($E$34,$B$34)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$E$40",
+  "Formula": "=PRODUCT($E$35,$B$34,$B$37)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$F$44",
+  "Formula": "=SUM(F8,F10,F12,F17,F38)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$G$44",
+  "Formula": "=SUM(G8,G10,G12,G17,G28,G33,G38)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$44",
+  "Formula": "=SUM(H7:H38)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$44",
+  "Formula": "=SUM(I7:I38,F44)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$44",
+  "Formula": "=SUM(J7:J38,G44)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$H$45",
+  "Formula": "=PRODUCT($H$44,$L$6)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$I$45",
+  "Formula": "=PRODUCT($I$44,$L$7)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$45",
+  "Formula": "=PRODUCT($J$44,$L$8)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$44",
+  "Formula": "=SUM(E8,E10,E15,E23,E28,E33,E39,E20)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$44"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$45",
+  "Formula": "=PRODUCT($C$44,$L$6)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$45"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$46",
+  "Formula": "=IF(A47=\"YES\",\"0\",PRODUCT(Estimate!E40,'Pricing 021315'!$D$22))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$46"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$47",
+  "Formula": "=IF(A47=\"Yes\",PRODUCT($B$34,IF(Estimate!B37<=3.5,'Pricing 021315'!$D$32,IF(Estimate!B37<=4,'Pricing 021315'!$D$33,IF(Estimate!B37<=4.5,'Pricing 021315'!$D$34,IF(B37<=5,'Pricing 021315'!$D$35,'Pricing 021315'!$D$35))))),\"\")"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$47"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$48",
+  "Formula": "=IF(ISBLANK($B$48),\"\",VLOOKUP($B$48,Finishdata,2,FALSE)*SUM($E$40,$C$44))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$48"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$49",
+  "Formula": "=PRODUCT(C44,'Pricing 021315'!$D$23)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$49"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$50",
+  "Formula": "=SUM(((IF(ISBLANK(Takeoff!F15),\"0\",VLOOKUP(Takeoff!F15,Post,2,FALSE)))*B14),((IF(ISBLANK(Takeoff!F25),\"0\",VLOOKUP(Takeoff!F25,Post,2,FALSE)))*B19))"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$50"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$51",
+  "Formula": "=SUM(C45:D50)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$51"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$C$52",
+  "Formula": "=IFERROR(QUOTIENT(J55,B34),\"0\")"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$D$52"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$53",
+  "Formula": "=SUM(H45,I45,J45,C50,C48,C45,C46,C47,C49)"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$54",
+  "Formula": "=C51*6%"
+ },
+ {
+  "Sheet Name": "Estimate",
+  "Cell Address": "$J$55",
+  "Formula": "=SUM(J53,J54)"
+ }
+]

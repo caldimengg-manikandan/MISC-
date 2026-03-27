@@ -64,6 +64,10 @@ const createDirectories = () => {
 // Create directories on startup
 createDirectories();
 
+// Initialize System Configurations
+const configManager = require('./src/utils/configManager');
+configManager.loadConfigs();
+
 const app = express();
 
 // ================ SECURITY MIDDLEWARE ================

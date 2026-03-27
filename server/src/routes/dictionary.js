@@ -16,7 +16,7 @@ const adminOnly = (req, res, next) => {
 router.get('/:category', async (req, res) => {
   try {
     const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order] FROM dictionary WHERE category = ? AND isActive = 1 ORDER BY [order] ASC, label ASC',
+      'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary WHERE category = ? AND isActive = 1 ORDER BY [order] ASC, label ASC',
       [req.params.category]
     );
     
@@ -31,7 +31,7 @@ router.get('/:category', async (req, res) => {
 router.get('/all/categories', auth, adminOnly, async (req, res) => {
   try {
     const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order], isActive FROM dictionary ORDER BY category ASC, [order] ASC',
+      'SELECT id, category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary ORDER BY category ASC, [order] ASC',
       []
     );
     res.json({ success: true, data: entries });
@@ -44,7 +44,7 @@ router.get('/all/categories', auth, adminOnly, async (req, res) => {
 // @desc    Add a new dictionary entry
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
-    const { category, label, value, description, order } = req.body;
+    const { category, label, value, description, order, steelLbsLf, shopLaborMhLf, fieldLaborMhLf } = req.body;
     
     // Check if exists
     const [existing] = await db.query('SELECT id FROM dictionary WHERE category = ? AND value = ?', [category, value]);
@@ -53,8 +53,8 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order]) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?)',
-      [category, label, value, description || '', order || 0]
+      'INSERT INTO dictionary (category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null]
     );
     
     const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [rows[0].id]);
@@ -68,11 +68,22 @@ router.post('/', auth, adminOnly, async (req, res) => {
 // @desc    Update a dictionary entry
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
-    const { category, label, value, description, order, isActive } = req.body;
+    const { category, label, value, description, order, isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf } = req.body;
     
     await db.query(
-      'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ? WHERE id = ?',
-      [category, label, value, description || '', order || 0, isActive !== undefined ? (isActive ? 1 : 0) : 1, req.params.id]
+      'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ?, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ? WHERE id = ?',
+      [
+        category, 
+        label, 
+        value, 
+        description || '', 
+        order || 0, 
+        isActive !== undefined ? (isActive ? 1 : 0) : 1, 
+        steelLbsLf || null, 
+        shopLaborMhLf || null, 
+        fieldLaborMhLf || null,
+        req.params.id
+      ]
     );
     
     const [updated] = await db.query('SELECT * FROM dictionary WHERE id = ?', [req.params.id]);
