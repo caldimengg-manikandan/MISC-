@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // LOGIN
-  const login = async (email, password, isOwner = false) => {
+  const login = async (email, password, isOwner = false, redirectTo = '/home') => {
     try {
       setLoading(true);
 
@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         toast.success(isOwner ? 'Owner login successful!' : 'Login successful!');
-        navigate('/home');
+        navigate(redirectTo);
 
         return { success: true, user: data.user };
       } else {
@@ -90,11 +90,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   // REGISTER
-  const register = async (userData, isOwner = false) => {
+  const register = async (userData, isOwner = false, redirectTo = null) => {
     try {
       setLoading(true);
-
-      const endpoint = isOwner
+      
+      const endpoint = isOwner 
         ? `${API_BASE_URL}/api/auth/register-owner`
         : `${API_BASE_URL}/api/auth/register`;
 
@@ -114,7 +114,13 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         toast.success(isOwner ? 'Owner account created!' : 'Account created!');
-        navigate(isOwner ? '/owner/dashboard' : '/dashboard');
+        
+        // Use redirectTo if provided, otherwise default based on role
+        if (redirectTo) {
+          navigate(redirectTo);
+        } else {
+          navigate('/estimate/stair-railings');
+        }
 
         return { success: true, user: data.user };
       } else {

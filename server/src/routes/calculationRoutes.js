@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/mssql');
-const calcService = require('../services/StairCalculationService');
-const flightCalcService = require('../services/StairFlightCalculationService');
+const calcService = require('../services/calculation/StairCalculationService');
+const flightCalcService = require('../services/calculation/StairFlightCalculationService');
 
 /**
  * POST /api/calculate/stair-flight

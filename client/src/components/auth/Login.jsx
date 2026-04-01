@@ -1,5 +1,6 @@
 // client/src/components/auth/Login3D.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Text, Html } from '@react-three/drei';
@@ -195,7 +196,8 @@ const Stair3DModel = ({ assemblyProgress }) => {
               color={part.color}
               metalness={0.8}
               roughness={0.2}
-              emissive={isVisible ? `${part.color}33` : '#000000'}
+              emissive={isVisible ? part.color : '#000000'}
+              emissiveIntensity={isVisible ? 0.2 : 0}
             />
 
             {/* Connection welds */}
@@ -279,6 +281,10 @@ const CameraController = () => {
 };
 
 const Login3D = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/dashboard';
+
   const [isLogin, setIsLogin] = useState(true);
   const [isOwnerLogin, setIsOwnerLogin] = useState(false);
   const [assemblyProgress, setAssemblyProgress] = useState(0);
@@ -373,9 +379,9 @@ const Login3D = () => {
 
     try {
       if (isLogin) {
-        await login(formData.email, formData.password, isOwnerLogin);
+        await login(formData.email, formData.password, isOwnerLogin, from);
       } else {
-        await register(formData, isOwnerLogin);
+        await register(formData, isOwnerLogin, from);
       }
     } catch (error) {
       toast.error(error.message || 'Authentication failed');

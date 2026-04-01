@@ -23,10 +23,12 @@ const crypto = require('crypto');
 
 // Import configurations
 const logger = require('./src/utils/logger');
+const { initCron } = require('./src/utils/cron');
 
 // Import routes
 
 const projectRoutes = require('./src/routes/projects');
+const estimationsRoutes = require('./src/routes/estimations');
 const dictionaryRoutes = require('./src/routes/dictionary');
 
 // Import secure routes
@@ -67,6 +69,9 @@ createDirectories();
 // Initialize System Configurations
 const configManager = require('./src/utils/configManager');
 configManager.loadConfigs();
+
+// Initialize Cron Jobs
+initCron();
 
 const app = express();
 
@@ -283,6 +288,7 @@ app.get('/api/docs', (req, res) => {
 // Protected routes with authentication
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', authMiddleware, projectRoutes);
+app.use('/api/estimations', authMiddleware, estimationsRoutes);
 app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/debug', authMiddleware, debugRoutes);
 

@@ -1,0 +1,583 @@
+/**
+ * StairConfig.css
+ * GPT-exact re-skin for the Stair & Railings estimation page.
+ * Targets all class names used in StairFlight.jsx, StairConfig.jsx (CollapsibleSection),
+ * LandingConfig, RailConfig. Zero logic changes — CSS only.
+ */
+
+/* ─── CSS Variable Bridge ────────────────────────────────────────── */
+:root {
+  --sf-accent:       #10a37f;
+  --sf-accent-dim:   rgba(16,163,127,0.08);
+  --sf-accent-mid:   rgba(16,163,127,0.15);
+  --sf-accent-glow:  rgba(16,163,127,0.2);
+  --sf-border:       #e5e5e5;
+  --sf-border-focus: #10a37f;
+  --sf-bg:           #f9f9f9;
+  --sf-surface:      #ffffff;
+  --sf-text:         #0d0d0d;
+  --sf-muted:        #6e6e80;
+  --sf-sub:          #acacbe;
+  --sf-auto-bg:      rgba(16,163,127,0.06);
+  --sf-warn:         #f59e0b;
+  --sf-error:        #ef4444;
+  --sf-radius:       10px;
+  --sf-radius-sm:    7px;
+  --sf-transition:   0.14s ease;
+}
+
+/* ─── Page body padding fix ──────────────────────────────────────── */
+.stair-page .sc-canvas { padding: 20px 24px; }
+
+/* ─── Form Sections ──────────────────────────────────────────────── */
+.form-section {
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: var(--sf-radius) !important;
+  padding: 20px !important;
+  margin-bottom: 14px !important;
+  box-shadow: none !important;
+}
+
+.form-section-title {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.7px !important;
+  color: var(--sf-muted) !important;
+  border-bottom: 1px solid var(--sf-border) !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* ─── Labels ─────────────────────────────────────────────────────── */
+.form-label,
+.form-field > label,
+label.form-label {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--sf-muted) !important;
+  margin-bottom: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+/* ─── Inputs & Selects ───────────────────────────────────────────── */
+.form-input,
+.arch-input,
+.form-select,
+input.form-input,
+input.arch-input,
+select.form-select {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 13px !important;
+  color: var(--sf-text) !important;
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: var(--sf-radius-sm) !important;
+  padding: 8px 11px !important;
+  width: 100% !important;
+  box-shadow: none !important;
+  transition: border-color var(--sf-transition), box-shadow var(--sf-transition) !important;
+  outline: none !important;
+}
+
+.form-input:focus,
+.arch-input:focus,
+.form-select:focus,
+input.form-input:focus,
+input.arch-input:focus,
+select.form-select:focus {
+  border-color: var(--sf-accent) !important;
+  box-shadow: 0 0 0 3px var(--sf-accent-dim) !important;
+  background: var(--sf-surface) !important;
+}
+
+/* Monospace for arch inputs (dimension values) */
+.arch-input {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace !important;
+  font-size: 12.5px !important;
+  letter-spacing: -0.3px !important;
+  color: var(--sf-text) !important;
+}
+
+/* ─── Auto-calculated fields ─────────────────────────────────────── */
+.auto-calculation,
+.field-auto-calc,
+.field-auto,
+input.auto-calculation {
+  background: var(--sf-auto-bg) !important;
+  border-color: rgba(16,163,127,0.25) !important;
+  color: #059669 !important;
+  font-weight: 700 !important;
+  cursor: not-allowed !important;
+}
+
+/* ─── Unit badge inside inputs ───────────────────────────────────── */
+.form-input-unit {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  background: var(--sf-bg) !important;
+  color: var(--sf-muted) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: 5px !important;
+  padding: 2px 7px !important;
+}
+
+button.form-input-unit,
+button.form-input-unit.unit-active {
+  background: var(--sf-accent) !important;
+  color: white !important;
+  border-color: var(--sf-accent) !important;
+  cursor: pointer !important;
+  transition: background var(--sf-transition) !important;
+}
+
+button.form-input-unit:hover {
+  background: #0d9268 !important;
+}
+
+/* ─── SYSTEM-CALC Badge ──────────────────────────────────────────── */
+.system-calc-badge {
+  background: var(--sf-accent) !important;
+  color: white !important;
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  padding: 2px 7px !important;
+  border-radius: 99px !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+  animation: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* ─── Data badges ────────────────────────────────────────────────── */
+.data-badge {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+.dt-string  { background: #6366f1; }
+.dt-float   { background: var(--sf-accent); }
+.dt-ft-in   { background: #f59e0b; }
+.dt-int     { background: #0ea5e9; }
+
+/* ─── Quick-edit (Settings gear) button ──────────────────────────── */
+.quick-edit-btn {
+  margin-left: 6px !important;
+  background: transparent !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: 5px !important;
+  padding: 3px 4px !important;
+  cursor: pointer !important;
+  color: var(--sf-muted) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  transition: all var(--sf-transition) !important;
+  vertical-align: middle !important;
+}
+.quick-edit-btn:hover {
+  background: var(--sf-accent) !important;
+  color: white !important;
+  border-color: var(--sf-accent) !important;
+  transform: rotate(20deg) !important;
+}
+
+/* ─── Section faded ──────────────────────────────────────────────── */
+.section-faded {
+  opacity: 0.45 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.6) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* ─── Form grids ─────────────────────────────────────────────────── */
+.form-grid { display: grid; gap: 12px; }
+.form-field { display: flex; flex-direction: column; min-width: 0; }
+.form-hint  { font-size: 11px; color: var(--sf-sub); margin-top: 4px; }
+
+/* ─── Pan / tread sub-section ────────────────────────────────────── */
+.form-section .form-grid[style*="border-subtitle"],
+.form-section .form-grid + .form-grid {
+  background: var(--sf-bg) !important;
+  border-radius: var(--sf-radius-sm) !important;
+  padding: 14px !important;
+  border: 1px solid var(--sf-border) !important;
+  margin-top: 12px !important;
+}
+
+/* ─── Geometry profile miniature SVG card ────────────────────────── */
+.form-field.flex.flex-col {
+  background: var(--sf-bg) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: var(--sf-radius-sm) !important;
+  padding: 10px !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Override the Geometry Profile label inside the SVG cell */
+.form-field .text-\[9px\] {
+  font-size: 9px !important;
+  color: var(--sf-sub) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* ─── Collapsible Section GPT polish ─────────────────────────────── */
+.collapsible-section {
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  margin-bottom: 12px !important;
+  overflow: hidden !important;
+  transition: border-color var(--sf-transition), box-shadow var(--sf-transition) !important;
+}
+
+.collapsible-section.active {
+  border-color: var(--sf-accent) !important;
+  box-shadow: 0 0 0 3px var(--sf-accent-dim) !important;
+}
+
+.collapsible-header {
+  background: var(--sf-bg) !important;
+  border-bottom: 1px solid var(--sf-border) !important;
+  padding: 13px 18px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  transition: background var(--sf-transition) !important;
+}
+
+.collapsible-header:hover { background: #f0f0f0 !important; }
+
+.collapsible-type-badge {
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.4px !important;
+  padding: 2px 7px !important;
+  border-radius: 99px !important;
+  text-transform: uppercase !important;
+}
+
+/* STAIR badge → green */
+.header-stair .collapsible-type-badge:first-child {
+  background: var(--sf-accent-dim) !important;
+  color: var(--sf-accent) !important;
+}
+
+/* FLIGHT badge → indigo */
+.header-flight .collapsible-type-badge {
+  background: rgba(99,102,241,0.1) !important;
+  color: #6366f1 !important;
+}
+
+/* LANDING badge → amber */
+.header-landing .collapsible-type-badge {
+  background: rgba(245,158,11,0.1) !important;
+  color: #d97706 !important;
+}
+
+/* GUARD RAIL badge → slate */
+.header-guard .collapsible-type-badge {
+  background: rgba(100,116,139,0.1) !important;
+  color: #475569 !important;
+}
+
+.collapsible-title {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--sf-text) !important;
+  letter-spacing: -0.1px !important;
+}
+
+.collapsible-subtitle {
+  font-size: 11.5px !important;
+  color: var(--sf-muted) !important;
+  margin-top: 1px !important;
+}
+
+.collapsible-body {
+  padding: 18px 20px !important;
+  background: var(--sf-surface) !important;
+}
+
+/* ─── Icon buttons (delete / duplicate) ──────────────────────────── */
+.icon-btn {
+  background: var(--sf-bg) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: 6px !important;
+  width: 28px !important; height: 28px !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  cursor: pointer !important;
+  color: var(--sf-muted) !important;
+  transition: all var(--sf-transition) !important;
+}
+.icon-btn:hover { background: #efefef !important; color: var(--sf-text) !important; }
+.icon-btn.danger:hover {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #dc2626 !important;
+}
+
+/* ─── Add buttons ────────────────────────────────────────────────── */
+.add-btn {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  color: var(--sf-muted) !important;
+  border-radius: var(--sf-radius-sm) !important;
+  padding: 7px 12px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all var(--sf-transition) !important;
+}
+.add-btn:hover {
+  background: var(--sf-bg) !important;
+  border-color: #c8c8c8 !important;
+  color: var(--sf-text) !important;
+}
+.add-btn.ghost {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--sf-sub) !important;
+}
+.add-btn.ghost:hover {
+  background: var(--sf-bg) !important;
+  border-color: var(--sf-border) !important;
+  color: var(--sf-muted) !important;
+}
+
+/* ─── Live Preview Result Card ───────────────────────────────────── */
+/* The systemCalc preview card in StairFlight — GPT palette */
+.summary-card {
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: var(--sf-radius) !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Metric strip at top of preview card */
+.summary-card > div {
+  padding: 18px 20px !important;
+}
+
+/* Override blue top border on calc cards */
+.summary-card.card-glow-blue,
+.summary-card.card-glow-green,
+.summary-card.card-glow-purple {
+  border-top: 2.5px solid var(--sf-accent) !important;
+  box-shadow: none !important;
+}
+
+/* ─── LIVE PREVIEW metric cells (from StairFlight inline) ─────────
+   We can't override inline styles directly; but we can enhance the
+   containing card to frame them better.                            */
+.summary-card [style*="fontSize: '18px'"],
+.summary-card [style*="fontSize:'18px'"] {
+  font-family: 'Geist Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* ENGINE v2.0 badge */
+.summary-card .system-calc-badge,
+[style*="EXCEL PARITY"] {
+  background: var(--sf-accent) !important;
+  color: white !important;
+  border-radius: 99px !important;
+  font-size: 9px !important;
+  padding: 3px 10px !important;
+  font-weight: 700 !important;
+  animation: none !important;
+}
+
+/* ─── Radio options (pill-style GPT toggle) ──────────────────────── */
+/* The inline styles in StairFlight hardcode colors; we can only
+   target the base class and override what inline doesn't set */
+.radio-option {
+  border-radius: 8px !important;
+  border: 1.5px solid var(--sf-border) !important;
+  background: var(--sf-surface) !important;
+  color: var(--sf-muted) !important;
+  cursor: pointer !important;
+  transition: border-color var(--sf-transition), background var(--sf-transition), color var(--sf-transition), box-shadow var(--sf-transition) !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+.radio-option input[type="radio"] {
+  accent-color: var(--sf-accent) !important;
+}
+
+/* Selected state — override inline borderColor/background/color */
+.radio-option.selected {
+  border-color: var(--sf-accent) !important;
+  box-shadow: 0 0 0 3px var(--sf-accent-dim) !important;
+  color: var(--sf-accent) !important;
+}
+
+/* Hide the actual radio dot — we use the border glow instead */
+.radio-option input[type="radio"] {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ─── Warning states ─────────────────────────────────────────────── */
+.warning-glow {
+  border-color: var(--sf-warn) !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1) !important;
+}
+
+/* ─── Eng-card & empty state ─────────────────────────────────────── */
+.eng-card {
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: none !important;
+}
+
+.empty-state { text-align: center; padding: 48px 0; }
+.empty-state-icon  { font-size: 40px; margin-bottom: 12px; }
+.empty-state-title { font-size: 17px; font-weight: 700; color: var(--sf-text); margin-bottom: 6px; }
+.empty-state-sub   { font-size: 13px; color: var(--sf-muted); }
+
+/* ─── Header btn overrides (actions row in page header) ─────────── */
+.header-btn {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  padding: 7px 14px !important;
+  cursor: pointer !important;
+  transition: all var(--sf-transition) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.header-btn-outline {
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  color: var(--sf-muted) !important;
+}
+.header-btn-outline:hover {
+  border-color: #c8c8c8 !important;
+  color: var(--sf-text) !important;
+  background: var(--sf-bg) !important;
+}
+
+.header-btn-primary {
+  background: var(--sf-accent) !important;
+  color: white !important;
+  border: none !important;
+}
+.header-btn-primary:hover { background: #0d9268 !important; }
+.header-btn-accent { background: #0d0d0d !important; color: white !important; border: none !important; }
+.header-btn-accent:hover { background: #1a1a1a !important; }
+
+/* ─── Info chip ──────────────────────────────────────────────────── */
+.info-chip {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  padding: 4px 10px !important;
+  border-radius: 99px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.chip-blue {
+  background: rgba(99,102,241,0.1) !important;
+  color: #4f46e5 !important;
+}
+
+/* ─── Expand chevron ─────────────────────────────────────────────── */
+.expand-chevron { color: var(--sf-muted) !important; transition: transform 0.25s ease !important; }
+.expand-chevron.open { transform: rotate(180deg) !important; }
+
+/* ─── Eng-table (used in some sub-modules) ───────────────────────── */
+.eng-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.eng-table th {
+  padding: 9px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--sf-muted); border-bottom: 1px solid var(--sf-border);
+  background: var(--sf-bg); text-align: left;
+}
+.eng-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--sf-border);
+  color: var(--sf-text); vertical-align: middle;
+}
+.eng-table tr:last-child td { border-bottom: none; }
+.eng-table tr:hover td { background: var(--sf-bg); }
+
+/* ─── Computed field tags ────────────────────────────────────────── */
+.computed-field {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 14px !important;
+  background: var(--sf-surface) !important;
+  border: 1px solid var(--sf-border) !important;
+  border-left: 3px solid var(--sf-accent) !important;
+  border-radius: var(--sf-radius-sm) !important;
+}
+
+.computed-label {
+  font-size: 9.5px !important; font-weight: 700 !important;
+  text-transform: uppercase !important; letter-spacing: 0.5px !important;
+  color: var(--sf-muted) !important;
+}
+.computed-value {
+  font-size: 14px !important; font-weight: 700 !important;
+  color: var(--sf-text) !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ─── Fade-in animation for conditional fields ───────────────────── */
+.fade-in {
+  animation: sf-fade-in 0.2s ease forwards !important;
+}
+@keyframes sf-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Dividers ───────────────────────────────────────────────────── */
+.divider { height: 1px !important; background: var(--sf-border) !important; margin: 16px 0 !important; }
+
+/* ─── Quick Manage Modal override ───────────────────────────────── */
+.quick-manage-modal,
+[class*="quick-modal"] {
+  border-radius: 12px !important;
+  border: 1.5px solid var(--sf-border) !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.12) !important;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .stair-page .sc-rail { display: none; }
+  .stair-page .sc-canvas { padding: 16px; }
+}

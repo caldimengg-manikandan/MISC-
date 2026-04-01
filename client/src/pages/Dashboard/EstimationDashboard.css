@@ -1,0 +1,401 @@
+/* ===================== EMS DASHBOARD — GPT-style wrapper ===================== */
+
+/* Center screen home state */
+.dash-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.dash-greeting {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--gpt-text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 36px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Pill Tab Bar ── (matches user screenshot) */
+.dash-tab-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 6px;
+  background: var(--gpt-surface);
+  border: 1.5px solid var(--gpt-border);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+}
+
+.dash-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.dash-tab:hover {
+  color: var(--gpt-text-primary);
+  background: rgba(0,0,0,0.04);
+}
+
+.dash-tab.active {
+  background: #0d0d0d;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+/* New Estimation tab with dropdown */
+.dash-tab-dropdown {
+  position: relative;
+}
+
+.dash-tab-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 200px;
+  background: var(--gpt-surface);
+  border: 1.5px solid var(--gpt-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  padding: 6px;
+  z-index: 100;
+}
+
+.dash-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: var(--gpt-text-primary);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s;
+}
+.dash-dropdown-item:hover {
+  background: var(--gpt-body-bg);
+}
+.dash-dropdown-item svg { color: var(--gpt-text-muted); flex-shrink: 0; }
+
+/* Divider between tab bar and data */
+.dash-divider {
+  width: 100%;
+  max-width: 520px;
+  height: 1px;
+  background: var(--gpt-border);
+  margin: 16px auto 0;
+}
+
+/* ── EMS Dashboard layout below the home header ── */
+.ems-dashboard {
+  width: 100%;
+}
+
+.ems-top-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-group select {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--gpt-border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--gpt-text-secondary);
+  background: var(--gpt-surface);
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.filter-group select:hover { border-color: var(--gpt-border-strong); }
+.filter-group select:focus { border-color: var(--gpt-accent); }
+
+.ems-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Panels ── */
+.ems-panel {
+  background: var(--gpt-surface);
+  border: 1px solid var(--gpt-border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gpt-text-primary);
+  margin-bottom: 14px;
+  letter-spacing: -0.1px;
+}
+
+/* ── Metrics ── */
+.metrics-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.metric-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.m-label { font-weight: 500; color: inherit; }
+.m-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.bg-blue   { background: #eff6ff; color: #1d4ed8; }
+.bg-amber  { background: #fffbeb; color: #92400e; }
+.bg-orange { background: #fff7ed; color: #c2410c; }
+.bg-purple { background: #f5f3ff; color: #6d28d9; }
+.bg-red    { background: #fef2f2; color: #b91c1c; }
+.bg-green  { background: #f0fdf4; color: #15803d; }
+
+/* ── Calendar ── */
+.cal-panel { margin-top: 16px; }
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.cal-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gpt-text-primary);
+}
+
+.cal-header button {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--gpt-border);
+  background: var(--gpt-surface);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gpt-text-muted);
+  transition: all 0.15s;
+}
+.cal-header button:hover { background: var(--gpt-border); color: var(--gpt-text-primary); }
+
+.cal-days-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gpt-text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.cal-body { display: flex; flex-direction: column; gap: 2px; }
+.cal-row  { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+
+.cal-cell {
+  min-height: 36px;
+  padding: 4px;
+  border-radius: 6px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.cal-cell:hover { background: var(--gpt-body-bg); }
+.cal-cell.disabled { opacity: 0.3; }
+.cal-cell.today .cal-number {
+  background: var(--gpt-accent);
+  color: white;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.cal-number { font-size: 11px; font-weight: 500; color: var(--gpt-text-secondary); }
+.cal-events { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.cal-event  { font-size: 9px; border-radius: 3px; padding: 1px 3px; font-weight: 500; }
+
+.event-new        { background: #dbeafe; color: #1d4ed8; }
+.event-assigned   { background: #fef3c7; color: #92400e; }
+.event-in_progress{ background: #fff7ed; color: #c2410c; }
+.event-review     { background: #f5f3ff; color: #6d28d9; }
+.event-overdue    { background: #fee2e2; color: #b91c1c; }
+.event-submitted  { background: #dcfce7; color: #15803d; }
+
+/* ── Table panel ── */
+.table-panel { padding: 0; overflow: hidden; }
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gpt-border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gpt-body-bg);
+  border: 1px solid var(--gpt-border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+  color: var(--gpt-text-muted);
+}
+.search-bar input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--gpt-text-primary);
+  font-family: inherit;
+  flex: 1;
+}
+.search-bar input::placeholder { color: var(--gpt-text-muted); }
+
+.date-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gpt-text-muted);
+  flex-wrap: wrap;
+}
+.date-filters span { margin-right: 4px; }
+.date-filters button {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--gpt-border);
+  background: transparent;
+  font-size: 12px;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.date-filters button:hover { background: var(--gpt-border); }
+.date-filters button.active {
+  background: var(--gpt-text-primary);
+  color: white;
+  border-color: var(--gpt-text-primary);
+}
+
+.ems-table-wrap { overflow-x: auto; }
+
+.ems-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ems-table th {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gpt-text-muted);
+  border-bottom: 1px solid var(--gpt-border);
+  white-space: nowrap;
+  background: var(--gpt-surface);
+}
+.ems-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gpt-border);
+  color: var(--gpt-text-secondary);
+  vertical-align: middle;
+}
+.ems-table tr:last-child td { border-bottom: none; }
+.ems-table tr:hover td { background: var(--gpt-body-bg); }
+
+.t-pid { font-family: 'Geist Mono', monospace; font-size: 11.5px; color: var(--gpt-text-muted); }
+.t-name { font-weight: 500; color: var(--gpt-text-primary); }
+.t-status .status-badge, .status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-new        { background: #dbeafe; color: #1d4ed8; }
+.badge-assigned   { background: #fef3c7; color: #92400e; }
+.badge-in_progress{ background: #fff7ed; color: #c2410c; }
+.badge-review     { background: #f5f3ff; color: #6d28d9; }
+.badge-overdue    { background: #fee2e2; color: #b91c1c; }
+.badge-submitted  { background: #dcfce7; color: #15803d; }
+
+.t-date { font-size: 12.5px; color: var(--gpt-text-muted); }
+.text-red { color: #ef4444; }
+
+.btn-go {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px;
+  border: 1px solid var(--gpt-border);
+  background: var(--gpt-surface);
+  cursor: pointer;
+  color: var(--gpt-text-muted);
+  transition: all 0.12s;
+}
+.btn-go:hover { background: var(--gpt-text-primary); color: white; border-color: transparent; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .ems-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Status pills in EstimationList ── */
+.status-pill { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.status-pill.new          { background: #dbeafe; color: #1d4ed8; }
+.status-pill.assigned     { background: #fef3c7; color: #92400e; }
+.status-pill.in_progress  { background: #fff7ed; color: #c2410c; }
+.status-pill.review       { background: #f5f3ff; color: #6d28d9; }
+.status-pill.overdue      { background: #fee2e2; color: #b91c1c; }
+.status-pill.submitted    { background: #dcfce7; color: #15803d; }

@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/mssql');
 const auth = require('../middleware/auth');
+const dashboardService = require('../services/DashboardService');
 
 const tryParseJson = (val) => {
   if (typeof val !== 'string') return val;
@@ -51,6 +52,27 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Get Dashboard Metrics
+router.get('/dashboard-metrics', auth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    // Fetch all projects for the user from the database
+    const [rows] = await db.query('SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status, enquiryDate, submissionDeadline, updatedAt, createdAt FROM projects WHERE userId = ?', [userId]);
+    
+    // Use the Dashboard Service to compute metrics and recent items
+    const { metrics, projects } = dashboardService.computeMetrics(rows);
+
+    res.json({
+      success: true,
+      metrics,
+      projects // send computed projects for the table and calendar
+    });
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Create or update a project for the authenticated user
 router.post('/upsert', auth, async (req, res) => {
   try {
@@ -70,7 +92,11 @@ router.post('/upsert', auth, async (req, res) => {
       notes, 
       stairs, 
       guardRails, 
-      customRailValues 
+      customRailValues,
+      assignedEngineer,
+      enquiryDate,
+      submissionDeadline,
+      status
     } = req.body;
     
     if (!projectNumber || !projectName) {
@@ -107,13 +133,15 @@ router.post('/upsert', auth, async (req, res) => {
           projectNumber = ?, projectName = ?, customer_name = ?, project_location = ?, 
           architect = ?, eor = ?, gc_name = ?, detailer = ?, vendor_name = ?, 
           aisc_certified = ?, units = ?, notes = ?, stairs = ?, guardRails = ?, 
-          customRailValues = ?, updatedAt = GETDATE() 
+          customRailValues = ?, assignedEngineer = ?, enquiryDate = ?, submissionDeadline = ?, status = ?, updatedAt = GETDATE() 
         WHERE id = ? AND userId = ?`,
         [
           projectNumber, projectName, customerName || '', projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
-          stairsJson, guardRailsJson, customRailValuesJson, id, userId
+          stairsJson, guardRailsJson, customRailValuesJson, 
+          assignedEngineer || null, enquiryDate || null, submissionDeadline || null, status || 'Project Created',
+          id, userId
         ]
       );
       
@@ -125,14 +153,15 @@ router.post('/upsert', auth, async (req, res) => {
         `INSERT INTO projects 
           (projectNumber, projectName, userId, customer_name, project_location, 
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units, 
-           notes, stairs, guardRails, customRailValues, status) 
+           notes, stairs, guardRails, customRailValues, status, assignedEngineer, enquiryDate, submissionDeadline) 
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           projectNumber, projectName, userId, customerName || '', projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
-          stairsJson, guardRailsJson, customRailValuesJson, 'draft'
+          stairsJson, guardRailsJson, customRailValuesJson, status || 'Project Created',
+          assignedEngineer || null, enquiryDate || new Date(), submissionDeadline || null
         ]
       );
       
@@ -254,7 +283,8 @@ router.put('/:projectId', auth, async (req, res) => {
       'projectNumber', 'projectName', 'customerName', 'projectLocation', 
       'architect', 'eor', 'gcName', 'detailer', 'vendorName', 
       'aiscCertified', 'units', 'notes', 'stairs', 'guardRails', 
-      'customRailValues', 'status', 'totalWeight', 'totalCost'
+      'customRailValues', 'status', 'totalWeight', 'totalCost',
+      'assignedEngineer', 'enquiryDate', 'submissionDeadline'
     ];
     
     let setClause = [];
