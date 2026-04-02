@@ -17,6 +17,7 @@ Complete toolkit for senior fullstack with modern tools and best practices.
 This skill provides three core capabilities through automated scripts:
 
 ```bash
+
 # Script 1: Fullstack Scaffolder
 python scripts/fullstack_scaffolder.py [options]
 
