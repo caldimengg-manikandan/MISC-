@@ -4,14 +4,14 @@ import StairFlight from './StairFlight';
 import LandingConfig from '../Landing/LandingConfig';
 import RailConfig from '../Rail/RailConfig';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Table, Scale, DollarSign } from 'lucide-react';
+import { FileText, Table, Scale, DollarSign, Copy } from 'lucide-react';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils.js';
 import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
 import SFEEstimateReport from './SFEEstimateReport';
 import API_BASE_URL from '../../config/api';
 import toast from 'react-hot-toast';
 import './StairConfig.css';
-import ToolsDock from './components/ToolsDock';
+import { useEstimation } from '../../contexts/EstimationContext';
 
 let uid = 100; // Start from 100 to avoid collision with DB-restored IDs
 const makeId = () => uid++;
@@ -96,8 +96,9 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
       className={`collapsible-section ${className}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      onFocus={onFocus}
-      onClick={onFocus}
+      onPointerDown={(e) => {
+        if (onFocus) onFocus();
+      }}
     >
       <div className={`collapsible-header ${headerClass}`} onClick={() => setOpen(o => !o)}>
         <div className="collapsible-header-left">
@@ -636,8 +637,15 @@ function StairItem({
   onUndoDeleteSubItem,
   history,
   activeId,
-  onFocus
+  onFocusContext
 }) {
+  const { setActiveContext } = useEstimation();
+
+  const handleFocus = (type, id, label) => {
+    setActiveContext({ type, id, label });
+    if (onFocusContext) onFocusContext(id);
+  };
+
   const flights = stair.flights || [];
   const landings = stair.landings || [];
   const rails = stair.rails || [];
@@ -654,26 +662,16 @@ function StairItem({
       onDuplicate={onDuplicateStair}
       defaultOpen={true}
       headerClass="header-stair"
-      onFocus={() => onFocus(stair.id)}
+      onFocus={() => handleFocus('stair', stair.id, stair.label)}
       className={activeId === stair.id ? 'active' : ''}
     >
       {/* Stair Config Form */}
-      <StairFlight stair={stair} onChange={onUpdateStair} />
+      <StairFlight stair={stair} onChange={onUpdateStair} onFocus={() => handleFocus('stair', stair.id, stair.label)} />
 
       <div className="divider" />
 
-      {/* ── Flights ────────────────────────────────────────────────── */}
+      {/* Flights list */}
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-            Flights ({flights.length + 1})
-          </span>
-          {history.lastDeleted?.type === 'flight' && (
-            <button className="text-btn" onClick={() => onUndoDeleteSubItem('flight')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
-              ↩ Undo Delete
-            </button>
-          )}
-        </div>
 
         {flights.map(fl => (
           <CollapsibleSection
@@ -685,44 +683,22 @@ function StairItem({
             onDuplicate={() => onDuplicateSubItem('flight', fl.id)}
             defaultOpen={false}
             headerClass="header-flight"
-            onFocus={() => onFocus(fl.id)}
+            onFocus={() => handleFocus('flight', fl.id, fl.label)}
             className={activeId === fl.id ? 'active' : ''}
           >
             <StairFlight
               stair={{ ...stair, ...fl }}
               onChange={(changes) => onUpdateSubItem('flight', fl.id, changes)}
               isFlightMode
+              onFocus={() => handleFocus('flight', fl.id, fl.label)}
             />
           </CollapsibleSection>
         ))}
-        {/* Flight actions kept in a single linear row aligned with rails workflow */}
-        <div className="add-section-row" style={{ marginTop: flights.length ? '16px' : '8px', justifyContent: 'flex-start' }}>
-          <button className="add-btn ghost" onClick={onCopyLastFlight} id="copy-flight">
-            ⎘ Copy from Above
-          </button>
-          <button className="add-btn" onClick={onAddFlight} id="add-flight">
-            + Add Flight
-          </button>
-        </div>
+        {/* Flight actions moved to summary tools list */}
       </div>
 
-      {/* ── Landings ───────────────────────────────────────────────── */}
+      {/* Landings list */}
       <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-              Landings ({landings.length})
-            </span>
-            {history.lastDeleted?.type === 'landing' && (
-              <button className="text-btn" onClick={() => onUndoDeleteSubItem('landing')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
-                ↩ Undo Delete
-              </button>
-            )}
-          </div>
-          <button className="add-btn" onClick={onAddLanding} id="add-landing">
-            + Add Landing
-          </button>
-        </div>
 
         {landings.map(l => (
           <CollapsibleSection
@@ -734,12 +710,13 @@ function StairItem({
             onDuplicate={() => onDuplicateSubItem('landing', l.id)}
             defaultOpen={false}
             headerClass="header-landing"
-            onFocus={() => onFocus(l.id)}
+            onFocus={() => handleFocus('landing', l.id, l.label)}
             className={activeId === l.id ? 'active' : ''}
           >
             <LandingConfig
               data={l}
               onChange={(changes) => onUpdateSubItem('landing', l.id, changes)}
+              onFocus={() => handleFocus('landing', l.id, l.label)}
             />
           </CollapsibleSection>
         ))}
@@ -750,30 +727,11 @@ function StairItem({
           </div>
         )}
 
-        {/* Add landing control below list */}
-        {landings.length > 0 && (
-          <div className="add-section-row" style={{ marginTop: '16px' }}>
-            <button className="add-btn" onClick={onAddLanding}>
-              + Add Landing
-            </button>
-          </div>
-        )}
+        {/* Add landing control moved to summary tools list */}
       </div>
 
-      {/* ── Rails ──────────────────────────────────────────────────── */}
+      {/* Rails list */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
-              Rails ({rails.length})
-            </span>
-            {history.lastDeleted?.type === 'rail' && (
-              <button className="text-btn" onClick={() => onUndoDeleteSubItem('rail')} style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
-                ↩ Undo Delete
-              </button>
-            )}
-          </div>
-        </div>
 
         <div style={{ marginTop: '12px' }}>
           {rails.map(r => {
@@ -788,13 +746,14 @@ function StairItem({
                 onDuplicate={() => onDuplicateSubItem('rail', r.id)}
                 defaultOpen={false}
                 headerClass={`header-${r.type.replace('Rail', '')}`}
-                onFocus={() => onFocus(r.id)}
+                onFocus={() => handleFocus('rail', r.id, r.label)}
                 className={activeId === r.id ? 'active' : ''}
               >
                 <RailConfig
                   type={r.type}
                   data={r}
                   onChange={(changes) => onUpdateSubItem('rail', r.id, changes)}
+                  onFocus={() => handleFocus('rail', r.id, r.label)}
                 />
               </CollapsibleSection>
             );
@@ -807,19 +766,7 @@ function StairItem({
           </div>
         )}
 
-        {/* Rail type add buttons (positioned after existing rails for easier workflow) */}
-        <div className="add-section-row" style={{ marginTop: rails.length ? '16px' : '8px' }}>
-          {RAIL_TYPES.map(rt => (
-            <button
-              key={rt.key}
-              className="add-btn"
-              onClick={() => onAddRail(rt.key)}
-              id={`add-${rt.key}`}
-            >
-              {rt.icon} + {rt.label}
-            </button>
-          ))}
-        </div>
+        {/* Rail type add buttons moved to summary tools list */}
       </div>
     </CollapsibleSection>
   );
@@ -827,10 +774,11 @@ function StairItem({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function StairEstimation() {
-  const [activeId, setActiveId] = useState(null);
+  const initialId = makeId();
+  const [activeId, setActiveId] = useState(initialId);
   const [stairs, setStairs] = useState([
     { 
-      id: makeId(), 
+      id: initialId, 
       label: 'Stair 1', 
       stairType: '', 
       drawingRef: '', 
@@ -841,13 +789,15 @@ export default function StairEstimation() {
       template: 'custom'
     }
   ]);
-  const [projectData, setProjectData] = useState({ projectName: '', projectNumber: '', projectId: null });
+  const [projectData, setProjectData] = useState({ projectName: '', projectNumber: '', customerName: '', projectId: null });
   const [templateModal, setTemplateModal] = useState({ isOpen: false, nextLabel: 'Stair 1' });
   const [saving, setSaving] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [estimationResult, setEstimationResult] = useState(null);
   const [showReport, setShowReport] = useState(false); // New state for showing report
   const [reportData, setReportData] = useState(null);   // New state for report data
+  const [overallHistory, setOverallHistory] = useState(null);
+  const { fetchNotes, notes, setSelectedEstimation } = useEstimation();
   const stairsRef = useRef(stairs);
   stairsRef.current = stairs;
 
@@ -858,13 +808,20 @@ export default function StairEstimation() {
     try {
       const parsed = JSON.parse(savedInfo);
       setProjectData({
-        projectName:   parsed.projectName   || '',
-        projectNumber: parsed.projectNumber || '',
+        projectName:   parsed.projectName   || 'New Estimation',
+        projectNumber: parsed.projectNumber || 'Draft',
+        customerName:  parsed.customerName  || parsed.clientName || 'Internal',
         projectId:     parsed.id            || null,
       });
 
       const projectId = parsed.id;
       if (!projectId) return;
+      
+      // Update global context immediately from localStorage info
+      setSelectedEstimation({ id: projectId, ...parsed });
+      
+      // Fetch notes for the project
+      fetchNotes(projectId);
 
       const token = localStorage.getItem('steel_token');
       if (!token) return;
@@ -878,12 +835,18 @@ export default function StairEstimation() {
           if (data.success && data.project) {
             const proj = data.project;
             // Update project data with full DB fields
-            setProjectData(prev => ({
-              ...prev,
-              projectId: proj.id,
-              projectName:   proj.projectName   || prev.projectName,
-              projectNumber: proj.projectNumber || prev.projectNumber,
-            }));
+            setProjectData(prev => {
+              const updated = {
+                ...prev,
+                id: proj.id,
+                projectId: proj.id,
+                projectName:   proj.projectName   || prev.projectName,
+                projectNumber: proj.projectNumber || prev.projectNumber,
+                customerName:  proj.customerName  || proj.clientName || prev.customerName,
+              };
+              setSelectedEstimation(proj); // Sync with context for ToolsDock
+              return updated;
+            });
 
             // Restore stairs from DB
             const raw = proj.stairs;
@@ -892,6 +855,7 @@ export default function StairEstimation() {
               const restored = restoreStairs(saved);
               if (restored.length > 0) {
                 setStairs(restored);
+                setActiveId(restored[0].id); // Default open for first stair
                 toast.success(`Loaded ${restored.length} stair(s) from database`);
               }
             }
@@ -901,7 +865,7 @@ export default function StairEstimation() {
     } catch (e) {
       console.error('Failed to parse project info:', e);
     }
-  }, []);
+  }, [fetchNotes]);
 
   // ── Save stairs to DB ─────────────────────────────────────────────────────
   const saveChanges = useCallback(async () => {
@@ -1392,21 +1356,21 @@ export default function StairEstimation() {
 
     const templateDefaults = applyTemplateDefaults(template);
 
-    setStairs(s => [
-      ...s,
-      { 
-        id: makeId(), 
-        label: `Stair ${nextNum}`, 
-        stairType: templateDefaults.stairType || '', 
-        drawingRef: '',
-        flights: [],
-        landings: [],
-        rails: [],
-        history: { lastDeleted: null },
-        template,
-        ...templateDefaults
-      }
-    ]);
+    const newStair = { 
+      id: makeId(), 
+      label: `Stair ${nextNum}`, 
+      stairType: templateDefaults.stairType || '', 
+      drawingRef: '',
+      flights: [],
+      landings: [],
+      rails: [],
+      history: { lastDeleted: null },
+      template,
+      ...templateDefaults
+    };
+
+    setStairs(s => [...s, newStair]);
+    setActiveId(newStair.id);
   };
 
   const duplicateStair = (id) => {
@@ -1421,21 +1385,33 @@ export default function StairEstimation() {
     // Deep copy helper for nested objects (flights, landings, rails)
     const deepClone = (items) => items.map(item => ({ ...item, id: makeId() }));
 
-    setStairs(s => [
-      ...s,
-      { 
-        ...target, 
-        id: makeId(), 
-        label: `Stair ${nextNum}`,
-        flights: deepClone(target.flights || []),
-        landings: deepClone(target.landings || []),
-        rails: deepClone(target.rails || []),
-        history: { lastDeleted: null }
-      }
-    ]);
+    const newStair = { 
+      ...target, 
+      id: makeId(), 
+      label: `Stair ${nextNum}`,
+      flights: deepClone(target.flights || []),
+      landings: deepClone(target.landings || []),
+      rails: deepClone(target.rails || []),
+      history: { lastDeleted: null }
+    };
+
+    setStairs(s => [...s, newStair]);
+    setActiveId(newStair.id);
   };
 
-  const deleteStair = (id) => setStairs(s => s.filter(x => x.id !== id));
+  const deleteStair = (id) => {
+    const deleted = stairs.find(s => s.id === id);
+    setOverallHistory({ type: 'stair', data: deleted });
+    const remaining = stairs.filter(x => x.id !== id);
+    setStairs(remaining);
+    
+    // If we deleted the active stair, pick a new one
+    if (activeId === id && remaining.length > 0) {
+      setActiveId(remaining[remaining.length - 1].id);
+    } else if (remaining.length === 0) {
+      setActiveId(null);
+    }
+  };
 
   const updateStair = (id, changes) =>
     setStairs(s => s.map(x => x.id === id ? { ...x, ...changes } : x));
@@ -1548,6 +1524,7 @@ export default function StairEstimation() {
       if (s.id !== stairId) return s;
       const key = type + 's';
       const deleted = s[key].find(x => x.id === itemId);
+      setOverallHistory({ type, stairId, data: deleted });
       return {
         ...s,
         [key]: s[key].filter(x => x.id !== itemId),
@@ -1566,6 +1543,28 @@ export default function StairEstimation() {
         history: { lastDeleted: null }
       };
     }));
+    setOverallHistory(null);
+  };
+
+  const undoLastOverallAction = () => {
+    if (!overallHistory) return;
+    const { type, stairId, data } = overallHistory;
+    
+    if (type === 'stair') {
+      setStairs(prev => [...prev, data]);
+    } else {
+      setStairs(st => st.map(s => {
+        if (s.id !== stairId) return s;
+        const key = type + 's';
+        return {
+          ...s,
+          [key]: [...s[key], data],
+          history: { lastDeleted: null }
+        };
+      }));
+    }
+    setOverallHistory(null);
+    toast.success(`Restored ${type} ✓`);
   };
 
   // Summary stats
@@ -1626,6 +1625,176 @@ export default function StairEstimation() {
       border: 1px solid #e5e5e5 !important;
       border-radius: 8px !important;
     }
+
+    .sc-stair-nav-wrapper {
+      margin-bottom: 6px;
+      position: relative;
+    }
+    .sc-quick-add-panel {
+      padding: 12px 14px;
+      background: var(--sf-surface);
+      border: 1px solid var(--sf-border);
+      border-radius: var(--sf-radius-sm);
+      margin: 4px 0 8px 16px;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .sc-quick-add-panel::before {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: -12px;
+      bottom: 16px;
+      width: 2px;
+      background: var(--sf-border);
+      border-radius: 2px;
+    }
+    .sc-quick-add-heading {
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--sf-muted);
+      margin-bottom: 10px;
+    }
+    .sc-quick-add-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .sc-quick-add-grid:last-child {
+      margin-bottom: 0;
+    }
+    .sc-quick-add-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 6px 10px;
+      background: var(--sf-bg);
+      border: 1px solid var(--sf-border);
+      border-radius: 6px;
+      color: var(--sf-text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .sc-quick-add-btn:hover {
+      background: var(--sf-surface);
+      border-color: var(--sf-accent);
+      color: var(--sf-accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px var(--sf-accent-dim);
+    }
+    .sc-overall-undo {
+      background: var(--sf-accent);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      border: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px var(--sf-accent-dim);
+    }
+    .sc-stair-nav {
+      position: relative;
+    }
+    .sc-stair-copy-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 4px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--sf-muted);
+      opacity: 0.6; /* Softly visible by default */
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sc-stair-nav:hover .sc-stair-copy-btn {
+      opacity: 1;
+      color: var(--sf-accent);
+    }
+    .sc-stair-copy-btn:hover {
+      background: var(--sf-bg);
+      border-color: var(--sf-border);
+      color: var(--sf-accent);
+      transform: translateY(-50%) scale(1.1);
+    }
+    .sc-nav-tag {
+      margin-right: 28px; /* Make room for the copy icon */
+    }
+    .sc-overall-undo:hover {
+      background: #0d9268;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px var(--sf-accent-dim);
+    }
+
+    .sc-header-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .sc-meta-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .sc-meta-chip.chip-project {
+      background: rgba(30, 64, 175, 0.05);
+      border-color: rgba(30, 64, 175, 0.1);
+    }
+    .sc-meta-chip.chip-project .sc-meta-label { color: #1e40af; }
+    
+    .sc-meta-chip.chip-ref {
+      background: rgba(71, 85, 105, 0.05);
+      border-color: rgba(71, 85, 105, 0.1);
+    }
+    .sc-meta-chip.chip-ref .sc-meta-label { color: #475569; }
+
+    .sc-meta-chip.chip-customer {
+      background: rgba(16, 163, 127, 0.05);
+      border-color: rgba(16, 163, 127, 0.1);
+    }
+    .sc-meta-chip.chip-customer .sc-meta-label { color: #10a37f; }
+
+    .sc-meta-label {
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 9px;
+      opacity: 0.8;
+    }
+    .sc-meta-val {
+      color: var(--sf-text);
+      font-weight: 600;
+    }
+    .sc-meta-divider {
+      width: 1px;
+      height: 12px;
+      background: var(--sf-border);
+    }
   `;
 
   return (
@@ -1658,6 +1827,21 @@ export default function StairEstimation() {
               <div className="sc-mini-stat-label">Rails</div>
             </div>
           </div>
+          
+          <AnimatePresence>
+            {overallHistory && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                className="sc-overall-undo"
+                onClick={undoLastOverallAction}
+                style={{ width: '100%', marginBottom: '12px' }}
+              >
+                <span>↩ UNDO DELETE ({overallHistory.type.toUpperCase()})</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
           <div className="sc-kpi-card">
             <Scale size={14} color="var(--gpt-text-muted)" />
             <div>
@@ -1686,20 +1870,71 @@ export default function StairEstimation() {
         <div className="sc-rail-section">
           <div className="sc-rail-heading">Stairs</div>
           {stairs.map(stair => (
-            <button
-              key={stair.id}
-              className={`sc-stair-nav ${activeId === stair.id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveId(stair.id);
-                document.getElementById(`stair-${stair.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            >
-              <span className="sc-nav-bullet" />
-              <span className="sc-nav-name">{stair.label}</span>
-              {stair.totalCost > 0 && (
-                <span className="sc-nav-tag">${Math.round(stair.totalCost).toLocaleString()}</span>
-              )}
-            </button>
+            <div key={stair.id} className="sc-stair-nav-wrapper">
+              <button
+                className={`sc-stair-nav ${activeId === stair.id ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveId(stair.id);
+                  document.getElementById(`stair-${stair.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+              >
+                <span className="sc-nav-bullet" />
+                <span className="sc-nav-name">{stair.label}</span>
+                {stair.totalCost > 0 && (
+                  <span className="sc-nav-tag">${Math.round(stair.totalCost).toLocaleString()}</span>
+                )}
+                <button 
+                  className="sc-stair-copy-btn" 
+                  title="Duplicate Entire Stair"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    duplicateStair(stair.id);
+                  }}
+                >
+                  <Copy size={12} />
+                </button>
+              </button>
+              
+              <AnimatePresence>
+                {activeId === stair.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0, scale: 0.98 }}
+                    animate={{ height: 'auto', opacity: 1, scale: 1 }}
+                    exit={{ height: 0, opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="sc-quick-add-panel">
+                      <div className="sc-quick-add-heading">Quick Add Components</div>
+                      <div className="sc-quick-add-grid">
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'flight')}>+ Flight</button>
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'landing')}>+ Landing</button>
+                      </div>
+                      
+                      {(stair.history.lastDeleted?.type === 'flight' || stair.history.lastDeleted?.type === 'landing' || stair.history.lastDeleted?.type === 'rail') && (
+                        <div className="sc-quick-add-grid">
+                          <button 
+                            className="sc-quick-add-btn" 
+                            style={{ color: 'var(--sf-accent)', borderColor: 'var(--sf-accent)', width: '100%', justifyContent: 'center' }}
+                            onClick={() => undoDeleteSubItem(stair.id, stair.history.lastDeleted.type)}
+                          >
+                            ↩ Undo Delete {stair.history.lastDeleted.type}
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="sc-quick-add-grid">
+                        {RAIL_TYPES.map(rt => (
+                          <button key={rt.key} className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: rt.key })}>
+                            {rt.icon} {rt.badge}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ))}
           <button className="sc-add-stair" onClick={openTemplateModal} id="btn-add-stair">
             + Add Stair
@@ -1733,7 +1968,20 @@ export default function StairEstimation() {
         <div className="sc-page-header">
           <div>
             <h1 className="sc-page-title">Stair &amp; Railings — Estimation</h1>
-            <p className="sc-page-sub">Configure stair assemblies including flights, landings, and all rail types</p>
+            <div className="sc-header-meta">
+              <div className="sc-meta-chip chip-project">
+                <span className="sc-meta-label">Project</span>
+                <span className="sc-meta-val">{projectData.projectName || 'New Estimation'}</span>
+              </div>
+              <div className="sc-meta-chip chip-ref">
+                <span className="sc-meta-label">Ref</span>
+                <span className="sc-meta-val">#{projectData.projectNumber || 'DRAFT'}</span>
+              </div>
+              <div className="sc-meta-chip chip-customer">
+                <span className="sc-meta-label">Customer</span>
+                <span className="sc-meta-val">{projectData.customerName || 'None'}</span>
+              </div>
+            </div>
           </div>
           <div className="sc-header-actions">
             <span className="info-chip chip-blue">📐 {totalStairs} Stair{totalStairs !== 1 ? 's' : ''}</span>
@@ -1762,23 +2010,7 @@ export default function StairEstimation() {
           </div>
         </div>
 
-        {/* Project banner */}
-        {(projectData.projectName || projectData.projectNumber) && (
-          <div className="sc-project-banner">
-            {projectData.projectName && (
-              <div className="sc-project-chip">
-                <span className="sc-chip-key">Project</span>
-                <span className="sc-chip-val">{projectData.projectName}</span>
-              </div>
-            )}
-            {projectData.projectNumber && (
-              <div className="sc-project-chip sc-ref-chip">
-                <span className="sc-chip-key">Ref #</span>
-                <span className="sc-chip-val">{projectData.projectNumber}</span>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Project banner removed - moved to header chips */}
 
         {/* ── Estimation Result Summary (GPT-reskinned) ── */}
         {estimationResult && estimationResult.summary && (
@@ -1888,7 +2120,7 @@ export default function StairEstimation() {
             <StairItem
               stair={stair}
               activeId={activeId}
-              onFocus={setActiveId}
+              onFocusContext={setActiveId}
               history={stair.history}
               onDeleteStair={() => deleteStair(stair.id)}
               onDuplicateStair={() => duplicateStair(stair.id)}
@@ -1918,13 +2150,7 @@ export default function StairEstimation() {
           </div>
         )}
 
-        {stairs.length > 0 && (
-          <div className="add-section-row" style={{ marginTop: '20px' }}>
-            <button className="add-btn" style={{ fontSize: '13px', padding: '10px 18px' }} onClick={openTemplateModal} id="add-stair-bottom">
-              + Add Another Stair
-            </button>
-          </div>
-        )}
+        {/* Redundant Add Stair button removed */}
       </div>
 
       {/* ══ TEMPLATE MODAL ══════════════════════════════════════════════════ */}
@@ -1971,7 +2197,6 @@ export default function StairEstimation() {
         </div>
       )}
 
-      <ToolsDock />
     </div>
     </>
   );

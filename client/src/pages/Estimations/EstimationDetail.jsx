@@ -349,7 +349,17 @@ export default function EstimationDetail() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            onClick={() => navigate('/estimate/stair-railings')}
+            onClick={() => {
+              // Persist project details for the estimation module
+              localStorage.setItem('steelProjectInfo', JSON.stringify({
+                id: projectId,
+                projectName: form.projectName,
+                projectNumber: form.projectNumber,
+                customerName: form.customer_name || '',
+                projectLocation: form.projectLocation || ''
+              }));
+              navigate('/estimate/stair-railings');
+            }}
           >
             <div className="ed-cta-left">
               <div className="ed-cta-icon"><Zap size={20} /></div>

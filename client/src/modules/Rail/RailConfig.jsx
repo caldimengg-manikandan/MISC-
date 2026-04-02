@@ -116,7 +116,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
   );
 };
 
-export default function RailConfig({ type = 'guardRail', data, onChange }) {
+export default function RailConfig({ type = 'guardRail', data, onChange, onFocus }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
@@ -218,7 +218,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
   }, [form.toeplateRequired, form.railLength]);
 
   return (
-    <div>
+    <div onPointerDown={onFocus}>
       <div className="form-section">
         <div className="form-section-title">
           {type === 'guardRail' ? 'Guard Rail Specifications' : 'Rail Specifications'}
@@ -271,7 +271,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           {!config.lbsPerFt && (
             <div className="form-field">
               <label className="form-label">
-                Actual Spacing <span className="system-calc-badge" style={{ background: '#3B82F6' }}>DISTRIBUTED</span>
+                Actual Spacing
               </label>
               <input
                 className="form-input auto-calculation field-auto"
@@ -284,7 +284,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
 
           <div className="form-field" style={{ display: config.hasIntermediateRails ? 'block' : 'none' }}>
             <label className="form-label">
-              Intermediate Rails <span className="system-calc-badge" style={{ background: '#3B82F6' }}>FAB-GRADE</span>
+              Intermediate Rails
             </label>
             <input
               className="form-input data-type-int"
@@ -297,7 +297,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
 
           <div className="form-field" style={{ display: config.hasPosts ? 'block' : 'none' }}>
             <label className="form-label">
-              Post Qty <span className="system-calc-badge">SYSTEM-CALC</span>
+              Post Qty
             </label>
             <input
               className="form-input auto-calculation field-auto"
@@ -310,7 +310,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
           {config.hasBrackets && (
             <div className="form-field">
               <label className="form-label">
-                Bracket Qty <span className="system-calc-badge" style={{ background: '#10B981' }}>FITTINGS</span>
+                Bracket Qty
               </label>
               <input
                 className="form-input auto-calculation field-auto"
@@ -465,12 +465,12 @@ export default function RailConfig({ type = 'guardRail', data, onChange }) {
             </div>
           </div>
           <div style={{ marginTop: '8px', textAlign: 'right' }}>
-             <span className="system-calc-badge" style={{ opacity: 0.8, background: '#8B5CF6', fontSize: '10px', padding: '4px 12px', borderRadius: '100px', color: '#FFFFFF', fontWeight: 900 }}>ENGINE v2.0 • EXCEL PARITY ACTIVE</span>
+
           </div>
         </div>
       )}
       <div style={{ marginTop: '8px', textAlign: 'right' }}>
-        <span className="system-calc-badge" style={{ opacity: 0.6, background: '#A78BFA', fontSize: '9px', padding: '2px 8px', borderRadius: '100px', color: '#0F172A', fontWeight: 900 }}>ENGINE v1.02 • INDUSTRY STANDARD FLOW</span>
+
       </div>
 
       <QuickManageModal

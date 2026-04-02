@@ -1,17 +1,48 @@
 import React, { useState } from 'react';
 import {
   FileCode2, CheckSquare, Zap, Megaphone, Clock,
-  MessageSquare, Sun, Moon, Monitor, X, Download, PlusSquare, Image as ImageIcon
+  MessageSquare, Sun, Moon, Monitor, X, Download, PlusSquare, Image as ImageIcon,
+  Trash2, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEstimation } from '../../../contexts/EstimationContext';
 import './ToolsDock.css';
 
 export default function ToolsDock() {
-  const [activePopover, setActivePopover] = useState(null); // 'calc', 'notes', 'appearance', 'attachments'
+  const { 
+    addNote, selectedEstimation, activeContext, setActiveContext,
+    trashNotes, fetchTrashNotes, restoreNote, permanentlyDeleteNote 
+  } = useEstimation();
+  const [activePopover, setActivePopover] = useState(null); // 'calc', 'notes', 'appearance', 'attachments', 'trash'
   const [themeMode, setThemeMode] = useState('light'); // 'light', 'dark', 'system'
 
+  const handleAddNote = async () => {
+    if (!selectedEstimation?.id) return;
+    // Spawn note near centre of visible viewport, accounting for sidebar (~260px) and dock (~52px)
+    const spawnX = Math.round((window.innerWidth - 260 - 52) / 2 + 260 - 150);
+    const spawnY = Math.round(window.innerHeight / 2 - 120);
+    try {
+      await addNote({
+        projectId: selectedEstimation.id,
+        title: 'New Note',
+        content: '',
+        note_type: 'personal',
+        pos_x: spawnX,
+        pos_y: spawnY,
+      });
+    } catch (err) {
+      console.error('Failed to spawn note:', err);
+    }
+  };
+
   const togglePopover = (popover) => {
-    setActivePopover(activePopover === popover ? null : popover);
+    const nextValue = activePopover === popover ? null : popover;
+    setActivePopover(nextValue);
+    
+    // Auto-fetch trash when opening trash popover
+    if (nextValue === 'trash' && selectedEstimation?.id) {
+      fetchTrashNotes(selectedEstimation.id);
+    }
   };
 
   return (
@@ -42,36 +73,23 @@ export default function ToolsDock() {
           <div className="tdk-wrapper">
             <button 
               className={`tdk-btn ${activePopover === 'notes' ? 'active' : ''}`}
-              onMouseEnter={(e) => injectTooltip(e, 'Sticky Notes')}
+              onMouseEnter={(e) => injectTooltip(e, `Add Note to ${activeContext.label}`)}
               onMouseLeave={removeTooltip}
-              onClick={() => togglePopover('notes')}
+              onClick={handleAddNote}
+              style={{ position: 'relative' }}
             >
               <PlusSquare size={16} className="tdk-accent-yellow" />
             </button>
-
-            {/* Sticky Notes Popover */}
-            <AnimatePresence>
-              {activePopover === 'notes' && (
-                <motion.div
-                  className="tdk-popover tdk-pop-notes"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 5 }}
-                >
-                  <div className="tdk-note-card">
-                    <div className="tdk-note-header">
-                      <div className="tdk-note-icon"><CheckSquare size={12} /></div>
-                      <button className="tdk-close-btn" onClick={() => setActivePopover(null)}><X size={12} /></button>
-                    </div>
-                    <textarea className="tdk-note-title" placeholder="Name your note" />
-                    <textarea className="tdk-note-body" placeholder="Start typing..." />
-                    <div className="tdk-note-footer">
-                      My Personal notes <span>›</span> General
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
+            {activeContext.type !== 'global' && (
+              <div 
+                className="tdk-context-chip"
+                onClick={() => setActiveContext({ type: 'global', id: null, label: 'Global' })}
+                title="Click to reset to Global"
+              >
+                {activeContext.label} ✕
+              </div>
+            )}
           </div>
 
           {/* Tekla Calculator */}
@@ -133,6 +151,60 @@ export default function ToolsDock() {
           </div>
 
           <ToolIcon icon={Megaphone} tip="Announcements" dot={true} />
+          
+          {/* Trash Bin */}
+          <div className="tdk-wrapper">
+            <button 
+              className={`tdk-btn ${activePopover === 'trash' ? 'active' : ''}`}
+              onMouseEnter={(e) => injectTooltip(e, 'Trash Bin (7-day retention)')}
+              onMouseLeave={removeTooltip}
+              onClick={() => togglePopover('trash')}
+            >
+              <Trash2 size={16} />
+              {trashNotes.length > 0 && <span className="tdk-count-badge" title={`${trashNotes.length} Trashed Items`}>{trashNotes.length}</span>}
+            </button>
+
+            {/* Trash Popover */}
+            <AnimatePresence>
+              {activePopover === 'trash' && (
+                <motion.div
+                  className="tdk-popover tdk-pop-trash"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 5 }}
+                >
+                  <div className="tdk-trash-panel">
+                    <div className="tdk-trash-header">
+                      <span>Trash Bin</span>
+                      <button onClick={() => setActivePopover(null)}><X size={12} /></button>
+                    </div>
+                    <div className="tdk-trash-body">
+                      {trashNotes.length === 0 ? (
+                        <div className="tdk-empty-trash">Your trash is empty.</div>
+                      ) : (
+                        <div className="tdk-trash-list">
+                          <div className="tdk-retention-notice">Items are purged after 7 days</div>
+                          {trashNotes.map(note => (
+                            <div key={note.id} className="tdk-trash-item">
+                              <div className="tdk-ti-info">
+                                <div className="tdk-ti-title">{note.title || 'Untitled Note'}</div>
+                                <div className="tdk-ti-date">Deleted {new Date(note.deleted_at).toLocaleDateString()}</div>
+                              </div>
+                              <div className="tdk-ti-actions">
+                                <button onClick={() => restoreNote(note.id)} title="Restore"><RotateCcw size={14} /></button>
+                                <button onClick={() => permanentlyDeleteNote(note.id)} className="tdk-btn-hard-delete" title="Delete permanently"><Trash2 size={14} /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <ToolIcon icon={Clock} tip="History Log" />
         </div>
 

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
+import ToolsDock from '../modules/Stair/components/ToolsDock';
+import StickyNote from '../modules/Stair/components/StickyNote';
 import toast from 'react-hot-toast';
 
 // ── Navigation definition ─────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ export default function MainLayout({ children }) {
   const navigate   = useNavigate();
   const location   = useLocation();
   const { user, logout } = useAuth();
-  const { estimations, fetchEstimations } = useEstimation();
+  const { estimations, fetchEstimations, notes, fetchNotes, selectedEstimation, setSelectedEstimation, activeContext } = useEstimation();
 
   const [collapsed,     setCollapsed]     = useState(false);
   const [estimateOpen,  setEstimateOpen]  = useState(
@@ -143,11 +145,46 @@ export default function MainLayout({ children }) {
 
   const activePath = location.pathname;
 
-  // Fetch projects for sidebar list (limit to 5 most recent)
+  // Fetch projects for sidebar list (limit to 15 most recent)
   useEffect(() => {
     fetchEstimations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+    // Project detection for Notes & Tools
+    useEffect(() => {
+      const queryParams = new URLSearchParams(location.search);
+      const urlId = queryParams.get('id');
+      
+      // 1. If we have an ID in URL, sync it
+      if (urlId) {
+        if (selectedEstimation?.id !== urlId) {
+          fetchNotes(urlId);
+          // We don't have the full object yet, so we just set the ID
+          setSelectedEstimation(prev => (prev?.id === urlId ? prev : { id: urlId }));
+        }
+      } 
+      // 2. Fallback to localStorage if we are in estimation module
+      else if (location.pathname.startsWith('/estimate')) {
+        const savedInfo = localStorage.getItem('steelProjectInfo');
+        if (savedInfo) {
+          try {
+            const parsed = JSON.parse(savedInfo);
+            if (parsed.id) {
+              if (selectedEstimation?.id !== parsed.id) {
+                fetchNotes(parsed.id);
+                setSelectedEstimation({ id: parsed.id, ...parsed });
+              }
+              return; // Found context
+            }
+          } catch (e) {}
+        }
+      }
+      // 3. NO PROJECT CONTEXT: Clear it (Dashboard, generic Reports, etc.)
+      else if (selectedEstimation !== null) {
+        setSelectedEstimation(null);
+      }
+    }, [location.pathname, location.search, selectedEstimation?.id, fetchNotes, setSelectedEstimation]);
 
   // Split estimations into structural segments avoiding archived ones safely
   const pinnedProjects = estimations.filter(p => p.isPinned && !p.isArchived);
@@ -359,6 +396,28 @@ export default function MainLayout({ children }) {
         <main className="workspace">
           {children}
         </main>
+
+        {/* Global Tools Dock (Fixed Right) */}
+        {selectedEstimation?.id && <ToolsDock />}
+
+        {/* Global Sticky Notes Overlay (Fixed Layer) */}
+        {selectedEstimation?.id && (
+          <div className="sc-notes-overlay" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1100 }}>
+            {notes.filter(note => {
+              // 1. Always show global notes
+              if (note.context_type === 'global' || !note.context_type) return true;
+              
+              // 2. Show if matches current active context (Flight, Rail, etc)
+              if (note.context_type === activeContext.type && note.context_id === activeContext.id) return true;
+              
+              return false;
+            }).map(note => (
+              <div key={note.id} style={{ pointerEvents: 'auto' }}>
+                <StickyNote note={note} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -54,6 +54,7 @@ export default function ProjectHistory() {
   const handleSelectProject = (project) => {
     // Save to local storage for estimation module
     localStorage.setItem('steelProjectInfo', JSON.stringify({
+      id: project.id,
       projectName: project.projectName,
       projectNumber: project.projectNumber,
       customerName: project.customerName || '',

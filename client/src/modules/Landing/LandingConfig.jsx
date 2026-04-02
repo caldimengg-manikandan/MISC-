@@ -44,7 +44,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
   );
 };
 
-export default function LandingConfig({ data, onChange }) {
+export default function LandingConfig({ data, onChange, onFocus }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
@@ -112,7 +112,7 @@ export default function LandingConfig({ data, onChange }) {
   const calcField     = data?.calcField     ?? null;
 
   return (
-    <div>
+    <div onPointerDown={onFocus}>
       {/* ── Compressed Configuration Header ────────────────────────── */}
       <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
         <div className="form-field">
@@ -139,7 +139,7 @@ export default function LandingConfig({ data, onChange }) {
         <div className="form-field">
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>🔒 Area (sq.ft)</span>
-            <span className="system-calc-badge">SYSTEM-CALC</span>
+            <span className="sc-auto-label">AUTO</span>
           </label>
           <div className="form-input-with-unit">
             <input
@@ -253,7 +253,7 @@ export default function LandingConfig({ data, onChange }) {
             </div>
           </div>
           <div style={{ marginTop: '8px', textAlign: 'right' }}>
-             <span className="system-calc-badge" style={{ opacity: 0.8, background: '#8B5CF6', fontSize: '10px', padding: '4px 12px', borderRadius: '100px', color: '#FFFFFF', fontWeight: 900 }}>ENGINE v2.0 • EXCEL PARITY ACTIVE</span>
+
           </div>
         </div>
       )}

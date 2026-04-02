@@ -104,7 +104,7 @@ const ConnBlock = ({ label, propName, value, options, onChange }) => (
   </div>
 );
 
-export default function StairConfig({ stair = {}, onChange = () => {}, isFlightMode = false }) {
+export default function StairConfig({ stair = {}, onChange = () => {}, isFlightMode = false, onFocus = () => {} }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
@@ -211,7 +211,7 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
   };
 
   return (
-    <div>
+    <div onPointerDown={onFocus}>
       {/* ── Identification ─────────────────────────────────────────── */}
       {/* ── Identification & Configuration ─────────────────────────── */}
       <div className="form-section">
@@ -329,14 +329,14 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
           <UnitInput id="stair-height" label="Total Height" value={form.totalHeight} onChange={v => set('totalHeight', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           
           <div className="form-field logic-connector">
-            <label className="form-label">Risers <span className="system-calc-badge">SYSTEM-CALC</span></label>
+            <label className="form-label">Risers</label>
             <input className="form-input auto-calculation" type="number" value={form.systemCalc?.risers || ''} readOnly placeholder="Auto" />
           </div>
 
           <div className="form-field">
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Slope (deg)</span>
-              <span className="system-calc-badge">SYSTEM-CALC</span>
+
             </label>
             <div className="relative flex items-center">
                <div className={`form-input-with-unit w-full ${form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'field-auto' : 'warning-glow') : ''}`}
@@ -606,7 +606,7 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             </div>
           </div>
           <div style={{ marginTop: '8px', textAlign: 'right' }}>
-             <span className="system-calc-badge" style={{ opacity: 0.8, background: '#8B5CF6', fontSize: '10px', padding: '4px 12px', borderRadius: '100px', color: '#FFFFFF', fontWeight: 900 }}>ENGINE v2.0 • EXCEL PARITY ACTIVE</span>
+
           </div>
         </div>
       )}
@@ -691,7 +691,7 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             </div>
           </div>
           <div style={{ marginTop: '8px', textAlign: 'right' }}>
-             <span className="system-calc-badge" style={{ opacity: 0.6, background: '#A78BFA', fontSize: '9px', padding: '2px 8px', borderRadius: '100px', color: '#0F172A', fontWeight: 900 }}>REAL-TIME ENGINE SYNC • (FABRICATION MODE)</span>
+
           </div>
         </div>
       )}

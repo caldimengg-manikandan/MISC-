@@ -40,6 +40,7 @@ const authRoutes = require('./src/routes/authRoutes');
 
 // Import debug routes
 const debugRoutes = require('./src/routes/debug');
+const noteRoutes = require('./src/routes/notes');
 // Remove duplicate import: const excelDebugRoutes = require('./src/routes/excelDebugRoutes');
 
 // Import authentication middleware
@@ -295,6 +296,7 @@ app.use('/api/debug', authMiddleware, debugRoutes);
 // Secure routes
 app.use('/api/secure/prices', authMiddleware, priceRoutes);
 app.use('/api/secure/excel', authMiddleware, excelRoutes);
+app.use('/api/notes', authMiddleware, noteRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
 
 // IMPORTANT: Make sure you have this route for flight geometry
