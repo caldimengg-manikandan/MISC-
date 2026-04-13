@@ -101,6 +101,10 @@ const login = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
+        name: user.name || '',
+        bio: user.bio || '',
+        region: user.region || '',
+        avatar: user.avatar || '',
         company: user.company,
         phone: user.phone,
         role: user.role,
@@ -219,16 +223,57 @@ const ownerLogin = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.userId;
-    const { company, phone } = req.body;
+    const { name, bio, region, avatar, company, phone } = req.body;
     
-    await db.query('UPDATE users SET company = ?, phone = ? WHERE id = ?', [company, phone, userId]);
+    await db.query(`
+      UPDATE users 
+      SET name = ?, bio = ?, region = ?, avatar = ?, company = ?, phone = ? 
+      WHERE id = ?`, 
+      [name, bio, region, avatar, company, phone, userId]
+    );
+
+    const [updated] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
+    const user = updated[0];
     
     res.json({
       success: true,
-      message: 'Profile updated'
+      message: 'Profile updated',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || '',
+        bio: user.bio || '',
+        region: user.region || '',
+        avatar: user.avatar || '',
+        company: user.company,
+        phone: user.phone,
+        role: user.role
+      }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { currentPassword, newPassword } = req.body;
+
+    const [rows] = await db.query('SELECT password FROM users WHERE id = ?', [userId]);
+    const user = rows[0];
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, error: 'Current password incorrect' });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -239,5 +284,6 @@ module.exports = {
   verify,
   registerOwner,
   ownerLogin,
-  updateProfile
+  updateProfile,
+  changePassword
 };

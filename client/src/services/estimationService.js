@@ -73,6 +73,7 @@ export async function calculateFull(payload, debug = false) {
     return {
       success: true,
       breakdown: data.breakdown,
+      summary: data.summary, // ⬅️ Critical: Preserves SFE summary for UI population
       subtotal: data.costs?.subtotal || 0,
       tax: data.costs?.tax || 0,
       totalEstimatedCost: data.costs?.totalEstimatedCost || 0,

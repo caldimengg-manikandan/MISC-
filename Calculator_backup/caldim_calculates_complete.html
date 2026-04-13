@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caldim Calculates - Professional Construction Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #f59e0b;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --dark-bg: #1f2937;
+            --darker-bg: #111827;
+            --light-bg: #f3f4f6;
+            --border-color: #d1d5db;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --display-bg: #1a1a2e;
+            --display-text: #00ff88;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+        }
+
+        .calculator-wrapper {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 1200px;
+            width: 100%;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 0;
+        }
+
+        .calculator-section {
+            padding: 24px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .solvers-section {
+            padding: 24px;
+            background: var(--light-bg);
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: var(--light-bg);
+            padding: 8px;
+            border-radius: 12px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid transparent;
+            background: white;
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mode-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .display-container {
+            background: var(--display-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .display {
+            background: transparent;
+            color: var(--display-text);
+            font-family: 'Courier New', monospace;
+            font-size: 2.5em;
+            text-align: right;
+            padding: 16px;
+            min-height: 70px;
+            word-break: break-all;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .subdisplay {
+            color: #7ed6df;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            text-align: right;
+            padding: 8px 16px;
+            opacity: 0.8;
+        }
+
+        .memory-display {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--display-text);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-number {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: var(--text-primary);
+        }
+
+        .btn-operator {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-function {
+            background: linear-gradient(135deg, var(--danger-color), #dc2626);
+            color: white;
+        }
+
+        .btn-special {
+            background: linear-gradient(135deg, var(--accent-color), #d97706);
+            color: white;
+        }
+
+        .btn-memory {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+        }
+
+        .solvers-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .solver-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .solver-btn {
+            padding: 16px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .solver-btn:hover {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: white;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .solver-icon {
+            font-size: 1.5em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .close-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #dc2626;
+            transform: rotate(90deg);
+        }
+
+        .solver-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+
+        .form-input {
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-input:disabled {
+            background: var(--light-bg);
+            cursor: not-allowed;
+        }
+
+        .calculate-btn {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 12px;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .results-section {
+            margin-top: 24px;
+            padding: 20px;
+            background: var(--light-bg);
+            border-radius: 12px;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-item {
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .result-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-family: 'Courier New', monospace;
+        }
+
+        .info-section {
+            margin-top: 24px;
+            padding: 20px;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 12px;
+        }
+
+        .info-title {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .info-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.9em;
+        }
+
+        .diagram {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+
+        .diagram svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 968px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .calculator-section {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .keypad {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .display {
+                font-size: 1.8em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .calculator-wrapper {
+                margin: 10px auto;
+            }
+
+            .header {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .calculator-section,
+            .solvers-section {
+                padding: 16px;
+            }
+
+            .keypad {
+                gap: 6px;
+            }
+
+            .btn {
+                padding: 14px;
+                font-size: 1em;
+            }
+
+            .display {
+                font-size: 1.5em;
+                padding: 12px;
+            }
+        }
+
+        .privacy-section {
+            padding: 24px;
+            background: var(--light-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .privacy-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .privacy-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.9em;
+        }
+
+        .conversion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .conversion-card {
+            background: white;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .conversion-card strong {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-wrapper">
+        <div class="header">
+            <h1>Caldim Calculates</h1>
+            <p>Professional Construction Calculator</p>
+        </div>
+
+        <div class="main-container">
+            <!-- Calculator Section -->
+            <div class="calculator-section">
+                <div class="mode-selector">
+                    <button class="mode-btn active" onclick="setMode('FIS')">FIS</button>
+                    <button class="mode-btn" onclick="setMode('decimal')">Decimal</button>
+                    <button class="mode-btn" onclick="setMode('metric')">Metric (mm)</button>
+                </div>
+
+                <div class="display-container">
+                    <div class="display" id="display">0</div>
+                    <div class="subdisplay" id="subdisplay">Ready - FIS Mode</div>
+                    <div class="memory-display" id="memory">Memory: Empty</div>
+                </div>
+
+                <div class="keypad">
+                    <!-- Row 1 -->
+                    <button class="btn btn-number" onclick="appendNumber('7')">7</button>
+                    <button class="btn btn-number" onclick="appendNumber('8')">8</button>
+                    <button class="btn btn-number" onclick="appendNumber('9')">9</button>
+                    <button class="btn btn-operator" onclick="setOperation('÷')">÷</button>
+                    <button class="btn btn-function" onclick="clearAll()">C</button>
+
+                    <!-- Row 2 -->
+                    <button class="btn btn-number" onclick="appendNumber('4')">4</button>
+                    <button class="btn btn-number" onclick="appendNumber('5')">5</button>
+                    <button class="btn btn-number" onclick="appendNumber('6')">6</button>
+                    <button class="btn btn-operator" onclick="setOperation('×')">×</button>
+                    <button class="btn btn-function" onclick="clearEntry()">CE</button>
+
+                    <!-- Row 3 -->
+                    <button class="btn btn-number" onclick="appendNumber('1')">1</button>
+                    <button class="btn btn-number" onclick="appendNumber('2')">2</button>
+                    <button class="btn btn-number" onclick="appendNumber('3')">3</button>
+                    <button class="btn btn-operator" onclick="setOperation('-')">-</button>
+                    <button class="btn btn-function" onclick="toggleSign()">+/-</button>
+
+                    <!-- Row 4 -->
+                    <button class="btn btn-number" onclick="appendNumber('0')">0</button>
+                    <button class="btn btn-special" onclick="addSeparator()">-</button>
+                    <button class="btn btn-special" onclick="addFraction()">/</button>
+                    <button class="btn btn-operator" onclick="setOperation('+')">+</button>
+                    <button class="btn btn-function" onclick="calculate()">=</button>
+
+                    <!-- Row 5 - Memory Functions -->
+                    <button class="btn btn-memory" onclick="memoryAdd()">M+</button>
+                    <button class="btn btn-memory" onclick="memorySubtract()">M-</button>
+                    <button class="btn btn-memory" onclick="memoryRecall()">MR</button>
+                    <button class="btn btn-memory" onclick="memoryClear()">MC</button>
+                    <button class="btn btn-special" onclick="convertUnits()">Convert</button>
+
+                    <!-- Row 6 - Advanced Functions -->
+                    <button class="btn btn-function" onclick="squareRoot()">√x</button>
+                    <button class="btn btn-function" onclick="square()">x²</button>
+                    <button class="btn btn-function" onclick="cube()">x³</button>
+                    <button class="btn btn-function" onclick="reciprocal()">1/x</button>
+                    <button class="btn btn-function" onclick="percentage()">%</button>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-title">Quick Reference - FIS Mode</div>
+                    <div class="info-text">
+                        <strong>Input Format:</strong> Enter feet-inches-sixteenths using "-" separator<br>
+                        <strong>Example:</strong> 67-10-15 = 67 feet, 10 inches, 15/16"<br>
+                        <strong>Fractions:</strong> Use "/" for custom fractions (e.g., 5/8)
+                    </div>
+                    <div class="conversion-grid">
+                        <div class="conversion-card"><strong>1"</strong> = 1/16</div>
+                        <div class="conversion-card"><strong>2"</strong> = 1/8</div>
+                        <div class="conversion-card"><strong>4"</strong> = 1/4</div>
+                        <div class="conversion-card"><strong>8"</strong> = 1/2</div>
+                        <div class="conversion-card"><strong>12"</strong> = 3/4</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solvers Section -->
+            <div class="solvers-section">
+                <h3 class="solvers-title">Professional Solvers</h3>
+                <div class="solver-grid">
+                    <button class="solver-btn" onclick="openSolver('rightTriangle')">
+                        <span class="solver-icon">📐</span>
+                        <span>Right Triangle</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('circle')">
+                        <span class="solver-icon">⭕</span>
+                        <span>Circle</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('stairs')">
+                        <span class="solver-icon">🪜</span>
+                        <span>Stair Calculator</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('roof')">
+                        <span class="solver-icon">🏠</span>
+                        <span>Roof/Truss</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('concrete')">
+                        <span class="solver-icon">🧱</span>
+                        <span>Concrete Volume</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('boardFeet')">
+                        <span class="solver-icon">🪵</span>
+                        <span>Board Feet</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('squaring')">
+                        <span class="solver-icon">📏</span>
+                        <span>Squaring Project</span>
+                    </button>
+                    <button class="solver-btn" onclick="openSolver('slope')">
+                        <span class="solver-icon">📊</span>
+                        <span>Slope Percentage</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="privacy-section">
+            <div class="privacy-title">Privacy Policy - Caldim Calculates</div>
+            <div class="privacy-text">
+                All calculations are performed locally in your browser. No data is collected, stored, or transmitted. Your measurements and projects remain completely private and secure.
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals for Solvers -->
+    <div id="modalContainer"></div>
+
+    <script>
+        // Global State
+        let currentValue = '0';
+        let previousValue = null;
+        let operation = null;
+        let mode = 'FIS';
+        let memory = 0;
+        let awaitingNextValue = false;
+
+        // Display Update
+        function updateDisplay() {
+            const display = document.getElementById('display');
+            const subdisplay = document.getElementById('subdisplay');
+            
+            if (mode === 'FIS') {
+                display.textContent = formatFIS(currentValue);
+            } else {
+                display.textContent = currentValue;
+            }
+            
+            if (operation && previousValue !== null) {
+                subdisplay.textContent = `${previousValue} ${operation}`;
+            } else {
+                subdisplay.textContent = `Mode: ${mode}`;
+            }
+        }
+
+        // FIS Formatting
+        function formatFIS(value) {
+            if (value === '0') return '0"';
+            const parts = value.split('-');
+            let result = '';
+            
+            if (parts[0]) result += parts[0] + "'";
+            if (parts[1]) result += " " + parts[1];
+            if (parts[2]) {
+                if (parts[2].includes('/')) {
+                    result += " " + parts[2];
+                } else {
+                    result += " " + parts[2] + "/16";
+                }
+            }
+            result += '"';
+            
+            return result.trim();
+        }
+
+        // Mode Switching
+        function setMode(newMode) {
+            mode = newMode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateDisplay();
+        }
+
+        // Number Input
+        function appendNumber(num) {
+            if (awaitingNextValue) {
+                currentValue = num;
+                awaitingNextValue = false;
+            } else {
+                currentValue = currentValue === '0' ? num : currentValue + num;
+            }
+            updateDisplay();
+        }
+
+        function addSeparator() {
+            if (mode === 'FIS') {
+                const separatorCount = (currentValue.match(/-/g) || []).length;
+                if (separatorCount < 2) {
+                    currentValue += '-';
+                }
+            } else {
+                if (!currentValue.includes('.')) {
+                    currentValue += '.';
+                }
+            }
+            updateDisplay();
+        }
+
+        function addFraction() {
+            if (mode === 'FIS' && !currentValue.includes('/')) {
+                currentValue += '/';
+                updateDisplay();
+            }
+        }
+
+        // Clear Functions
+        function clearAll() {
+            currentValue = '0';
+            previousValue = null;
+            operation = null;
+            awaitingNextValue = false;
+            updateDisplay();
+        }
+
+        function clearEntry() {
+            currentValue = '0';
+            updateDisplay();
+        }
+
+        function toggleSign() {
+            if (currentValue !== '0') {
+                currentValue = currentValue.startsWith('-') ? currentValue.substring(1) : '-' + currentValue;
+                updateDisplay();
+            }
+        }
+
+        // Operations
+        function setOperation(op) {
+            if (previousValue !== null && operation !== null && !awaitingNextValue) {
+                calculate();
+            }
+            previousValue = currentValue;
+            operation = op;
+            awaitingNextValue = true;
+            updateDisplay();
+        }
+
+        function calculate() {
+            if (operation === null || previousValue === null) return;
+            
+            let prev = parseValue(previousValue);
+            let curr = parseValue(currentValue);
+            let result;
+            
+            switch(operation) {
+                case '+': result = prev + curr; break;
+                case '-': result = prev - curr; break;
+                case '×': result = prev * curr; break;
+                case '÷': result = curr !== 0 ? prev / curr : 0; break;
+            }
+            
+            currentValue = formatResult(result);
+            previousValue = null;
+            operation = null;
+            awaitingNextValue = true;
+            updateDisplay();
+        }
+
+        // Parse FIS to Decimal Inches
+        function parseValue(val) {
+            if (mode === 'FIS') {
+                const parts = val.replace(/^-/, '').split('-');
+                const isNegative = val.startsWith('-');
+                let totalInches = 0;
+                
+                if (parts[0]) totalInches += parseFloat(parts[0] || 0) * 12;
+                if (parts[1]) totalInches += parseFloat(parts[1] || 0);
+                if (parts[2]) {
+                    if (parts[2].includes('/')) {
+                        const [num, den] = parts[2].split('/').map(Number);
+                        totalInches += num / den;
+                    } else {
+                        totalInches += parseFloat(parts[2] || 0) / 16;
+                    }
+                }
+                
+                return isNegative ? -totalInches : totalInches;
+            } else if (mode === 'metric') {
+                return parseFloat(val) || 0;
+            } else {
+                return parseFloat(val) || 0;
+            }
+        }
+
+        // Format Result Back to FIS
+        function formatResult(inches) {
+            if (mode === 'FIS') {
+                const isNegative = inches < 0;
+                inches = Math.abs(inches);
+                
+                const feet = Math.floor(inches / 12);
+                const remainingInches = inches % 12;
+                const wholeInches = Math.floor(remainingInches);
+                const fraction = remainingInches - wholeInches;
+                const sixteenths = Math.round(fraction * 16);
+                
+                let result = (isNegative ? '-' : '') + feet.toString();
+                if (wholeInches > 0 || sixteenths > 0) {
+                    result += '-' + wholeInches;
+                }
+                if (sixteenths > 0 && sixteenths < 16) {
+                    result += '-' + sixteenths;
+                } else if (sixteenths === 16) {
+                    const parts = result.split('-');
+                    parts[1] = (parseInt(parts[1]) + 1).toString();
+                    result = parts.join('-');
+                }
+                
+                return result;
+            } else if (mode === 'metric') {
+                return inches.toFixed(2);
+            } else {
+                return inches.toFixed(4);
+            }
+        }
+
+        // Advanced Functions
+        function squareRoot() {
+            const val = parseValue(currentValue);
+            currentValue = formatResult(Math.sqrt(Math.abs(val)));
+            updateDisplay();
+        }
+
+        function square() {
+            const val = parseValue(currentValue);
+            currentValue = formatResult(val * val);
+            updateDisplay();
+        }
+
+        function cube() {
+            const val = parseValue(currentValue);
+            currentValue = formatResult(val * val * val);
+            updateDisplay();
+        }
+
+        function reciprocal() {
+            const val = parseValue(currentValue);
+            if (val !== 0) {
+                currentValue = formatResult(1 / val);
+                updateDisplay();
+            }
+        }
+
+        function percentage() {
+            const val = parseValue(currentValue);
+            currentValue = formatResult(val / 100);
+            updateDisplay();
+        }
+
+        function convertUnits() {
+            const modes = ['FIS', 'decimal', 'metric'];
+            const currentIndex = modes.indexOf(mode);
+            const nextIndex = (currentIndex + 1) % modes.length;
+            const nextMode = modes[nextIndex];
+            
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons.forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === nextIndex);
+            });
+            
+            mode = nextMode;
+            updateDisplay();
+        }
+
+        // Memory Functions
+        function memoryAdd() {
+            memory += parseValue(currentValue);
+            updateMemoryDisplay();
+        }
+
+        function memorySubtract() {
+            memory -= parseValue(currentValue);
+            updateMemoryDisplay();
+        }
+
+        function memoryRecall() {
+            currentValue = formatResult(memory);
+            updateDisplay();
+        }
+
+        function memoryClear() {
+            memory = 0;
+            updateMemoryDisplay();
+        }
+
+        function updateMemoryDisplay() {
+            const memDisplay = document.getElementById('memory');
+            if (memory === 0) {
+                memDisplay.textContent = 'Memory: Empty';
+            } else {
+                memDisplay.textContent = `Memory: ${formatResult(memory)}`;
+            }
+        }
+
+        // Solver Functions
+        function openSolver(type) {
+            const solvers = {
+                rightTriangle: createRightTriangleSolver,
+                circle: createCircleSolver,
+                stairs: createStairsSolver,
+                roof: createRoofSolver,
+                concrete: createConcreteSolver,
+                boardFeet: createBoardFeetSolver,
+                squaring: createSquaringSolver,
+                slope: createSlopeSolver
+            };
+
+            if (solvers[type]) {
+                solvers[type]();
+            }
+        }
+
+        function createModal(title, content) {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">${title}</h2>
+                        <button class="close-btn" onclick="closeModal(this)">×</button>
+                    </div>
+                    ${content}
+                </div>
+            `;
+            document.getElementById('modalContainer').appendChild(modal);
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modal.querySelector('.close-btn'));
+            });
+        }
+
+        function closeModal(btn) {
+            const modal = btn.closest('.modal');
+            modal.remove();
+        }
+
+        // Right Triangle Solver
+        function createRightTriangleSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="diagram">
+                        <svg width="300" height="200" viewBox="0 0 300 200">
+                            <defs>
+                                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
+                                </marker>
+                            </defs>
+                            <line x1="50" y1="150" x2="250" y2="150" stroke="#2563eb" stroke-width="3"/>
+                            <line x1="250" y1="150" x2="250" y2="30" stroke="#2563eb" stroke-width="3"/>
+                            <line x1="50" y1="150" x2="250" y2="30" stroke="#2563eb" stroke-width="3"/>
+                            <text x="150" y="170" text-anchor="middle" fill="#2563eb" font-weight="bold">RUN</text>
+                            <text x="270" y="90" text-anchor="start" fill="#2563eb" font-weight="bold">RISE</text>
+                            <text x="130" y="80" text-anchor="middle" fill="#2563eb" font-weight="bold">SLOPE</text>
+                            <path d="M 240 150 L 240 140 L 250 140" stroke="#2563eb" fill="none" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Rise (vertical height)</label>
+                        <input type="text" id="rt-rise" class="form-input" placeholder="e.g., 9-11-5 or 9.94">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Run (horizontal distance)</label>
+                        <input type="text" id="rt-run" class="form-input" placeholder="e.g., 12-8-3 or 12.69">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Pitch (rise per 12" run)</label>
+                        <input type="text" id="rt-pitch" class="form-input" placeholder="e.g., 9-3/8">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateRightTriangle()">Calculate Triangle</button>
+                    
+                    <div id="rt-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Slope (hypotenuse):</span>
+                            <span class="result-value" id="rt-slope">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Pitch:</span>
+                            <span class="result-value" id="rt-pitch-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Angle (degrees):</span>
+                            <span class="result-value" id="rt-angle">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Rise:</span>
+                            <span class="result-value" id="rt-rise-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Run:</span>
+                            <span class="result-value" id="rt-run-result">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Right Triangle Solver', content);
+        }
+
+        function calculateRightTriangle() {
+            const rise = document.getElementById('rt-rise').value;
+            const run = document.getElementById('rt-run').value;
+            const pitch = document.getElementById('rt-pitch').value;
+            
+            let riseInches = rise ? parseValue(rise) : null;
+            let runInches = run ? parseValue(run) : null;
+            let pitchInches = pitch ? parseValue(pitch) : null;
+            
+            // Calculate missing values
+            if (riseInches !== null && runInches !== null) {
+                // Have rise and run
+                const slope = Math.sqrt(riseInches * riseInches + runInches * runInches);
+                const angle = Math.atan(riseInches / runInches) * (180 / Math.PI);
+                pitchInches = (riseInches / runInches) * 12;
+                
+                displayRightTriangleResults(riseInches, runInches, slope, pitchInches, angle);
+            } else if (pitchInches !== null && runInches !== null) {
+                // Have pitch and run
+                riseInches = (pitchInches / 12) * runInches;
+                const slope = Math.sqrt(riseInches * riseInches + runInches * runInches);
+                const angle = Math.atan(riseInches / runInches) * (180 / Math.PI);
+                
+                displayRightTriangleResults(riseInches, runInches, slope, pitchInches, angle);
+            } else if (pitchInches !== null && riseInches !== null) {
+                // Have pitch and rise
+                runInches = (riseInches * 12) / pitchInches;
+                const slope = Math.sqrt(riseInches * riseInches + runInches * runInches);
+                const angle = Math.atan(riseInches / runInches) * (180 / Math.PI);
+                
+                displayRightTriangleResults(riseInches, runInches, slope, pitchInches, angle);
+            } else {
+                alert('Please enter at least two values to calculate the triangle.');
+                return;
+            }
+        }
+
+        function displayRightTriangleResults(rise, run, slope, pitch, angle) {
+            document.getElementById('rt-results').classList.add('active');
+            document.getElementById('rt-rise-result').textContent = formatResult(rise);
+            document.getElementById('rt-run-result').textContent = formatResult(run);
+            document.getElementById('rt-slope').textContent = formatResult(slope);
+            document.getElementById('rt-pitch-result').textContent = formatResult(pitch) + ' to 12"';
+            document.getElementById('rt-angle').textContent = angle.toFixed(4) + '°';
+        }
+
+        // Circle Solver
+        function createCircleSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="diagram">
+                        <svg width="300" height="250" viewBox="0 0 300 250">
+                            <circle cx="150" cy="125" r="80" fill="none" stroke="#2563eb" stroke-width="3"/>
+                            <line x1="150" y1="125" x2="230" y2="125" stroke="#ef4444" stroke-width="2"/>
+                            <line x1="70" y1="125" x2="230" y2="125" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5"/>
+                            <line x1="100" y1="70" x2="200" y2="180" stroke="#f59e0b" stroke-width="2"/>
+                            <circle cx="150" cy="125" r="4" fill="#2563eb"/>
+                            <text x="190" y="120" fill="#ef4444" font-weight="bold">Radius</text>
+                            <text x="150" y="210" fill="#10b981" font-weight="bold" text-anchor="middle">Diameter</text>
+                            <text x="120" y="60" fill="#f59e0b" font-weight="bold">Chord</text>
+                        </svg>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Radius</label>
+                        <input type="text" id="circle-radius" class="form-input" placeholder="Enter radius">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Diameter</label>
+                        <input type="text" id="circle-diameter" class="form-input" placeholder="Enter diameter">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Chord Length</label>
+                        <input type="text" id="circle-chord" class="form-input" placeholder="Enter chord length">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Arc Length</label>
+                        <input type="text" id="circle-arc" class="form-input" placeholder="Enter arc length">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateCircle()">Calculate Circle</button>
+                    
+                    <div id="circle-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Radius:</span>
+                            <span class="result-value" id="circle-radius-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Diameter:</span>
+                            <span class="result-value" id="circle-diameter-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Circumference:</span>
+                            <span class="result-value" id="circle-circumference">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Area:</span>
+                            <span class="result-value" id="circle-area">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Circle Solver', content);
+        }
+
+        function calculateCircle() {
+            const radiusVal = document.getElementById('circle-radius').value;
+            const diameterVal = document.getElementById('circle-diameter').value;
+            
+            let radius;
+            
+            if (radiusVal) {
+                radius = parseValue(radiusVal);
+            } else if (diameterVal) {
+                radius = parseValue(diameterVal) / 2;
+            } else {
+                alert('Please enter either radius or diameter.');
+                return;
+            }
+            
+            const diameter = radius * 2;
+            const circumference = 2 * Math.PI * radius;
+            const area = Math.PI * radius * radius;
+            
+            document.getElementById('circle-results').classList.add('active');
+            document.getElementById('circle-radius-result').textContent = formatResult(radius);
+            document.getElementById('circle-diameter-result').textContent = formatResult(diameter);
+            document.getElementById('circle-circumference').textContent = formatResult(circumference);
+            document.getElementById('circle-area').textContent = formatResult(area) + ' sq. in.';
+        }
+
+        // Stairs Solver
+        function createStairsSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="info-section">
+                        <div class="info-title">Stair Calculator</div>
+                        <div class="info-text">
+                            Enter any 3 known values to calculate complete stair dimensions.
+                            Standard riser height: 7-7.5 inches. Standard tread depth: 10-11 inches.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Total Floor to Floor Height</label>
+                        <input type="text" id="stair-height" class="form-input" placeholder="e.g., 10-0-0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Maximum Riser Height</label>
+                        <input type="text" id="stair-max-riser" class="form-input" placeholder="e.g., 0-7-8">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tread Width/Depth</label>
+                        <input type="text" id="stair-tread" class="form-input" placeholder="e.g., 0-11-0">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateStairs()">Calculate Stairs</button>
+                    
+                    <div id="stair-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Number of Risers:</span>
+                            <span class="result-value" id="stair-num-risers">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Actual Riser Height:</span>
+                            <span class="result-value" id="stair-actual-riser">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Total Run:</span>
+                            <span class="result-value" id="stair-run">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Slope Length:</span>
+                            <span class="result-value" id="stair-slope">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Stair Calculator', content);
+        }
+
+        function calculateStairs() {
+            const heightVal = document.getElementById('stair-height').value;
+            const maxRiserVal = document.getElementById('stair-max-riser').value;
+            const treadVal = document.getElementById('stair-tread').value;
+            
+            if (!heightVal || !maxRiserVal) {
+                alert('Please enter total height and maximum riser height.');
+                return;
+            }
+            
+            const totalHeight = parseValue(heightVal);
+            const maxRiser = parseValue(maxRiserVal);
+            const treadWidth = treadVal ? parseValue(treadVal) : 11;
+            
+            const numRisers = Math.ceil(totalHeight / maxRiser);
+            const actualRiser = totalHeight / numRisers;
+            const numTreads = numRisers - 1;
+            const totalRun = numTreads * treadWidth;
+            const slope = Math.sqrt(totalHeight * totalHeight + totalRun * totalRun);
+            
+            document.getElementById('stair-results').classList.add('active');
+            document.getElementById('stair-num-risers').textContent = numRisers;
+            document.getElementById('stair-actual-riser').textContent = formatResult(actualRiser);
+            document.getElementById('stair-run').textContent = formatResult(totalRun);
+            document.getElementById('stair-slope').textContent = formatResult(slope);
+        }
+
+        // Roof Solver
+        function createRoofSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="info-section">
+                        <div class="info-title">Roof/Truss Calculator</div>
+                        <div class="info-text">
+                            Calculate roof dimensions from pitch and building measurements.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Roof Pitch (rise per 12" run)</label>
+                        <input type="text" id="roof-pitch" class="form-input" placeholder="e.g., 5-1/2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Building Run (half of width)</label>
+                        <input type="text" id="roof-run" class="form-input" placeholder="e.g., 16-6">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Overhang</label>
+                        <input type="text" id="roof-overhang" class="form-input" placeholder="e.g., 1-0">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateRoof()">Calculate Roof</button>
+                    
+                    <div id="roof-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Building Rise:</span>
+                            <span class="result-value" id="roof-rise">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Building Slope:</span>
+                            <span class="result-value" id="roof-slope">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Total Rafter Length:</span>
+                            <span class="result-value" id="roof-rafter">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Angle:</span>
+                            <span class="result-value" id="roof-angle">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Roof/Truss Solver', content);
+        }
+
+        function calculateRoof() {
+            const pitchVal = document.getElementById('roof-pitch').value;
+            const runVal = document.getElementById('roof-run').value;
+            const overhangVal = document.getElementById('roof-overhang').value;
+            
+            if (!pitchVal || !runVal) {
+                alert('Please enter pitch and building run.');
+                return;
+            }
+            
+            const pitch = parseValue(pitchVal);
+            const run = parseValue(runVal);
+            const overhang = overhangVal ? parseValue(overhangVal) : 0;
+            
+            const rise = (pitch / 12) * run;
+            const buildingSlope = Math.sqrt(rise * rise + run * run);
+            const totalRun = run + overhang;
+            const totalRise = (pitch / 12) * totalRun;
+            const totalRafter = Math.sqrt(totalRise * totalRise + totalRun * totalRun);
+            const angle = Math.atan(pitch / 12) * (180 / Math.PI);
+            
+            document.getElementById('roof-results').classList.add('active');
+            document.getElementById('roof-rise').textContent = formatResult(rise);
+            document.getElementById('roof-slope').textContent = formatResult(buildingSlope);
+            document.getElementById('roof-rafter').textContent = formatResult(totalRafter);
+            document.getElementById('roof-angle').textContent = angle.toFixed(2) + '°';
+        }
+
+        // Concrete Calculator
+        function createConcreteSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="info-section">
+                        <div class="info-title">Concrete Volume Calculator</div>
+                        <div class="info-text">
+                            Calculate cubic yards of concrete needed. Remember: 27 cubic feet = 1 cubic yard.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Length</label>
+                        <input type="text" id="concrete-length" class="form-input" placeholder="e.g., 15-0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Width</label>
+                        <input type="text" id="concrete-width" class="form-input" placeholder="e.g., 10-0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Thickness/Depth</label>
+                        <input type="text" id="concrete-thickness" class="form-input" placeholder="e.g., 0-4">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateConcrete()">Calculate Volume</button>
+                    
+                    <div id="concrete-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Cubic Feet:</span>
+                            <span class="result-value" id="concrete-cf">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Cubic Yards:</span>
+                            <span class="result-value" id="concrete-cy">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Square Feet (area):</span>
+                            <span class="result-value" id="concrete-sf">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Concrete Volume Calculator', content);
+        }
+
+        function calculateConcrete() {
+            const lengthVal = document.getElementById('concrete-length').value;
+            const widthVal = document.getElementById('concrete-width').value;
+            const thicknessVal = document.getElementById('concrete-thickness').value;
+            
+            if (!lengthVal || !widthVal || !thicknessVal) {
+                alert('Please enter all dimensions.');
+                return;
+            }
+            
+            const length = parseValue(lengthVal);
+            const width = parseValue(widthVal);
+            const thickness = parseValue(thicknessVal);
+            
+            const cubicInches = length * width * thickness;
+            const cubicFeet = cubicInches / 1728; // 12^3
+            const cubicYards = cubicFeet / 27;
+            const squareFeet = (length * width) / 144; // 12^2
+            
+            document.getElementById('concrete-results').classList.add('active');
+            document.getElementById('concrete-cf').textContent = cubicFeet.toFixed(2) + ' cu. ft.';
+            document.getElementById('concrete-cy').textContent = cubicYards.toFixed(2) + ' cu. yd.';
+            document.getElementById('concrete-sf').textContent = squareFeet.toFixed(2) + ' sq. ft.';
+        }
+
+        // Board Feet Calculator
+        function createBoardFeetSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="info-section">
+                        <div class="info-title">Board Feet Calculator</div>
+                        <div class="info-text">
+                            Formula: (Thickness × Width × Length) ÷ 12 = Board Feet
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Thickness (inches)</label>
+                        <input type="text" id="bf-thickness" class="form-input" placeholder="e.g., 2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Width (inches)</label>
+                        <input type="text" id="bf-width" class="form-input" placeholder="e.g., 4">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Length (feet)</label>
+                        <input type="text" id="bf-length" class="form-input" placeholder="e.g., 8">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Quantity (pieces)</label>
+                        <input type="text" id="bf-quantity" class="form-input" placeholder="e.g., 10" value="1">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateBoardFeet()">Calculate Board Feet</button>
+                    
+                    <div id="bf-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Board Feet per Piece:</span>
+                            <span class="result-value" id="bf-per-piece">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Total Board Feet:</span>
+                            <span class="result-value" id="bf-total">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Board Feet Calculator', content);
+        }
+
+        function calculateBoardFeet() {
+            const thickness = parseFloat(document.getElementById('bf-thickness').value);
+            const width = parseFloat(document.getElementById('bf-width').value);
+            const length = parseFloat(document.getElementById('bf-length').value);
+            const quantity = parseFloat(document.getElementById('bf-quantity').value) || 1;
+            
+            if (!thickness || !width || !length) {
+                alert('Please enter thickness, width, and length.');
+                return;
+            }
+            
+            const boardFeetPerPiece = (thickness * width * length) / 12;
+            const totalBoardFeet = boardFeetPerPiece * quantity;
+            
+            document.getElementById('bf-results').classList.add('active');
+            document.getElementById('bf-per-piece').textContent = boardFeetPerPiece.toFixed(4) + ' BF';
+            document.getElementById('bf-total').textContent = totalBoardFeet.toFixed(4) + ' BF';
+        }
+
+        // Squaring Calculator
+        function createSquaringSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="info-section">
+                        <div class="info-title">Squaring a Project</div>
+                        <div class="info-text">
+                            Use the 3-4-5 method (or any multiple) to ensure your project is square.
+                            Enter two sides to calculate the diagonal for checking square.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Side A (Run)</label>
+                        <input type="text" id="square-a" class="form-input" placeholder="e.g., 43-8">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Side B (Rise)</label>
+                        <input type="text" id="square-b" class="form-input" placeholder="e.g., 23-6">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateSquaring()">Calculate Diagonal</button>
+                    
+                    <div id="square-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Diagonal Should Be:</span>
+                            <span class="result-value" id="square-diagonal">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Area:</span>
+                            <span class="result-value" id="square-area">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Squaring Calculator', content);
+        }
+
+        function calculateSquaring() {
+            const sideAVal = document.getElementById('square-a').value;
+            const sideBVal = document.getElementById('square-b').value;
+            
+            if (!sideAVal || !sideBVal) {
+                alert('Please enter both sides.');
+                return;
+            }
+            
+            const sideA = parseValue(sideAVal);
+            const sideB = parseValue(sideBVal);
+            const diagonal = Math.sqrt(sideA * sideA + sideB * sideB);
+            const area = sideA * sideB / 144; // Convert to square feet
+            
+            document.getElementById('square-results').classList.add('active');
+            document.getElementById('square-diagonal').textContent = formatResult(diagonal);
+            document.getElementById('square-area').textContent = area.toFixed(2) + ' sq. ft.';
+        }
+
+        // Slope Percentage Calculator
+        function createSlopeSolver() {
+            const content = `
+                <div class="solver-form">
+                    <div class="info-section">
+                        <div class="info-title">Slope Percentage Calculator</div>
+                        <div class="info-text">
+                            Convert between slope percentage and pitch (rise to run ratio).
+                            Example: 12.5% slope = 1.5" rise per 12" run
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Slope Percentage (%)</label>
+                        <input type="text" id="slope-percent" class="form-input" placeholder="e.g., 12.5">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">OR Rise per 12" Run</label>
+                        <input type="text" id="slope-pitch" class="form-input" placeholder="e.g., 1-1/2">
+                    </div>
+                    
+                    <button class="calculate-btn" onclick="calculateSlope()">Calculate Slope</button>
+                    
+                    <div id="slope-results" class="results-section">
+                        <div class="result-item">
+                            <span class="result-label">Percentage:</span>
+                            <span class="result-value" id="slope-percent-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Pitch (to 12"):</span>
+                            <span class="result-value" id="slope-pitch-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Angle:</span>
+                            <span class="result-value" id="slope-angle">-</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            createModal('Slope Percentage Calculator', content);
+        }
+
+        function calculateSlope() {
+            const percentVal = document.getElementById('slope-percent').value;
+            const pitchVal = document.getElementById('slope-pitch').value;
+            
+            let percentage, pitch;
+            
+            if (percentVal) {
+                percentage = parseFloat(percentVal);
+                pitch = (percentage / 100) * 12;
+            } else if (pitchVal) {
+                pitch = parseValue(pitchVal);
+                percentage = (pitch / 12) * 100;
+            } else {
+                alert('Please enter either percentage or pitch.');
+                return;
+            }
+            
+            const angle = Math.atan(pitch / 12) * (180 / Math.PI);
+            
+            document.getElementById('slope-results').classList.add('active');
+            document.getElementById('slope-percent-result').textContent = percentage.toFixed(2) + '%';
+            document.getElementById('slope-pitch-result').textContent = formatResult(pitch) + ' to 12"';
+            document.getElementById('slope-angle').textContent = angle.toFixed(2) + '°';
+        }
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (document.querySelector('.modal.active')) return;
+            
+            if (e.key >= '0' && e.key <= '9') {
+                appendNumber(e.key);
+            } else if (e.key === '+') {
+                setOperation('+');
+            } else if (e.key === '-' && e.shiftKey) {
+                setOperation('-');
+            } else if (e.key === '*') {
+                setOperation('×');
+            } else if (e.key === '/') {
+                e.preventDefault();
+                setOperation('÷');
+            } else if (e.key === 'Enter' || e.key === '=') {
+                calculate();
+            } else if (e.key === 'Escape') {
+                clearAll();
+            } else if (e.key === 'Backspace') {
+                clearEntry();
+            }
+        });
+
+        // Initialize
+        updateDisplay();
+        updateMemoryDisplay();
+    </script>
+</body>
+</html>

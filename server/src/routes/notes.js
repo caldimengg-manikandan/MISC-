@@ -29,6 +29,7 @@ router.get('/project/:projectId', auth, async (req, res) => {
 
     const parsedNotes = notes.map(n => ({
       ...n,
+      is_locked: n.isPinned === 1,
       mentions: tryParseJson(n.mentions) || []
     }));
 
@@ -42,16 +43,17 @@ router.get('/project/:projectId', auth, async (req, res) => {
 // Create a new note
 router.post('/', auth, async (req, res) => {
   try {
-    const { projectId, title, content, note_type, pos_x, pos_y, color, mentions, context_type, context_id } = req.body;
+    const { projectId, title, content, note_type, pos_x, pos_y, color, mentions, context_type, context_id, is_locked } = req.body;
     const userId = req.userId;
+    const lockedBit = is_locked ? 1 : 0;
 
     const [result] = await db.query(
-      `INSERT INTO project_notes (projectId, userId, title, content, note_type, pos_x, pos_y, color, mentions, context_type, context_id)
+      `INSERT INTO project_notes (projectId, userId, title, content, note_type, pos_x, pos_y, isPinned, color, mentions, context_type, context_id)
        OUTPUT INSERTED.id
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         projectId, userId, title || '', content || '', note_type || 'personal',
-        pos_x || 100, pos_y || 100, color || '#e0f7fa', JSON.stringify(mentions || []),
+        pos_x || 100, pos_y || 100, lockedBit, color || '#e0f7fa', JSON.stringify(mentions || []),
         context_type || 'global', context_id || null
       ]
     );
@@ -63,6 +65,7 @@ router.post('/', auth, async (req, res) => {
       success: true,
       note: {
         ...newNote[0],
+        is_locked: newNote[0].isPinned === 1,
         mentions: tryParseJson(newNote[0].mentions)
       }
     });
@@ -76,8 +79,9 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, note_type, color, mentions } = req.body;
+    const { title, content, note_type, color, mentions, is_locked } = req.body;
     const userId = req.userId;
+    const lockedBit = is_locked ? 1 : 0;
 
     // Verify ownership
     const [existing] = await db.query('SELECT userId FROM project_notes WHERE id = ?', [id]);
@@ -85,9 +89,9 @@ router.put('/:id', auth, async (req, res) => {
     if (existing[0].userId !== userId) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     await db.query(
-      `UPDATE project_notes SET title = ?, content = ?, note_type = ?, color = ?, mentions = ?, updatedAt = GETDATE()
+      `UPDATE project_notes SET title = ?, content = ?, note_type = ?, color = ?, isPinned = ?, mentions = ?, updatedAt = GETDATE()
        WHERE id = ?`,
-      [title, content, note_type, color, JSON.stringify(mentions || []), id]
+      [title, content, note_type, color, lockedBit, JSON.stringify(mentions || []), id]
     );
 
     res.json({ success: true, message: 'Note updated' });

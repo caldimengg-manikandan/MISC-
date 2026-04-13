@@ -8,7 +8,8 @@ import {
   LayoutDashboard, FolderOpen, ChevronRight, BarChart3,
   LogOut, PanelLeftOpen, PanelLeftClose, PenLine, Search,
   Box, Database, ArrowUpDown, ChevronDown, Settings,
-  MoreHorizontal, HelpCircle, Share2, Save, Pin
+  MoreHorizontal, HelpCircle, Share2, Save, Pin, DollarSign,
+  Zap, Users
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
@@ -36,10 +37,10 @@ const NAV_ITEMS = [
     icon: <PenLine size={16} />,
     path: null,
     children: [
-      { id: 'stair-railings', label: 'Stair & Railings', icon: <Box size={13} />,        path: '/estimate/stair-railings' },
-      { id: 'railings',       label: 'Railings',         icon: <Database size={13} />,    path: '/estimate/railings' },
-      { id: 'ladders',        label: 'Ladders',           icon: <ArrowUpDown size={13} />, path: '/estimate/ladders' },
-      { id: 'bollards',       label: 'Bollards & Gates',  icon: <Box size={13} />,        path: '/estimate/bollards' },
+      { id: 'stair-railings', label: 'Stair & Railings', icon: <Box size={13} />, path: '/estimate/stair-railings' },
+      { id: 'railings', label: 'Railings', icon: <Database size={13} />, path: '/estimate/railings' },
+      { id: 'ladders', label: 'Ladders', icon: <ArrowUpDown size={13} />, path: '/estimate/ladders' },
+      { id: 'bollards', label: 'Bollards & Gates', icon: <Box size={13} />, path: '/estimate/bollards' },
     ],
   },
   {
@@ -47,6 +48,18 @@ const NAV_ITEMS = [
     label: 'Reports',
     icon: <BarChart3 size={16} />,
     path: '/reports',
+  },
+  {
+    id: 'settings',
+    label: 'Config & Settings',
+    icon: <Settings size={16} />,
+    path: null,
+    children: [
+      { id: 'pricing', label: 'Pricing Rates', icon: <DollarSign size={13} />, path: '/settings/pricing' },
+      { id: 'customers', label: 'Customer Master', icon: <Users size={13} />, path: '/settings/customers' },
+      { id: 'system', label: 'System Admin', icon: <Database size={13} />, path: '/settings/system' },
+      { id: 'personalization', label: 'Personalization', icon: <Zap size={13} />, path: '/settings/personalization' },
+    ]
   },
 ];
 
@@ -90,7 +103,7 @@ const SidebarProjectRenderer = ({ p, navigate, isRecent = false, useEstimation }
       await saveEstimationData(p.id, { projectName: renameValue });
       toast.success('Project renamed!', { id: renameToast });
       setIsRenaming(false);
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed to rename project', { id: renameToast });
     }
   };
@@ -104,28 +117,28 @@ const SidebarProjectRenderer = ({ p, navigate, isRecent = false, useEstimation }
       {!isRecent && <span className="sidebar-project-dot" />}
 
       {isRenaming ? (
-         <form onSubmit={handleRenameSubmit} style={{ flex: 1, marginRight: 8 }} onClick={e => e.stopPropagation()}>
-           <input 
-              autoFocus 
-              value={renameValue} 
-              onChange={e => setRenameValue(e.target.value)}
-              onBlur={() => setIsRenaming(false)}
-              className="px-1 py-0.5 text-xs text-white bg-[#40414f] border border-[#10a37f] rounded" 
-              style={{ width: '100%', outline: 'none' }}
-           />
-         </form>
+        <form onSubmit={handleRenameSubmit} style={{ flex: 1, marginRight: 8 }} onClick={e => e.stopPropagation()}>
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={e => setRenameValue(e.target.value)}
+            onBlur={() => setIsRenaming(false)}
+            className="px-1 py-0.5 text-xs text-white bg-[#40414f] border border-[#10a37f] rounded"
+            style={{ width: '100%', outline: 'none' }}
+          />
+        </form>
       ) : (
-         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
-           {p.projectName || `Project ${String(p.id).slice(-4)}`}
-           {p.isPinned && <Pin size={10} style={{ opacity: 0.6, flexShrink: 0 }} />}
-         </span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {p.projectName || `Project ${String(p.id).slice(-4)}`}
+          {p.isPinned && <Pin size={10} style={{ opacity: 0.6, flexShrink: 0 }} />}
+        </span>
       )}
 
       {/* The floating action dropdown */}
-      <ProjectContextMenu 
-         project={p} 
-         isPinned={p.isPinned} 
-         onRenameStart={() => setIsRenaming(true)} 
+      <ProjectContextMenu
+        project={p}
+        isPinned={p.isPinned}
+        onRenameStart={() => setIsRenaming(true)}
       />
     </div>
   );
@@ -133,13 +146,13 @@ const SidebarProjectRenderer = ({ p, navigate, isRecent = false, useEstimation }
 
 // ── Main Layout ───────────────────────────────────────────────────────────────
 export default function MainLayout({ children }) {
-  const navigate   = useNavigate();
-  const location   = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { estimations, fetchEstimations, notes, fetchNotes, selectedEstimation, setSelectedEstimation, activeContext } = useEstimation();
 
-  const [collapsed,     setCollapsed]     = useState(false);
-  const [estimateOpen,  setEstimateOpen]  = useState(
+  const [collapsed, setCollapsed] = useState(false);
+  const [estimateOpen, setEstimateOpen] = useState(
     location.pathname.startsWith('/estimate')
   );
 
@@ -151,40 +164,40 @@ export default function MainLayout({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-    // Project detection for Notes & Tools
-    useEffect(() => {
-      const queryParams = new URLSearchParams(location.search);
-      const urlId = queryParams.get('id');
-      
-      // 1. If we have an ID in URL, sync it
-      if (urlId) {
-        if (selectedEstimation?.id !== urlId) {
-          fetchNotes(urlId);
-          // We don't have the full object yet, so we just set the ID
-          setSelectedEstimation(prev => (prev?.id === urlId ? prev : { id: urlId }));
-        }
-      } 
-      // 2. Fallback to localStorage if we are in estimation module
-      else if (location.pathname.startsWith('/estimate')) {
-        const savedInfo = localStorage.getItem('steelProjectInfo');
-        if (savedInfo) {
-          try {
-            const parsed = JSON.parse(savedInfo);
-            if (parsed.id) {
-              if (selectedEstimation?.id !== parsed.id) {
-                fetchNotes(parsed.id);
-                setSelectedEstimation({ id: parsed.id, ...parsed });
-              }
-              return; // Found context
+  // Project detection for Notes & Tools
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const urlId = queryParams.get('id');
+
+    // 1. If we have an ID in URL, sync it
+    if (urlId) {
+      if (selectedEstimation?.id !== urlId) {
+        fetchNotes(urlId);
+        // We don't have the full object yet, so we just set the ID
+        setSelectedEstimation(prev => (prev?.id === urlId ? prev : { id: urlId }));
+      }
+    }
+    // 2. Fallback to localStorage if we are in estimation module
+    else if (location.pathname.startsWith('/estimate')) {
+      const savedInfo = localStorage.getItem('steelProjectInfo');
+      if (savedInfo) {
+        try {
+          const parsed = JSON.parse(savedInfo);
+          if (parsed.id) {
+            if (selectedEstimation?.id !== parsed.id) {
+              fetchNotes(parsed.id);
+              setSelectedEstimation({ id: parsed.id, ...parsed });
             }
-          } catch (e) {}
-        }
+            return; // Found context
+          }
+        } catch (e) { }
       }
-      // 3. NO PROJECT CONTEXT: Clear it (Dashboard, generic Reports, etc.)
-      else if (selectedEstimation !== null) {
-        setSelectedEstimation(null);
-      }
-    }, [location.pathname, location.search, selectedEstimation?.id, fetchNotes, setSelectedEstimation]);
+    }
+    // 3. NO PROJECT CONTEXT: Clear it (Dashboard, generic Reports, etc.)
+    else if (selectedEstimation !== null) {
+      setSelectedEstimation(null);
+    }
+  }, [location.pathname, location.search, selectedEstimation?.id, fetchNotes, setSelectedEstimation]);
 
   // Split estimations into structural segments avoiding archived ones safely
   const pinnedProjects = estimations.filter(p => p.isPinned && !p.isArchived);
@@ -293,18 +306,18 @@ export default function MainLayout({ children }) {
 
           {/* ── Pinned Projects ── */}
           <div className="sidebar-section-title" style={{ marginTop: 8 }}>Projects</div>
-          
+
           {pinnedProjects.length === 0 ? (
             <div className="sidebar-recent-item" style={{ cursor: 'default', fontStyle: 'italic', opacity: 0.5 }}>
               No pinned projects
             </div>
           ) : (
             pinnedProjects.map(p => (
-              <SidebarProjectRenderer 
-                key={p.id} 
-                p={p} 
-                navigate={navigate} 
-                isRecent={false} 
+              <SidebarProjectRenderer
+                key={p.id}
+                p={p}
+                navigate={navigate}
+                isRecent={false}
                 useEstimation={useEstimation}
               />
             ))
@@ -319,11 +332,11 @@ export default function MainLayout({ children }) {
             </div>
           ) : (
             recentProjects.map(p => (
-              <SidebarProjectRenderer 
-                key={`r-${p.id}`} 
-                p={p} 
-                navigate={navigate} 
-                isRecent={true} 
+              <SidebarProjectRenderer
+                key={`r-${p.id}`}
+                p={p}
+                navigate={navigate}
+                isRecent={true}
                 useEstimation={useEstimation}
               />
             ))
@@ -334,7 +347,7 @@ export default function MainLayout({ children }) {
 
         {/* Footer: user info & context menu */}
         <ProfileContextMenu user={user} handleLogout={handleLogout} />
-        
+
       </aside>
 
       {/* ── Open button when sidebar is collapsed ──────────────────────────── */}
@@ -382,8 +395,8 @@ export default function MainLayout({ children }) {
             <button className="header-btn header-btn-outline" title="Export">
               <Share2 size={15} /> Export
             </button>
-            <button 
-              className="header-btn header-btn-primary" 
+            <button
+              className="header-btn header-btn-primary"
               title="Save"
               onClick={() => window.dispatchEvent(new CustomEvent('app:save'))}
             >
@@ -393,31 +406,25 @@ export default function MainLayout({ children }) {
         </header>
 
         {/* Page workspace */}
-        <main className="workspace">
+        <main className="workspace" style={{ position: 'relative' }}>
           {children}
+
+          {/* Global Sticky Notes Overlay (Document Layer) */}
+          {selectedEstimation?.id && (
+            <div className="sc-notes-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 1100, overflow: 'visible' }}>
+              {notes.filter(note => {
+                if (note.context_type === 'global' || !note.context_type) return true;
+                if (note.context_type === activeContext.type && note.context_id === activeContext.id) return true;
+                return false;
+              }).map(note => (
+                <StickyNote key={note.id} note={note} />
+              ))}
+            </div>
+          )}
         </main>
 
         {/* Global Tools Dock (Fixed Right) */}
         {selectedEstimation?.id && <ToolsDock />}
-
-        {/* Global Sticky Notes Overlay (Fixed Layer) */}
-        {selectedEstimation?.id && (
-          <div className="sc-notes-overlay" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1100 }}>
-            {notes.filter(note => {
-              // 1. Always show global notes
-              if (note.context_type === 'global' || !note.context_type) return true;
-              
-              // 2. Show if matches current active context (Flight, Rail, etc)
-              if (note.context_type === activeContext.type && note.context_id === activeContext.id) return true;
-              
-              return false;
-            }).map(note => (
-              <div key={note.id} style={{ pointerEvents: 'auto' }}>
-                <StickyNote note={note} />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -426,15 +433,19 @@ export default function MainLayout({ children }) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function buildCrumbs(path) {
   const map = {
-    '/dashboard':               ['Dashboard'],
-    '/estimations':             ['Projects'],
-    '/project-info':            ['Projects', 'Detail'],
+    '/dashboard': ['Dashboard'],
+    '/estimations': ['Projects'],
+    '/project-info': ['Projects', 'Detail'],
     '/estimate/stair-railings': ['New Estimation', 'Stair & Railings'],
-    '/estimate/railings':       ['New Estimation', 'Railings'],
-    '/estimate/ladders':        ['New Estimation', 'Ladders'],
-    '/estimate/bollards':       ['New Estimation', 'Bollards & Gates'],
-    '/estimate/gates':          ['New Estimation', 'Gates'],
-    '/reports':                 ['Reports'],
+    '/estimate/railings': ['New Estimation', 'Railings'],
+    '/estimate/ladders': ['New Estimation', 'Ladders'],
+    '/estimate/bollards': ['New Estimation', 'Bollards & Gates'],
+    '/estimate/gates': ['New Estimation', 'Gates'],
+    '/settings/pricing': ['Settings', 'Pricing'],
+    '/settings/customers': ['Settings', 'Customer Master'],
+    '/settings/system': ['Settings', 'System Admin'],
+    '/settings/personalization': ['Settings', 'Personalization'],
+    '/reports': ['Reports'],
   };
   return map[path] || ['MISC Pro'];
 }

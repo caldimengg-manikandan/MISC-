@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Settings } from 'lucide-react';
+import { motion } from 'framer-motion';
+import EstimationPreviewCard from '../../components/common/EstimationPreviewCard';
 import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import QuickManageModal from '../../components/common/QuickManageModal';
@@ -84,6 +86,39 @@ const RAIL_CONFIGS = {
   },
 };
 
+// ── Suggestion Engine Helpers ──────────────────────────────────────────
+const parseRailAttributes = (label) => {
+  if (!label || label.includes("Optional Kick Plate")) return null;
+  // Wall/Grab Rails check
+  if (label.toLowerCase().includes('wall bolted') || label.toLowerCase().includes('on guardrail')) return null;
+
+  return {
+    lines: label.match(/^(\d+)-Line/)?.[1] ? parseInt(label.match(/^(\d+)-Line/)[1]) : null,
+    pipeSize: label.includes('1 1/4') ? '1.25' : (label.includes('1 1/2') ? '1.5' : null),
+    postType: (label.includes('SCH 80') || label.includes('SCH. 80')) ? 'SCH80' : 'SCH40',
+    infill: label.match(/1\/2" picket|w\/1\/2/i) ? 'picket_half'
+           : label.match(/3\/4" picket|w\/3\/4/i) ? 'picket_three_quarter'
+           : label.match(/MESH/i) ? 'mesh'
+           : 'pipe'
+  };
+};
+
+const scoreMatch = (railAttrs, filters) => {
+  if (!railAttrs) return 0;
+
+  // Hard fail — lines or pipeSize must match if set
+  if (filters.lines !== null && railAttrs.lines !== filters.lines) return 0;
+  if (filters.pipeSize !== null && railAttrs.pipeSize !== filters.pipeSize) return 0;
+
+  // Soft mismatch — postType or infill differs
+  const postMatch = filters.postType === null || railAttrs.postType === filters.postType;
+  const infillMatch = filters.infill === null || railAttrs.infill === filters.infill;
+
+  if (postMatch && infillMatch) return 2; // exact match
+  return 1; // partial match
+};
+
+
 const DEFAULT_MOUNTING_OPTIONS = ['Bolted to Stringer', 'Welded to Stringer', 'Side Mounted Bolted', 'Side Mounted Welded', 'Embedded', 'Anchored'];
 
 // ── Unit Input Helper (Consistent with StairConfig) ─────────
@@ -100,6 +135,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
           className="arch-input"
           value={val}
           onChange={e => onChange({ value: e.target.value, unit })}
+          onFocus={e => e.target.select()}
           placeholder={placeholder || '0'}
         />
         <button
@@ -129,6 +165,8 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     grabRailTypes: [],
     caneRailTypes: []
   });
+  
+  const [isEditingSpacing, setIsEditingSpacing] = useState(false);
 
   const [quickModal, setQuickModal] = useState({ isOpen: false, category: '', label: '', rect: null });
 
@@ -178,13 +216,34 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     steelGrade: data?.steelGrade || 'A36',
     mountingType: data?.mountingType || '',
     intermediateRails: data?.intermediateRails || (type === 'caneRail' ? '0' : ''),
-    postSpacing: data?.postSpacing || { value: '', unit: 'FT' },
+    postSpacing: data?.postSpacing || { value: '4', unit: 'FT' },
     postQty: data?.postQty || '',
     toeplateRequired: data?.toeplateRequired || 'No',
     toeplateLength: data?.toeplateLength || { value: '', unit: 'FT' },
     finish: data?.finish || 'Primer',
+    selectionSource: data?.selectionSource || (data?.railType ? 'manual' : null),
+    filters: data?.filters || { lines: null, pipeSize: null, postType: null, infill: null },
     ...data
   });
+
+  const [parsedTypes, setParsedTypes] = useState({});
+
+  useEffect(() => {
+    // Cache parsed attributes for the guard rail types
+    const cache = {};
+    (dropdowns.guardRailTypes || []).forEach(label => {
+      cache[label] = parseRailAttributes(label);
+    });
+    setParsedTypes(cache);
+  }, [dropdowns.guardRailTypes]);
+
+  // Initial page load / save project restore fix
+  useEffect(() => {
+    if (data && data.railType && !data.selectionSource && form.selectionSource !== 'manual') {
+      setForm(f => ({ ...f, selectionSource: 'manual' }));
+    }
+  }, []); // Only on mount
+
 
   useEffect(() => {
     if (data) {
@@ -198,12 +257,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     if (onChange) onChange(updated);
   };
 
-  // ── Default Syncing Logic (Non-Mathematical) ──
-  useEffect(() => {
-    if (!form.railType && (dropdowns[`${type}Types`]?.length > 0 || config.types.length > 0)) {
-      set('railType', dropdowns[`${type}Types`]?.[0] || config.types?.[0]);
-    }
-  }, [dropdowns, type, form.railType, config.types]);
+  // Auto-selection of first type removed as per user request to always ask to select.
 
   useEffect(() => {
     if (type === 'caneRail' && form.intermediateRails === '') {
@@ -217,12 +271,176 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     }
   }, [form.toeplateRequired, form.railLength]);
 
+  // Suggestion Engine Logic
+  const getBestMatch = useCallback(() => {
+    if (type !== 'guardRail') return null;
+    let best = null;
+
+    (dropdowns.guardRailTypes || []).forEach(label => {
+      const attrs = parsedTypes[label];
+      const score = scoreMatch(attrs, form.filters);
+      if (score === 2 && !best) {
+        best = label;
+      }
+    });
+    return best;
+  }, [type, dropdowns.guardRailTypes, parsedTypes, form.filters]);
+
+  useEffect(() => {
+    if (type !== 'guardRail') return;
+    const bestMatch = getBestMatch();
+
+    // null -> 'auto'
+    if (form.selectionSource === null && bestMatch) {
+      const updated = { ...form, railType: bestMatch, selectionSource: 'auto' };
+      setForm(updated);
+      if (onChange) onChange(updated);
+    }
+    // 'auto' -> 'auto' (silently updates)
+    else if (form.selectionSource === 'auto' && bestMatch && form.railType !== bestMatch) {
+      const updated = { ...form, railType: bestMatch };
+      setForm(updated);
+      if (onChange) onChange(updated);
+    }
+  }, [form.filters, form.selectionSource, type, getBestMatch]);
+
+  useEffect(() => {
+    if (type === 'guardRail' && form.railType && parsedTypes[form.railType]) {
+      const attrs = parsedTypes[form.railType];
+      if (attrs.lines) {
+        const lines = parseInt(attrs.lines);
+        if (lines > 0 && (form.intermediateRails === '' || form.intermediateRails === null)) {
+          set('intermediateRails', (lines - 1).toString());
+        }
+      }
+    }
+  }, [form.railType, parsedTypes, type]);
+
+  const handleManualSelection = (val) => {
+    const updated = { ...form, railType: val, selectionSource: 'manual' };
+    setForm(updated);
+    if (onChange) onChange(updated);
+  };
+
+  const handleBlurReset = () => {
+    const val = form.railLength?.value;
+    if (val === '' || val === '0' || val === 0) {
+      const updated = { ...form, selectionSource: null, railType: '', intermediateRails: '' };
+      setForm(updated);
+      if (onChange) onChange(updated);
+    }
+  };
+
+  const bestMatch = getBestMatch();
+  const currentScore = parsedTypes[form.railType] ? scoreMatch(parsedTypes[form.railType], form.filters) : 0;
+  const showAmber = form.selectionSource === 'manual' && bestMatch && form.railType !== bestMatch;
+  const showGreen = form.selectionSource === 'auto' && currentScore === 2;
+  const showMountingWarning = form.railType && !form.mountingType;
+
   return (
     <div onPointerDown={onFocus}>
       <div className="form-section">
         <div className="form-section-title">
           {type === 'guardRail' ? 'Guard Rail Specifications' : 'Rail Specifications'}
         </div>
+
+        {/* Suggestion Filters - OPTION B */}
+        {type === 'guardRail' && (
+          <div className="suggestion-filters-box">
+            <div className="filters-header">
+              <span className="filters-title">Suggestion Filters</span>
+              <span className="filters-hint">Narrow down rail types by criteria</span>
+            </div>
+            <div className="filters-grid">
+              <div className="filter-group">
+                <label>Lines</label>
+                <div className="segmented-control">
+                  {[null, 1, 2, 3, 8].map(v => (
+                    <button
+                      key={v === null ? 'any' : v}
+                      className={form.filters.lines === v ? 'active' : ''}
+                      onClick={() => set('filters', { ...form.filters, lines: v })}
+                    >
+                      {v === null ? 'Any' : `${v}-Line`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="filter-group">
+                <label>Pipe Size</label>
+                <div className="segmented-control">
+                  {[null, '1.25', '1.5'].map(v => (
+                    <button
+                      key={v === null ? 'any' : v}
+                      className={form.filters.pipeSize === v ? 'active' : ''}
+                      onClick={() => set('filters', { ...form.filters, pipeSize: v })}
+                    >
+                      {v === null ? 'Any' : (v === '1.25' ? '1 1/4"' : '1 1/2"')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="filter-group">
+                <label>Post Type</label>
+                <div className="segmented-control">
+                  {[null, 'SCH40', 'SCH80'].map(v => (
+                    <button
+                      key={v === null ? 'any' : v}
+                      className={form.filters.postType === v ? 'active' : ''}
+                      onClick={() => set('filters', { ...form.filters, postType: v })}
+                    >
+                      {v === null ? 'Any' : (v === 'SCH40' ? 'SCH 40' : 'SCH 80')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="filter-group">
+                <label>Infill</label>
+                <div className="segmented-control wrapable" data-group="infill">
+                  {[null, 'pipe', 'picket_half', 'picket_three_quarter', 'mesh'].map(v => (
+                    <button
+                      key={v === null ? 'any' : v}
+                      className={form.filters.infill === v ? 'active' : ''}
+                      onClick={() => set('filters', { ...form.filters, infill: v })}
+                    >
+                      {v === null ? 'Any' : (v === 'pipe' ? 'Pipe' : v === 'picket_half' ? '½" Picket' : v === 'picket_three_quarter' ? '¾" Picket' : 'Mesh')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Banners */}
+        {showGreen && (
+          <div className="suggestion-banner banner-green">
+            <span className="banner-icon">✓</span>
+            <span className="banner-text">Recommended for your inputs</span>
+          </div>
+        )}
+        {showAmber && (
+          <div className="suggestion-banner banner-amber">
+            <span className="banner-icon">⚠</span>
+            <span className="banner-text">Selected rail may not match current inputs</span>
+            <button 
+              className="banner-action-btn"
+              onClick={() => {
+                const updated = { ...form, railType: bestMatch, selectionSource: 'auto' };
+                setForm(updated);
+                if (onChange) onChange(updated);
+              }}
+            >
+              Use Suggested
+            </button>
+          </div>
+        )}
+        {showMountingWarning && (
+          <div className="suggestion-banner banner-amber" style={{ padding: '6px 12px', marginBottom: '12px' }}>
+            <span className="banner-icon">⚠</span>
+            <span className="banner-text" style={{ fontSize: '12px' }}>Mounting type required for accurate post/anchor cost calculation</span>
+          </div>
+        )}
 
         {/* Primary Inputs Grid */}
         <div className="rail-specs-grid">
@@ -243,10 +461,23 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               className="form-select"
               id={`${type}-type`}
               value={form.railType}
-              onChange={e => set('railType', e.target.value)}
+              onChange={e => handleManualSelection(e.target.value)}
             >
               <option value="">— Select Type —</option>
-              {(dropdowns[`${type}Types`] || config.types).map(t => <option key={t} value={t}>{t}</option>)}
+              {(dropdowns[`${type}Types`] || config.types).map(t => {
+                const attrs = parsedTypes[t];
+                const score = type === 'guardRail' ? scoreMatch(attrs, form.filters) : 1;
+                const isRec = type === 'guardRail' && score === 2;
+                return (
+                  <option 
+                    key={t} 
+                    value={t}
+                    style={{ opacity: score === 0 ? 0.4 : 1 }}
+                  >
+                    {t} {isRec ? ' ★ (REC)' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -255,7 +486,9 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             label={type === 'guardRail' ? 'Guard Rail length' : 'Rail Length'}
             value={form.railLength}
             onChange={v => set('railLength', v)}
+            onBlur={handleBlurReset}
           />
+
 
           <div className="form-field">
             <label className="form-label">Steel Grade</label>
@@ -270,15 +503,63 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
           {!config.lbsPerFt && (
             <div className="form-field">
-              <label className="form-label">
+              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 Actual Spacing
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => {
+                    if (isEditingSpacing) {
+                      setIsEditingSpacing(false);
+                    } else if (window.confirm("This value is automatically calculated based on length. Are you sure you want to manually adjust the spacing?")) {
+                      setIsEditingSpacing(true);
+                    }
+                  }}
+                  style={{ 
+                    border: 'none', 
+                    background: isEditingSpacing ? 'var(--accent-blue)' : 'var(--color-neutral-100)', 
+                    color: isEditingSpacing ? 'white' : 'var(--text-muted)',
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  {isEditingSpacing ? '✅ DONE' : '✎ EDIT'}
+                </motion.button>
               </label>
-              <input
-                className="form-input auto-calculation field-auto"
-                type="text"
-                value={data?.systemCalc?.actualSpacing ? `${Number(data.systemCalc.actualSpacing).toFixed(3)} ft` : 'N/A'}
-                readOnly
-              />
+              
+              {isEditingSpacing ? (
+                <div className="form-input-with-unit">
+                  <input
+                    type="text"
+                    className="arch-input"
+                    value={form.postSpacing?.value || ''}
+                    onChange={e => set('postSpacing', { ...form.postSpacing, value: e.target.value })}
+                    onFocus={e => e.target.select()}
+                    placeholder="4"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="form-input-unit unit-active"
+                    onClick={() => set('postSpacing', { ...form.postSpacing, unit: form.postSpacing?.unit === 'FT' ? 'IN' : 'FT' })}
+                  >
+                    {form.postSpacing?.unit || 'FT'}
+                  </button>
+                </div>
+              ) : (
+                <input
+                  className="form-input auto-calculation field-auto"
+                  type="text"
+                  value={data?.systemCalc?.actualSpacing ? `${Number(data.systemCalc.actualSpacing).toFixed(3)} ft` : 'N/A'}
+                  readOnly
+                />
+              )}
             </div>
           )}
 
@@ -291,6 +572,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               type="number"
               value={form.intermediateRails || ''}
               onChange={(e) => set('intermediateRails', e.target.value)}
+              onFocus={e => e.target.select()}
               placeholder="0"
             />
           </div>
@@ -323,7 +605,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
         </div>
 
         {/* Row 2: Secondary Options */}
-        <div className="rail-options-grid mt-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+        <div className="rail-options-grid mt-4">
           {config.hasToeplate && (
             <>
               <div className="form-field">
@@ -384,9 +666,9 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
           )}
 
           <div className="form-field">
-            <label className="form-label">Mounting</label>
+            <label className={`form-label ${showMountingWarning ? 'text-amber-600 font-bold' : ''}`}>Mounting</label>
             <select
-              className="form-select compact-select"
+              className={`form-select compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
               value={form.mountingType}
               onChange={e => set('mountingType', e.target.value)}
             >
@@ -408,65 +690,19 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
         </div>
       </div>
 
+
       {/* ── Real-time Preview Engine Results (EXCEL SFE ALIGNED) ─────────────────────── */}
-      {data?.systemCalc && (
-        <div style={{ marginTop: 24, display: 'grid', gap: '16px' }}>
-          <div className="summary-card card-glow-purple" style={{
-            background: '#F8FAFC',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            padding: '20px',
-            borderTop: '4px solid #8B5CF6'
-          }}>
-            <div style={{ display: 'grid', gap: '20px' }}>
-              {/* 🛡️ SFE PER UNIT SECTION (EXCEL ALIGNED) */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, paddingBottom: 16, borderBottom: '1px dashed #CBD5E1' }}>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>STEEL LBS /<br />LF</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.steelLbsPerLF || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>SHOP MH /<br />LF</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.shopMH || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>FIELD MH /<br />LF</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.fieldMH || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>STEEL<br />(+SCRAP)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#EA580C' }}>{Number(data.systemCalc.steelWithScrap || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#0EA5E9', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>TOTAL STEEL<br />lbs.</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0369A1' }}>{Number(data.systemCalc.totalSteel || 0).toFixed(3)}</div>
-                </div>
-              </div>
-
-              {/* 🛡️ SFE TOTAL HOURS & COST */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Shop Total Hrs</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.shopTotalHrs || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Field Total Hrs</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.fieldTotalHrs || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Galvanize Cost</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#EA580C' }}>${Number(data.systemCalc.galvanizeTotalCost || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Mounting Cost</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#059669' }}>${Number(data.systemCalc.mountingCharge || 0).toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: '8px', textAlign: 'right' }}>
-
-          </div>
+      {data?.systemCalc && form.railType && form.railType !== '' && (
+        <div className="mt-6">
+          <EstimationPreviewCard 
+            systemCalc={data.systemCalc} 
+            totalCost={data.totalCost} 
+            unitType="LF"
+            finishName={form.finish}
+            hidePricePerRiser={true}
+            title="Rail Configuration Preview"
+            mountingType={form.mountingType}
+          />
         </div>
       )}
       <div style={{ marginTop: '8px', textAlign: 'right' }}>
@@ -490,13 +726,13 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       <style jsx>{`
         .rail-specs-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 12px;
         }
         .rail-options-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 12px;
         }
         .mt-4 { margin-top: 16px; }
         .backend-results-grid {
@@ -513,6 +749,162 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
         .results-value { font-size: 16px; font-weight: 700; color: #1e293b; }
         .quick-edit-btn { margin-left: 4px; border: none; background: none; cursor: pointer; color: #64748b; }
         .quick-edit-btn:hover { color: #1e293b; }
+
+        /* Suggestion Filters Overhaul */
+        .suggestion-filters-box {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+          position: relative;
+          overflow: hidden;
+        }
+        .suggestion-filters-box::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 4px;
+          background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+        .filters-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          border-bottom: 1px solid #f1f5f9;
+          padding-bottom: 12px;
+        }
+        .filters-title {
+          font-weight: 800;
+          font-size: 12px;
+          color: #1e293b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .filters-title::before {
+          content: '🔍';
+          font-size: 14px;
+        }
+        .filters-hint {
+          font-size: 11px;
+          font-weight: 500;
+          color: #94a3b8;
+        }
+        .filters-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+        }
+        .filter-group label {
+          display: block;
+          font-size: 11px;
+          font-weight: 700;
+          color: #64748b;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+        }
+        .segmented-control {
+          display: flex;
+          background: #f1f5f9;
+          padding: 4px;
+          border-radius: 12px;
+          gap: 4px;
+          border: 1px solid #e2e8f0;
+          height: 42px; /* Fixed height for consistency */
+          align-items: center;
+        }
+        .segmented-control button {
+          flex: 1;
+          height: 100%;
+          border: none;
+          background: transparent;
+          padding: 0 12px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #64748b;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .segmented-control button:hover:not(.active) {
+          background: #e2e8f0;
+          color: #1e293b;
+        }
+        .segmented-control button.active {
+          background: #3b82f6;
+          color: #ffffff;
+          box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3), 0 2px 4px -1px rgba(59, 130, 246, 0.2);
+        }
+        .segmented-control.wrapable {
+          display: grid;
+          height: auto; /* Allow multi-row */
+          grid-template-columns: repeat(3, 1fr);
+          gap: 4px;
+        }
+        .segmented-control.wrapable button {
+          height: 34px; /* Slightly shorter for grid items */
+        }
+
+        /* Banner Styles */
+        .suggestion-banner {
+          display: flex;
+          align-items: center;
+          padding: 12px 16px;
+          border-radius: 12px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          font-weight: 600;
+          gap: 12px;
+          animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .banner-green {
+          background: #f0fdf4;
+          border: 1px solid #dcfce7;
+          color: #166534;
+          box-shadow: 0 2px 4px rgba(22, 101, 52, 0.05);
+        }
+        .banner-amber {
+          background: #fffbeb;
+          border: 1px solid #fef3c7;
+          color: #92400e;
+          box-shadow: 0 2px 4px rgba(146, 64, 14, 0.05);
+        }
+        .banner-icon { font-size: 16px; }
+        .banner-text { flex: 1; }
+        .banner-action-btn {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+        }
+        .banner-action-btn:hover {
+          background: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.4);
+        }
+        .banner-action-btn:active {
+          transform: translateY(0);
+        }
+
       `}</style>
     </div>
   );

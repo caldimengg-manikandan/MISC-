@@ -182,7 +182,30 @@ export default function StickyNote({ note }) {
 
   const handleToggleLock = () => {
     const nextLocked = !isLocked;
+    
+    // We adjust position to prevent visual jumping when swapping relative contexts
+    let adjustedPos = { ...pos };
+    if (cardRef.current) {
+       const rect = cardRef.current.getBoundingClientRect();
+       
+       if (nextLocked) {
+         // Changing to Absolute (Document / Paper bounds) -> sticks to inputs while scrolling
+         const overlay = cardRef.current.closest('.sc-notes-overlay');
+         if (overlay) {
+            const overlayRect = overlay.getBoundingClientRect();
+            adjustedPos.x = rect.left - overlayRect.left;
+            adjustedPos.y = rect.top - overlayRect.top;
+         }
+       } else {
+         // Changing to Fixed (Screen Viewport bounds) -> floats on screen statically
+         adjustedPos.x = rect.left;
+         adjustedPos.y = rect.top;
+       }
+    }
+    
     setIsLocked(nextLocked);
+    setPos(adjustedPos);
+    updateNotePosition(note.id, { pos_x: adjustedPos.x, pos_y: adjustedPos.y });
     scheduleSave(title, content, noteType, colorScheme.bg, nextLocked);
   };
 
@@ -206,7 +229,7 @@ export default function StickyNote({ note }) {
       ref={cardRef}
       className={`sn-card ${isDragging ? 'sn-dragging' : ''} ${isMinimized ? 'sn-minimized' : ''} ${isLocked ? 'sn-locked' : ''}`}
       style={{
-        position: 'fixed',
+        position: isLocked ? 'absolute' : 'fixed',
         left: pos.x,
         top: pos.y,
         '--sn-bg': colorScheme.bg,
@@ -214,6 +237,7 @@ export default function StickyNote({ note }) {
         '--sn-border': colorScheme.border,
         zIndex: isDragging ? 2000 : 1100,
         touchAction: 'none',
+        pointerEvents: 'auto',
       }}
       initial={{ opacity: 0, scale: 0.85, y: 12 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}

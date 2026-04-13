@@ -6,8 +6,16 @@
  * @param {string} currentToggleUnit - The current UI toggle state ('FT' or 'IN').
  * @returns {Object} - { value: number, unit: 'FT' | 'IN' }
  */
-export const parseArchitecturalInput = (inputStr, currentToggleUnit) => {
-  if (!inputStr || typeof inputStr !== 'string' || inputStr.trim() === '') {
+export const parseArchitecturalInput = (inputStr, currentToggleUnit = 'FT') => {
+  if (inputStr === null || inputStr === undefined || inputStr === '') {
+    return { value: 0, unit: currentToggleUnit };
+  }
+  
+  if (typeof inputStr === 'number') {
+    return { value: inputStr, unit: currentToggleUnit };
+  }
+
+  if (typeof inputStr !== 'string') {
     return { value: 0, unit: currentToggleUnit };
   }
 

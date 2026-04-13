@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Settings } from 'lucide-react';
+import EstimationPreviewCard from '../../components/common/EstimationPreviewCard';
 import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import QuickManageModal from '../../components/common/QuickManageModal';
@@ -28,6 +29,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
           className="arch-input"
           value={val}
           onChange={e => onChange({ value: e.target.value, unit })}
+          onFocus={e => e.target.select()}
           placeholder={placeholder || '0'}
         />
         <button 
@@ -44,7 +46,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
   );
 };
 
-export default function LandingConfig({ data, onChange, onFocus }) {
+export default function LandingConfig({ data, parentStairType, onChange, onFocus }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
@@ -88,6 +90,7 @@ export default function LandingConfig({ data, onChange, onFocus }) {
     platformWidth: data?.platformWidth || { value: '', unit: 'FT' },
     platformType: data?.platformType || '',
     finish: data?.finish || 'Primer',
+    selectionSource: data?.selectionSource || (data?.platformType ? 'manual' : 'auto'),
     ...data
   });
 
@@ -103,6 +106,67 @@ export default function LandingConfig({ data, onChange, onFocus }) {
     setForm(updated);
     if (onChange) onChange(updated);
   };
+
+  // --- Smart Auto-Suggest for Platform Type ---
+  const isGrating = (parentStairType || '').toLowerCase().includes('grating');
+  const widthVal = parseFloat(form.platformWidth?.value) || 0;
+  const widthFt = form.platformWidth?.unit === 'IN' ? widthVal / 12 : widthVal;
+
+  let recommendedPlatformType = null;
+  let platformWarning = null;
+  let platformWarningType = 'info';
+
+  if (widthFt > 0) {
+    if (isGrating) {
+      if (widthFt <= 8) recommendedPlatformType = "Grating pan stair platform 8'-0\" wide";
+      else if (widthFt <= 10) recommendedPlatformType = "Grating pan stair platform 10'-0\" wide";
+      else {
+        platformWarning = "No grating platform above 10 ft in catalogue";
+        platformWarningType = "warning";
+      }
+    } else { // default to Pan 
+      if (widthFt <= 8) recommendedPlatformType = "Metal pan stair platform 8'-0\" wide";
+      else if (widthFt <= 10) recommendedPlatformType = "Metal pan stair platform 10'-0\" wide";
+      else if (widthFt <= 12) recommendedPlatformType = "Metal pan stair platform 12'-0\" wide";
+      else {
+        platformWarning = "Width exceeds catalogue (max 12 ft)";
+        platformWarningType = "warning";
+      }
+    }
+  }
+
+  // Find exact string match in dropdown Options
+  let resolvedRecommendedValue = null;
+  if (recommendedPlatformType) {
+    const matchedOpt = dropdowns.platformTypes.find(opt => 
+      (opt.label || opt.value || opt).toString().trim().toLowerCase() === recommendedPlatformType.toLowerCase() ||
+      (opt.value || opt.label || opt).toString().trim().toLowerCase() === recommendedPlatformType.toLowerCase()
+    );
+    resolvedRecommendedValue = matchedOpt ? (matchedOpt.value || matchedOpt.label || matchedOpt) : recommendedPlatformType;
+  }
+
+  useEffect(() => {
+    if (!resolvedRecommendedValue) return;
+    if (form.selectionSource === 'auto' && form.platformType !== resolvedRecommendedValue) {
+      setForm(f => {
+        const updated = { ...f, platformType: resolvedRecommendedValue };
+        if (onChange) onChange(updated);
+        return updated;
+      });
+    }
+  }, [resolvedRecommendedValue, form.selectionSource, form.platformType]);
+
+  if (resolvedRecommendedValue) {
+    if (!form.platformType || form.platformType !== resolvedRecommendedValue) {
+      platformWarning = `Selected type may not match geometry.\nSuggested: ${recommendedPlatformType}`;
+      platformWarningType = 'warning';
+    } else {
+      platformWarning = `Recommended based on your geometry`;
+      platformWarningType = 'success';
+    }
+  }
+
+
 
   // Area and labor MUST come from backend — never computed in frontend.
   // Parent passes backend results via data.calcArea, data.calcSteel, etc.
@@ -121,6 +185,7 @@ export default function LandingConfig({ data, onChange, onFocus }) {
             className="form-input data-type-string compact-input"
             value={form.landingNumber}
             onChange={e => set('landingNumber', e.target.value)}
+            onFocus={e => e.target.select()}
             placeholder="e.g. L-01"
           />
         </div>
@@ -168,13 +233,34 @@ export default function LandingConfig({ data, onChange, onFocus }) {
           <select
             className="form-select data-type-string compact-select"
             value={form.platformType}
-            onChange={e => set('platformType', e.target.value)}
+            onChange={e => {
+              const updated = { ...form, platformType: e.target.value, selectionSource: 'manual' };
+              setForm(updated);
+              if (onChange) onChange(updated);
+            }}
           >
             <option value="">— Select Type —</option>
             {dropdowns.platformTypes.map(pt => (
-              <option key={pt.value || pt._id} value={pt.value || pt.label}>{pt.label}</option>
+              <option key={pt.value || pt._id || pt} value={pt.value || pt.label || pt}>
+                {pt.label || pt.value || pt}
+              </option>
             ))}
           </select>
+          {platformWarning && (
+            <div style={{
+              marginTop: '6px', fontSize: '10.5px', padding: '4px 8px', borderRadius: '4px',
+              backgroundColor: platformWarningType === 'warning' ? '#FEF3C7' : '#D1FAE5',
+              color: platformWarningType === 'warning' ? '#92400E' : '#065F46',
+              border: `1px solid ${platformWarningType === 'warning' ? '#FDE68A' : '#A7F3D0'}`,
+              display: 'inline-block'
+            }}>
+              {platformWarning.split('\n').map((line, i) => (
+                <div key={i} style={{ fontWeight: i === 0 && platformWarningType === 'warning' ? '700' : '500' }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="form-field">
@@ -197,64 +283,16 @@ export default function LandingConfig({ data, onChange, onFocus }) {
       </div>
 
       {/* ── Real-time Preview Engine Results (EXCEL SFE ALIGNED) ─────────────────────── */}
-      {data?.systemCalc && (
-        <div style={{ marginTop: 24, display: 'grid', gap: '16px' }}>
-          <div className="summary-card card-glow-purple" style={{ 
-            background: '#F8FAFC',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            padding: '20px',
-            borderTop: '4px solid #8B5CF6'
-          }}>
-            <div style={{ display: 'grid', gap: '20px' }}>
-                {/* 🛡️ SFE PER UNIT SECTION (EXCEL ALIGNED) */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, paddingBottom: 16, borderBottom: '1px dashed #CBD5E1' }}>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>STEEL LBS /<br />LF(SF)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.steelLbsPerLF || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>SHOP MH /<br />LF(SF)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.shopMH || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>FIELD MH /<br />LF(SF)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.fieldMH || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>STEEL<br />(+10%)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#EA580C' }}>{Number(data.systemCalc.steelWithScrap || 0).toFixed(3)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#0EA5E9', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4, lineHeight: '1.2' }}>TOTAL STEEL<br />lbs.</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0369A1' }}>{Number(data.systemCalc.totalSteel || 0).toFixed(3)}</div>
-                </div>
-              </div>
-
-              {/* 🛡️ SFE TOTAL HOURS & COST */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Shop Total Hrs</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.shopTotalHrs || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Field Total Hrs</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(data.systemCalc.fieldTotalHrs || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Galvanize Cost</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#EA580C' }}>${Number(data.systemCalc.galvanizeTotalCost || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>Total Cost</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#059669' }}>${Number(data.totalCost || 0).toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: '8px', textAlign: 'right' }}>
-
-          </div>
+      {data?.systemCalc && form.platformType && form.platformType !== '' && (
+        <div className="mt-6">
+          <EstimationPreviewCard 
+            systemCalc={data.systemCalc} 
+            totalCost={data.totalCost} 
+            unitType="SF"
+            finishName={form.finish}
+            hidePricePerRiser={true}
+            title="Landing Configuration Preview"
+          />
         </div>
       )}
 

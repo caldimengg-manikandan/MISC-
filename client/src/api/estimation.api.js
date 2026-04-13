@@ -1,7 +1,10 @@
 // client/src/api/estimation.api.js
 import axios from 'axios';
 
-const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+let rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+if (rawApiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+    rawApiUrl = rawApiUrl.replace('localhost', window.location.hostname);
+}
 const API_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
 // Set default auth header if token exists

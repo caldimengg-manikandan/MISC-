@@ -1,16 +1,15 @@
-// src/pages/Estimations/EstimationList.jsx
-// GPT-style Projects hub — complete redesign
-// All logic (fetchEstimations, navigate) unchanged.
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, SlidersHorizontal, ArrowUpRight,
-  Clock, FolderOpen, AlertCircle, CheckCircle2,
-  Loader2, ChevronRight, Grid3x3, List
+  Clock, FolderOpen, AlertCircle,
+  Loader2, ChevronRight, Grid3x3, List, Trash2, X, AlertTriangle
 } from 'lucide-react';
 import { useEstimation } from '../../contexts/EstimationContext';
+import ProjectContextMenu from '../../components/ProjectContextMenu';
 import { format, differenceInDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import './EstimationList.css';
 
 /* ─── Status config ─────────────────────────────────────────────── */
@@ -34,12 +33,127 @@ function DaysLeftBadge({ dueDate }) {
   return <span className="el-days ok"><Clock size={11} /> {diff}d left</span>;
 }
 
+/* ─── Delete Confirmation Modal ─────────────────────────────────── */
+function DeleteConfirmModal({ project, onConfirm, onCancel, deleting }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(15, 23, 42, 0.55)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+    }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        style={{
+          background: '#fff', borderRadius: '16px',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
+          width: '100%', maxWidth: '420px',
+          overflow: 'hidden', border: '1px solid #e2e8f0'
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fef2f2 0%, #fff1f1 100%)',
+          padding: '24px 24px 20px',
+          borderBottom: '1px solid #fee2e2',
+          display: 'flex', alignItems: 'flex-start', gap: '16px'
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '12px',
+            background: '#fee2e2', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <AlertTriangle size={22} color="#ef4444" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.3px' }}>
+              Delete Project?
+            </h3>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              This action cannot be undone.
+            </p>
+          </div>
+          <button onClick={onCancel} disabled={deleting} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#94a3b8', padding: '4px', borderRadius: '6px',
+            display: 'flex', alignItems: 'center'
+          }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px' }}>
+          <div style={{
+            background: '#f8fafc', border: '1px solid #e2e8f0',
+            borderRadius: '10px', padding: '14px 16px', marginBottom: '16px'
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+              Project to delete
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
+              {project.projectName}
+            </div>
+            {project.customer_name && (
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                {project.customer_name}
+              </div>
+            )}
+          </div>
+          <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
+            All estimation data, stairs, railings, and notes associated with this project will be permanently removed.
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '16px 24px', background: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex', gap: '10px', justifyContent: 'flex-end'
+        }}>
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            style={{
+              padding: '9px 20px', borderRadius: '8px', fontSize: '13px',
+              fontWeight: 700, cursor: 'pointer', border: '1px solid #e2e8f0',
+              background: '#fff', color: '#475569', transition: 'all 0.15s'
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            style={{
+              padding: '9px 20px', borderRadius: '8px', fontSize: '13px',
+              fontWeight: 700, cursor: deleting ? 'not-allowed' : 'pointer',
+              border: 'none', background: deleting ? '#fca5a5' : '#ef4444',
+              color: '#fff', display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.15s',
+              boxShadow: deleting ? 'none' : '0 4px 12px rgba(239,68,68,0.3)'
+            }}
+          >
+            {deleting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={14} />}
+            {deleting ? 'Deleting…' : 'Yes, Delete'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── Component ─────────────────────────────────────────────────── */
 export default function EstimationList() {
   const navigate = useNavigate();
-  const { estimations, loading, fetchEstimations } = useEstimation();
+  const { estimations, loading, fetchEstimations, deleteEstimation } = useEstimation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [viewMode, setViewMode] = useState('table');
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchEstimations(); }, []);
 
@@ -48,16 +162,46 @@ export default function EstimationList() {
     (p.customer_name && p.customer_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handleDeleteClick = (e, project) => {
+    e.stopPropagation();
+    setDeleteModal(project);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal) return;
+    setDeleting(true);
+    const toastId = toast.loading(`Deleting "${deleteModal.projectName}"…`);
+    try {
+      await deleteEstimation(deleteModal.id);
+      toast.success('Project deleted successfully.', { id: toastId });
+      setDeleteModal(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to delete project.', { id: toastId });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="el-root fade-in">
+
+      {/* ══ DELETE CONFIRMATION MODAL ══════════════════════════════ */}
+      <AnimatePresence>
+        {deleteModal && (
+          <DeleteConfirmModal
+            project={deleteModal}
+            deleting={deleting}
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => !deleting && setDeleteModal(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ══ PAGE HEADER ═══════════════════════════════════════════ */}
       <div className="el-page-header">
         <div>
           <h1 className="el-page-title">Projects</h1>
-          <p className="el-page-sub">
-            Manage and track your fabrication estimations
-          </p>
+          <p className="el-page-sub">Manage and track your fabrication estimations</p>
         </div>
         <button className="el-btn-new" id="btn-new-estimation" onClick={() => navigate('/project-info')}>
           <Plus size={15} /> New Estimation
@@ -85,18 +229,10 @@ export default function EstimationList() {
             <SlidersHorizontal size={14} /> Filters
           </button>
           <div className="el-view-toggle">
-            <button
-              className={`el-view-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
-              title="Table view"
-            >
+            <button className={`el-view-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} title="Table view">
               <List size={15} />
             </button>
-            <button
-              className={`el-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-            >
+            <button className={`el-view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Grid view">
               <Grid3x3 size={15} />
             </button>
           </div>
@@ -123,9 +259,7 @@ export default function EstimationList() {
             <FolderOpen size={40} className="el-empty-icon" />
             <div className="el-empty-title">No projects found</div>
             <div className="el-empty-sub">
-              {searchTerm
-                ? `No results for "${searchTerm}". Try a different search.`
-                : 'Create your first estimation to get started.'}
+              {searchTerm ? `No results for "${searchTerm}". Try a different search.` : 'Create your first estimation to get started.'}
             </div>
             {!searchTerm && (
               <button className="el-btn-new" style={{ marginTop: 16 }} onClick={() => navigate('/project-info')}>
@@ -146,7 +280,7 @@ export default function EstimationList() {
                   <th>Engineer</th>
                   <th style={{ width: 120 }}>Due Date</th>
                   <th style={{ width: 120 }}>Timeline</th>
-                  <th style={{ width: 48 }}></th>
+                  <th style={{ width: 96 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -161,34 +295,32 @@ export default function EstimationList() {
                       transition={{ delay: i * 0.03 }}
                       onClick={() => navigate('/project-info?id=' + p.id)}
                     >
-                      <td>
-                        <span className="el-id-chip">
-                          #{p.id.toString().slice(-6).toUpperCase()}
-                        </span>
-                      </td>
+                      <td><span className="el-id-chip">#{p.id.toString().slice(-6).toUpperCase()}</span></td>
                       <td className="el-td-name">{p.projectName}</td>
                       <td className="el-td-muted">{p.customer_name || '—'}</td>
                       <td>
-                        <span
-                          className="el-status-pill"
-                          style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}
-                        >
+                        <span className="el-status-pill" style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}>
                           {st.label}
                         </span>
                       </td>
                       <td className="el-td-muted">{p.engineerId || '—'}</td>
-                      <td className="el-td-date">
-                        {p.dueDate ? format(new Date(p.dueDate), 'dd MMM yyyy') : '—'}
-                      </td>
+                      <td className="el-td-date">{p.dueDate ? format(new Date(p.dueDate), 'dd MMM yyyy') : '—'}</td>
                       <td><DaysLeftBadge dueDate={p.dueDate} /></td>
                       <td>
-                        <button
-                          className="el-row-cta"
-                          id={`btn-open-${p.id}`}
-                          onClick={e => { e.stopPropagation(); navigate('/project-info?id=' + p.id); }}
-                        >
-                          <ChevronRight size={15} />
-                        </button>
+                        <div className="el-row-actions" onClick={e => e.stopPropagation()}>
+                          <ProjectContextMenu project={p} isPinned={p.isPinned} onRenameStart={() => {}} />
+                          <button
+                            className="el-row-delete"
+                            id={`btn-delete-${p.id}`}
+                            title="Delete project"
+                            onClick={(e) => handleDeleteClick(e, p)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                          <button className="el-row-cta" id={`btn-open-${p.id}`} onClick={() => navigate('/project-info?id=' + p.id)}>
+                            <ChevronRight size={15} />
+                          </button>
+                        </div>
                       </td>
                     </motion.tr>
                   );
@@ -213,24 +345,23 @@ export default function EstimationList() {
                 >
                   <div className="el-grid-top">
                     <span className="el-id-chip">#{p.id.toString().slice(-6).toUpperCase()}</span>
-                    <span
-                      className="el-status-pill"
-                      style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}
-                    >
-                      {st.label}
-                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                      <button className="el-row-delete" id={`btn-grid-delete-${p.id}`} title="Delete project" onClick={(e) => handleDeleteClick(e, p)}>
+                        <Trash2 size={13} />
+                      </button>
+                      <ProjectContextMenu project={p} isPinned={p.isPinned} onRenameStart={() => {}} />
+                      <span className="el-status-pill" style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}>
+                        {st.label}
+                      </span>
+                    </div>
                   </div>
                   <div className="el-grid-name">{p.projectName}</div>
                   <div className="el-grid-customer">{p.customer_name || 'No customer assigned'}</div>
                   <div className="el-grid-footer">
                     <span className="el-grid-eng">{p.engineerId || 'Unassigned'}</span>
-                    {daysLeft !== null && (
-                      <DaysLeftBadge dueDate={p.dueDate} />
-                    )}
+                    {daysLeft !== null && <DaysLeftBadge dueDate={p.dueDate} />}
                   </div>
-                  <button className="el-grid-open" id={`btn-grid-open-${p.id}`}>
-                    <ArrowUpRight size={14} />
-                  </button>
+                  <button className="el-grid-open" id={`btn-grid-open-${p.id}`}><ArrowUpRight size={14} /></button>
                 </motion.div>
               );
             })}

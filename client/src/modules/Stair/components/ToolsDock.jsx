@@ -1,26 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  FileCode2, CheckSquare, Zap, Megaphone, Clock,
+  FileCode2, Megaphone, Clock,
   MessageSquare, Sun, Moon, Monitor, X, Download, PlusSquare, Image as ImageIcon,
-  Trash2, RotateCcw
+  Trash2, RotateCcw, Calculator
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEstimation } from '../../../contexts/EstimationContext';
+import JobberCalculatorModal from './JobberCalculatorModal';
 import './ToolsDock.css';
 
 export default function ToolsDock() {
   const { 
     addNote, selectedEstimation, activeContext, setActiveContext,
-    trashNotes, fetchTrashNotes, restoreNote, permanentlyDeleteNote 
+    trashNotes, fetchTrashNotes, restoreNote, permanentlyDeleteNote, notes
   } = useEstimation();
-  const [activePopover, setActivePopover] = useState(null); // 'calc', 'notes', 'appearance', 'attachments', 'trash'
+  const [activePopover, setActivePopover] = useState(null); // 'notes', 'appearance', 'attachments', 'trash'
+  const [showCalc, setShowCalc] = useState(false); // Jobber Calculator modal
   const [themeMode, setThemeMode] = useState('light'); // 'light', 'dark', 'system'
 
   const handleAddNote = async () => {
     if (!selectedEstimation?.id) return;
+    
+    // Add cascading offset so multiple notes don't spawn completely invisible under each other
+    const noteCount = notes?.length || 0;
+    const cascadeOffset = (noteCount % 10) * 30; // Shift 30px down and right per existing note (loops every 10)
+    
     // Spawn note near centre of visible viewport, accounting for sidebar (~260px) and dock (~52px)
-    const spawnX = Math.round((window.innerWidth - 260 - 52) / 2 + 260 - 150);
-    const spawnY = Math.round(window.innerHeight / 2 - 120);
+    const spawnX = Math.round((window.innerWidth - 260 - 52) / 2 + 260 - 150) + cascadeOffset;
+    const spawnY = Math.round(window.innerHeight / 2 - 120) + cascadeOffset;
     try {
       await addNote({
         projectId: selectedEstimation.id,
@@ -92,62 +99,16 @@ export default function ToolsDock() {
             )}
           </div>
 
-          {/* Tekla Calculator */}
+          {/* Jobber Construction Calculator */}
           <div className="tdk-wrapper">
             <button 
-              className={`tdk-btn ${activePopover === 'calc' ? 'active' : ''}`}
-              onMouseEnter={(e) => injectTooltip(e, 'Tekla Structural Calculator')}
+              className={`tdk-btn ${showCalc ? 'active' : ''}`}
+              onMouseEnter={(e) => injectTooltip(e, 'Jobber Construction Calculator')}
               onMouseLeave={removeTooltip}
-              onClick={() => togglePopover('calc')}
+              onClick={() => setShowCalc(true)}
             >
-              <Zap size={16} />
+              <Calculator size={16} />
             </button>
-
-            {/* Calculator Popover */}
-            <AnimatePresence>
-              {activePopover === 'calc' && (
-                <motion.div
-                  className="tdk-popover tdk-pop-calc"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 5 }}
-                >
-                  <div className="tdk-calc-panel">
-                    <div className="tdk-calc-header">
-                      <span>Formula Calculator (Tekla)</span>
-                      <button onClick={() => setActivePopover(null)}><X size={12} /></button>
-                    </div>
-                    <div className="tdk-calc-body">
-                      <div className="tdk-field">
-                        <label>Profile Designation</label>
-                        <input type="text" placeholder="e.g. W12x14" className="tdk-input" />
-                      </div>
-                      <div className="tdk-row">
-                        <div className="tdk-field">
-                          <label>Unit Wt (lbs/ft)</label>
-                          <input type="number" placeholder="14" className="tdk-input" />
-                        </div>
-                        <div className="tdk-field">
-                          <label>Length (ft)</label>
-                          <input type="number" placeholder="20.5" className="tdk-input" />
-                        </div>
-                      </div>
-                      <div className="tdk-row">
-                        <div className="tdk-field">
-                          <label>Quantity</label>
-                          <input type="number" placeholder="1" className="tdk-input" defaultValue={1} />
-                        </div>
-                        <div className="tdk-field">
-                          <label>Total Wt (lbs)</label>
-                          <input type="text" className="tdk-input tdk-input-result" readOnly value="287.00" />
-                        </div>
-                      </div>
-                      <button className="tdk-calc-btn">Calculate Profile</button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
 
           <ToolIcon icon={Megaphone} tip="Announcements" dot={true} />
@@ -309,6 +270,9 @@ export default function ToolsDock() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Jobber Calculator Modal ── */}
+      <JobberCalculatorModal isOpen={showCalc} onClose={() => setShowCalc(false)} />
     </>
   );
 }

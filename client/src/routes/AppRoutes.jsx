@@ -10,6 +10,12 @@ import EstimationList from '../pages/Estimations/EstimationList';
 import EstimationDetail from '../pages/Estimations/EstimationDetail';
 import Calendar from '../pages/Calendar/Calendar';
 import Reports from '../pages/Reports/Reports';
+import PricingSettings from '../pages/Settings/PricingSettings';
+import SystemSettings from '../pages/Settings/SystemSettings';
+import PersonalizationSettings from '../pages/Settings/PersonalizationSettings';
+import ProfileSettings from '../pages/Settings/ProfileSettings';
+import CustomerMaster from '../pages/Settings/CustomerMaster';
+import SupportCenter from '../pages/Support/SupportCenter';
 
 // Modules
 import StairConfig from '../modules/Stair/StairConfig';
@@ -34,6 +40,12 @@ const AppRoutes = () => {
       <Route path="/estimations" element={<EngRoute element={<EstimationList />} />} />
       <Route path="/project-info" element={<EngRoute element={<EstimationDetail />} />} />
       <Route path="/reports" element={<EngRoute element={<Reports />} />} />
+      <Route path="/settings/pricing" element={<EngRoute element={<PricingSettings />} />} />
+      <Route path="/settings/system" element={<EngRoute element={<SystemSettings />} />} />
+      <Route path="/settings/personalization" element={<EngRoute element={<PersonalizationSettings />} />} />
+      <Route path="/settings/customers" element={<EngRoute element={<CustomerMaster />} />} />
+      <Route path="/profile" element={<EngRoute element={<ProfileSettings />} />} />
+      <Route path="/support" element={<EngRoute element={<SupportCenter />} />} />
       
       {/* Estimation Modules */}
       <Route path="/estimate/stair-railings" element={<EngRoute element={<StairConfig />} />} />

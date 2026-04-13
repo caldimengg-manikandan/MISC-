@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building, Paintbrush, User, Settings, LifeBuoy, LogOut, MoreHorizontal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export default function ProfileContextMenu({ user, handleLogout }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
+  const navigate = useNavigate();
 
   // Close when clicking outside
   useEffect(() => {
@@ -29,10 +31,25 @@ export default function ProfileContextMenu({ user, handleLogout }) {
     e.stopPropagation();
     setIsOpen(false);
     
-    if (action === 'logout') {
-      handleLogout();
-    } else {
-      toast('🚧 This feature is coming soon!', { icon: '⚒️' });
+    switch (action) {
+      case 'logout':
+        handleLogout();
+        break;
+      case 'org':
+      case 'settings':
+        navigate('/settings/pricing');
+        break;
+      case 'personalize':
+        navigate('/settings/personalization');
+        break;
+      case 'profile':
+        navigate('/profile');
+        break;
+      case 'support':
+        navigate('/support');
+        break;
+      default:
+        toast('🚧 This feature is coming soon!', { icon: '⚒️' });
     }
   };
 
@@ -54,12 +71,12 @@ export default function ProfileContextMenu({ user, handleLogout }) {
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className="profile-menu-dropdown"
           >
-            {/* Context Anchor Header (matches screenshot behavior) */}
+            {/* Context Anchor Header */}
             <div className="profile-menu-header">
-              <div className="sidebar-footer-avatar" style={{ transform: 'scale(0.8)', marginLeft: '-4px' }}>{userInitials}</div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: 500, color: 'var(--gpt-sidebar-text)' }}>{userName}</span>
-                <span style={{ fontSize: '11px', color: 'var(--gpt-sidebar-muted)' }}>{user?.email || '@user'}</span>
+              <div className="sidebar-footer-avatar" style={{ transform: 'scale(1.1)', margin: '0 4px' }}>{userInitials}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <span style={{ fontWeight: 600, color: '#FFFFFF', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</span>
+                <span style={{ fontSize: '12px', color: 'var(--gpt-sidebar-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || '@user'}</span>
               </div>
             </div>
 

@@ -13,5 +13,6 @@ router.post('/owner-login', authController.ownerLogin);
 router.get('/verify', authMiddleware, authController.verify);
 router.get('/trial/status', authMiddleware, authController.checkTrialStatus);
 router.put('/update-profile', authMiddleware, authController.updateProfile);
+router.put('/change-password', authMiddleware, authController.changePassword);
 
 module.exports = router;

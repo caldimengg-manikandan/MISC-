@@ -4,9 +4,10 @@ import StairFlight from './StairFlight';
 import LandingConfig from '../Landing/LandingConfig';
 import RailConfig from '../Rail/RailConfig';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Table, Scale, DollarSign, Copy } from 'lucide-react';
+import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin } from 'lucide-react';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils.js';
 import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
+import PricingOverridesModal from './PricingOverridesModal';
 import SFEEstimateReport from './SFEEstimateReport';
 import API_BASE_URL from '../../config/api';
 import toast from 'react-hot-toast';
@@ -30,7 +31,9 @@ const restoreStairs = (savedStairs) => {
     // Helper to ensure geometric fields are objects
     const toObj = (val, defaultUnit) => {
       if (val && typeof val === 'object' && 'unit' in val) return val;
-      return { value: val || '', unit: defaultUnit };
+      // 🔄 PERSISTENCE FIX: Nullish check instead of "||" to preserve numeric 0 as a valid input
+      const displayVal = (val !== null && val !== undefined) ? val : '';
+      return { value: displayVal, unit: defaultUnit };
     };
 
     return {
@@ -62,24 +65,40 @@ const restoreStairs = (savedStairs) => {
         nsStringerTop: toObj(f.nsStringerTop, 'FT'),
         fsStringerTop: toObj(f.fsStringerTop, 'FT'),
       })),
-      landings: (s.landings || []).map((l, li) => ({
-        ...l,
-        id:    l.id    ?? makeId(),
-        label: l.label || `Landing ${li + 1}`,
-        platformLength: toObj(l.platformLength, 'FT'),
-        platformWidth:  toObj(l.platformWidth, 'FT'),
-      })),
+      landings: (s.landings || []).map((l, li) => {
+        // 🔄 PERSISTENCE FIX: Backend calc results spread 'length'/'width' (plain numbers)
+        // alongside 'platformLength'/'platformWidth' ({value,unit} objects).
+        // Always prefer the {value,unit} object; fall back to plain number.
+        const rawLen = (l.platformLength && typeof l.platformLength === 'object') ? l.platformLength
+                     : (l.platformLength !== undefined && l.platformLength !== null) ? l.platformLength
+                     : (l.length !== undefined && l.length !== null) ? l.length : '';
+        const rawWid = (l.platformWidth && typeof l.platformWidth === 'object') ? l.platformWidth
+                     : (l.platformWidth !== undefined && l.platformWidth !== null) ? l.platformWidth
+                     : (l.width !== undefined && l.width !== null) ? l.width : '';
+        return {
+          ...l,
+          id:    l.id    ?? makeId(),
+          label: l.label || `Landing ${li + 1}`,
+          platformLength: toObj(rawLen, 'FT'),
+          platformWidth:  toObj(rawWid, 'FT'),
+        };
+      }),
       rails: (s.rails || []).map((r, ri) => {
         const meta = RAIL_TYPES.find(t => t.key === r.type);
+        // 🔄 PERSISTENCE FIX: Backend may spread 'length' (plain number) alongside 'railLength' ({value,unit})
+        const rawRailLen = (r.railLength && typeof r.railLength === 'object') ? r.railLength
+                         : (r.railLength !== undefined && r.railLength !== null) ? r.railLength
+                         : (r.length !== undefined && r.length !== null) ? r.length : '';
         return {
           ...r,
           id:    r.id    ?? makeId(),
           label: r.label || (meta ? `${meta.label} ${ri + 1}` : `Rail ${ri + 1}`),
-          railLength:     toObj(r.railLength, 'FT'),
+          railLength:     toObj(rawRailLen, 'FT'),
           postSpacing:    toObj(r.postSpacing, 'FT'),
           toeplateLength: toObj(r.toeplateLength, 'FT'),
         };
       }),
+      selectionSource: s.selectionSource || (s.stringerSize ? 'manual' : 'auto'),
     };
   });
 };
@@ -687,7 +706,15 @@ function StairItem({
             className={activeId === fl.id ? 'active' : ''}
           >
             <StairFlight
-              stair={{ ...stair, ...fl }}
+              stair={{ 
+                stairCategory: stair.stairCategory, 
+                stairType: stair.stairType, 
+                stringerType: stair.stringerType, 
+                finish: stair.finish, 
+                steelGrade: stair.steelGrade,
+                mountingType: stair.mountingType,
+                ...fl 
+              }}
               onChange={(changes) => onUpdateSubItem('flight', fl.id, changes)}
               isFlightMode
               onFocus={() => handleFocus('flight', fl.id, fl.label)}
@@ -715,6 +742,7 @@ function StairItem({
           >
             <LandingConfig
               data={l}
+              parentStairType={stair.stairType}
               onChange={(changes) => onUpdateSubItem('landing', l.id, changes)}
               onFocus={() => handleFocus('landing', l.id, l.label)}
             />
@@ -786,17 +814,40 @@ export default function StairEstimation() {
       landings: [], 
       rails: [],
       history: { lastDeleted: null },
-      template: 'custom'
+      template: 'custom',
+      selectionSource: 'auto'
     }
   ]);
-  const [projectData, setProjectData] = useState({ projectName: '', projectNumber: '', customerName: '', projectId: null });
+  const [projectData, setProjectData] = useState({ 
+    projectName: '', 
+    projectNumber: '', 
+    customerName: '', 
+    customerId: null, 
+    customerInfo: null,
+    projectId: null 
+  });
   const [templateModal, setTemplateModal] = useState({ isOpen: false, nextLabel: 'Stair 1' });
   const [saving, setSaving] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [estimationResult, setEstimationResult] = useState(null);
+  
+  // ── Unified Data Access ──
+  const summaryData = estimationResult?.sfeSummary || estimationResult?.summary;
+
   const [showReport, setShowReport] = useState(false); // New state for showing report
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [localConfig, setLocalConfig] = useState({});
   const [reportData, setReportData] = useState(null);   // New state for report data
   const [overallHistory, setOverallHistory] = useState(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', resolve: null });
+
+  const requestConfirmation = (title, message) => {
+    return new Promise((resolve) => {
+      setConfirmModal({ isOpen: true, title, message, resolve });
+    });
+  };
+
   const { fetchNotes, notes, setSelectedEstimation } = useEstimation();
   const stairsRef = useRef(stairs);
   stairsRef.current = stairs;
@@ -807,65 +858,95 @@ export default function StairEstimation() {
     if (!savedInfo) return;
     try {
       const parsed = JSON.parse(savedInfo);
-      setProjectData({
+      setProjectData(prev => ({
+        ...prev,
         projectName:   parsed.projectName   || 'New Estimation',
         projectNumber: parsed.projectNumber || 'Draft',
         customerName:  parsed.customerName  || parsed.clientName || 'Internal',
+        customerId:    parsed.customerId    || null,
         projectId:     parsed.id            || null,
-      });
+      }));
 
       const projectId = parsed.id;
       if (!projectId) return;
       
-      // Update global context immediately from localStorage info
       setSelectedEstimation({ id: projectId, ...parsed });
-      
-      // Fetch notes for the project
       fetchNotes(projectId);
 
       const token = localStorage.getItem('steel_token');
       if (!token) return;
 
-      // Fetch full project from DB to restore stairs/rails
       fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success && data.project) {
-            const proj = data.project;
-            // Update project data with full DB fields
-            setProjectData(prev => {
-              const updated = {
-                ...prev,
-                id: proj.id,
-                projectId: proj.id,
-                projectName:   proj.projectName   || prev.projectName,
-                projectNumber: proj.projectNumber || prev.projectNumber,
-                customerName:  proj.customerName  || proj.clientName || prev.customerName,
-              };
-              setSelectedEstimation(proj); // Sync with context for ToolsDock
-              return updated;
-            });
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.project) {
+          const proj = data.project;
+          
+          // Update projectData with rich customer info from JOIN (LinkedCustomerName, CustomerEmail etc)
+          setProjectData(prev => ({
+            ...prev,
+            customerName: proj.LinkedCustomerName || proj.customer_name || 'Internal',
+            customerId: proj.customer_id,
+            customerInfo: proj.customer_id ? {
+              company: proj.LinkedCustomerName,
+              contact: proj.contactPerson,
+              email:   proj.CustomerEmail,
+              phone:   proj.CustomerPhone,
+              city:    proj.CustomerCity,
+              state:   proj.CustomerState
+            } : null
+          }));
 
-            // Restore stairs from DB
-            const raw = proj.stairs;
-            const saved = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null);
-            if (saved && saved.length > 0) {
-              const restored = restoreStairs(saved);
-              if (restored.length > 0) {
-                setStairs(restored);
-                setActiveId(restored[0].id); // Default open for first stair
-                toast.success(`Loaded ${restored.length} stair(s) from database`);
+          // 📝 PERSISTENCE CHECK: Look for unsaved local draft
+          const draftKey = `stair_draft_${projectId}`;
+          const draft = localStorage.getItem(draftKey);
+          if (draft) {
+            requestConfirmation("Restore Unsaved Changes?", "We found an unsaved draft from your last session. Would you like to restore it?").then(confirmed => {
+              if (confirmed) {
+                const restoredDraft = restoreStairs(JSON.parse(draft));
+                isUpdatingFromCalc.current = true; // Use common suppressor ref
+                setStairs(restoredDraft);
+                if (restoredDraft.length > 0) setActiveId(restoredDraft[0].id);
+                setIsDirty(true); // Draft IS dirty because it wasn't saved to DB yet
+              } else {
+                restoreStairsFromDB(proj);
               }
-            }
+            });
+            return; 
           }
-        })
-        .catch(err => console.error('Failed to load project stairs:', err));
+
+          restoreStairsFromDB(proj);
+        }
+      })
+      .catch(err => console.error('Failed to load project stairs:', err));
     } catch (e) {
       console.error('Failed to parse project info:', e);
     }
-  }, [fetchNotes]);
+  }, [fetchNotes, setSelectedEstimation]);
+
+  // Refactored helper for DB restoration
+  const restoreStairsFromDB = (proj) => {
+    // 🔄 PERSISTENCE FIX: Restore calculated summary directly from DB to prevent empty state on reload
+    if (proj.estimationResult) {
+      setEstimationResult(proj.estimationResult);
+      setReportData(proj.estimationResult);
+    }
+
+    const raw = proj.stairs;
+    const saved = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null);
+    if (saved && saved.length > 0) {
+      const restored = restoreStairs(saved);
+      if (restored.length > 0) {
+        isUpdatingFromCalc.current = true; // 🛡️ Suppress dirty flagging on DB load
+        setStairs(restored);
+        setActiveId(restored[0].id); 
+        toast.success(`Loaded ${restored.length} stair(s) from database`);
+        setIsDirty(false); // DB version is NOT dirty
+      }
+    }
+  };
 
   // ── Save stairs to DB ─────────────────────────────────────────────────────
   const saveChanges = useCallback(async () => {
@@ -883,69 +964,14 @@ export default function StairEstimation() {
         return;
       }
 
-      // Strip history and NORMALIZE geometric fields to baseline units
+      // Strip history to prevent bloated payloads, BUT DO NOT normalize geometric units.
+      // We persist EXACTLY what the user typed ({ value: "7' 11\"", unit: 'FT' })
       const stairsToSave = stairsRef.current.map(({ history, ...s }) => {
-        const pWidth = parseArchitecturalInput(s.stairWidth?.value, s.stairWidth?.unit);
-        const pRun = parseArchitecturalInput(s.run?.value, s.run?.unit);
-        const pRise = parseArchitecturalInput(s.rise?.value, s.rise?.unit);
-        const pHeight = parseArchitecturalInput(s.totalHeight?.value, s.totalHeight?.unit);
-        const pNSBot = parseArchitecturalInput(s.nsStringerBot?.value, s.nsStringerBot?.unit);
-        const pFSBot = parseArchitecturalInput(s.fsStringerBot?.value, s.fsStringerBot?.unit);
-        const pNSTop = parseArchitecturalInput(s.nsStringerTop?.value, s.nsStringerTop?.unit);
-        const pFSTop = parseArchitecturalInput(s.fsStringerTop?.value, s.fsStringerTop?.unit);
-
         return {
           ...s,
-          stairWidth:    normalizeToFeet(pWidth.value, pWidth.unit),
-          run:           normalizeToInches(pRun.value, pRun.unit),
-          rise:          normalizeToInches(pRise.value, pRise.unit),
-          totalHeight:   normalizeToInches(pHeight.value, pHeight.unit),
-          nsStringerBot: normalizeToFeet(pNSBot.value, pNSBot.unit),
-          fsStringerBot: normalizeToFeet(pFSBot.value, pFSBot.unit),
-          nsStringerTop: normalizeToFeet(pNSTop.value, pNSTop.unit),
-          fsStringerTop: normalizeToFeet(pFSTop.value, pFSTop.unit),
-          flights: (s.flights || []).map(f => {
-            const pfWidth = parseArchitecturalInput(f.stairWidth?.value, f.stairWidth?.unit);
-            const pfRun = parseArchitecturalInput(f.run?.value, f.run?.unit);
-            const pfRise = parseArchitecturalInput(f.rise?.value, f.rise?.unit);
-            const pfHeight = parseArchitecturalInput(f.totalHeight?.value, f.totalHeight?.unit);
-            const pfNSBot = parseArchitecturalInput(f.nsStringerBot?.value, f.nsStringerBot?.unit);
-            const pfFSBot = parseArchitecturalInput(f.fsStringerBot?.value, f.fsStringerBot?.unit);
-            const pfNSTop = parseArchitecturalInput(f.nsStringerTop?.value, f.nsStringerTop?.unit);
-            const pfFSTop = parseArchitecturalInput(f.fsStringerTop?.value, f.fsStringerTop?.unit);
-
-            return {
-              ...f,
-              stairWidth:    normalizeToFeet(pfWidth.value, pfWidth.unit),
-              run:           normalizeToInches(pfRun.value, pfRun.unit),
-              rise:          normalizeToInches(pfRise.value, pfRise.unit),
-              totalHeight:   normalizeToInches(pfHeight.value, pfHeight.unit),
-              nsStringerBot: normalizeToFeet(pfNSBot.value, pfNSBot.unit),
-              fsStringerBot: normalizeToFeet(pfFSBot.value, pfFSBot.unit),
-              nsStringerTop: normalizeToFeet(pfNSTop.value, pfNSTop.unit),
-              fsStringerTop: normalizeToFeet(pfFSTop.value, pfFSTop.unit),
-            };
-          }),
-          landings: (s.landings || []).map(l => {
-            const pLen = parseArchitecturalInput(l.platformLength?.value, l.platformLength?.unit);
-            const pWid = parseArchitecturalInput(l.platformWidth?.value, l.platformWidth?.unit);
-            return {
-              ...l,
-              platformLength: normalizeToFeet(pLen.value, pLen.unit),
-              platformWidth:  normalizeToFeet(pWid.value, pWid.unit),
-            };
-          }),
-          rails: (s.rails || []).map(r => {
-            const pLen = parseArchitecturalInput(r.railLength?.value, r.railLength?.unit);
-            const pSpa = parseArchitecturalInput(r.postSpacing?.value, r.postSpacing?.unit);
-            const pToe = parseArchitecturalInput(r.toeplateLength?.value, r.toeplateLength?.unit);
-            return {
-              ...r,
-              railLength:     normalizeToFeet(pLen.value, pLen.unit),
-              postSpacing:    normalizeToFeet(pSpa.value, pSpa.unit),
-              toeplateLength: normalizeToFeet(pToe.value, pToe.unit),
-            };
-          })
+          flights: (s.flights || []).map(({ history: fh, ...f }) => ({ ...f })),
+          landings: (s.landings || []).map(({ history: lh, ...l }) => ({ ...l })),
+          rails: (s.rails || []).map(({ history: rh, ...r }) => ({ ...r }))
         };
       });
 
@@ -958,6 +984,9 @@ export default function StairEstimation() {
       const data = await res.json();
       if (data.success) {
         toast.success('Changes saved to database ✓');
+        setIsDirty(false);
+        // ✨ Clean up draft after successful DB save
+        localStorage.removeItem(`stair_draft_${projectId}`);
       } else {
         toast.error(data.message || 'Save failed');
       }
@@ -971,81 +1000,145 @@ export default function StairEstimation() {
 
   // ── Calculate Estimation via backend ─────────────────────────────────────
   const calculateEstimation = useCallback(async () => {
+    // 🔄 AUTO-SAVE: If there are unsaved changes, save silently before estimating
+    // No modal interruption — just save in background and proceed
+    if (isDirty && projectData.projectId) {
+      try {
+        await saveChanges();
+      } catch (_) {
+        // Non-blocking: proceed with estimation even if save fails
+      }
+    }
     setCalculating(true);
     try {
       const token = localStorage.getItem('steel_token');
 
-      // Build components payload from the entire stair tree
+      // Build components payload — same format as triggerLiveCalc for consistency
+      // ── Consolidated robust parsing helpers ──
+      const toFeetFull = (field) => {
+        if (!field && field !== 0) return 0;
+        if (typeof field === 'number') return field;
+        if (typeof field === 'object' && 'value' in field) {
+          const parsed = parseArchitecturalInput(field.value, field.unit);
+          return normalizeToFeet(parsed.value, parsed.unit);
+        }
+        return parseFloat(field) || 0;
+      };
+      const toInchesFull = (field) => {
+        if (!field && field !== 0) return 0;
+        if (typeof field === 'number') return field;
+        if (typeof field === 'object' && 'value' in field) {
+          const parsed = parseArchitecturalInput(field.value, field.unit);
+          return normalizeToInches(parsed.value, parsed.unit);
+        }
+        return parseFloat(field) || 0;
+      };
+
+      const getTypeCode = (t) => {
+        const s = (t || '').toLowerCase();
+        if (s.includes('cane')) return 'CANE_RAIL';
+        if (s.includes('grab')) return 'GRAB_RAIL';
+        if (s.includes('handrail') || s.includes('hand railing')) return 'GRAB_RAIL';
+        if (s.includes('wall')) return 'WALL_RAIL';
+        const m = s.match(/(\d+)-line/);
+        if (m) {
+          const n = parseInt(m[1]);
+          if (n === 8) return 'GUARD_8_LINE';
+          if (n === 3) return 'GUARD_3_LINE';
+          if (n === 2) return 'GUARD_2_LINE';
+          if (n === 1) return 'GUARD_1_LINE';
+        }
+        return 'GUARD_2_LINE';
+      };
+
       const rails = [];
       const platforms = [];
       const stairFlights = [];
 
       stairsRef.current.forEach(stair => {
-        // Collect Rails
+        // ── Collect Rails ──────────────────────────────────────────
         (stair.rails || []).forEach(r => {
-          const pLen = parseArchitecturalInput(r.railLength?.value, r.railLength?.unit);
-          const pSpa = parseArchitecturalInput(r.postSpacing?.value, r.postSpacing?.unit);
-          const pToe = parseArchitecturalInput(r.toeplateLength?.value, r.toeplateLength?.unit);
+          const rLen = toFeetFull(r.railLength);
+          const rType = r.railType || r.rail_type_id;
+
+          // Skip incomplete/empty rails — they contribute $0 and skew totals
+          if (!rLen || !rType) return;
 
           rails.push({
-            type:         r.type || 'guardRail',
-            railType:     r.railType || '',
-            railLength:   normalizeToFeet(pLen.value, pLen.unit),
-            postSpacing:  normalizeToFeet(pSpa.value, pSpa.unit),
-            postQty:      parseInt(r.postQty) || 0,
-            mountingType: r.mountingType || '',
-            finish:       r.finish || 'Primer',
-            toeplateRequired: r.toeplateRequired || 'No',
-            toeplateLength:   normalizeToFeet(pToe.value, pToe.unit),
-            intermediateRails: parseInt(r.intermediateRails) || 0
+            id: r.id,
+            railType:          rType,
+            typeCode:          getTypeCode(rType),
+            length:            rLen,
+            railLength:        rLen, // backend reads either railLength or length
+            maxSpacing:        toFeetFull(r.postSpacing),
+            postSpacing:       toFeetFull(r.postSpacing),
+            mountingType:      r.mountingType || 'anchored',
+            finish:            r.finish || 'Primer',
+            intermediateRails: parseInt(r.intermediateRails) || 0,
+            toeplateRequired:  r.toeplateRequired || 'No',
+            toeWidth:          toFeetFull(r.toeWidth),
+            isLvlAtBot:        r.isLvlAtBot || false,
+            isLvlAtTop:        r.isLvlAtTop || false,
           });
         });
 
-        // Collect Landings/Platforms
+        // ── Collect Landings/Platforms ──────────────────────────────
         (stair.landings || []).forEach(l => {
-          const pLen = parseArchitecturalInput(l.platformLength?.value, l.platformLength?.unit);
-          const pWid = parseArchitecturalInput(l.platformWidth?.value, l.platformWidth?.unit);
+          const lLen = toFeetFull(l.platformLength);
+          const lWid = toFeetFull(l.platformWidth);
+
+          // Skip incomplete/empty landings
+          if (lLen <= 0 || lWid <= 0) return;
+
           platforms.push({
-            platformType:   l.platformType || '',
-            platformLength: normalizeToFeet(pLen.value, pLen.unit),
-            platformWidth:  normalizeToFeet(pWid.value, pWid.unit),
-            finish:         l.finish || 'Primer'
+            id:           l.id,
+            platformType: l.platformType || l.type || 'Standard',
+            length:       lLen,
+            width:        lWid,
+            quantity:     1,
+            finish:       l.finish || stair.finish || 'Primer',
+            mountingType: l.mountingType || stair.mountingType || 'anchored',
           });
         });
 
-        // Collect Stair Flights
-        // Normalizing geometric inputs for the backend batch calculation
-        const pWidth  = parseArchitecturalInput(stair.stairWidth?.value, stair.stairWidth?.unit);
-        const pRise   = parseArchitecturalInput(stair.rise?.value, stair.rise?.unit);
-        const pRun    = parseArchitecturalInput(stair.run?.value, stair.run?.unit);
-        const pNSBot  = parseArchitecturalInput(stair.nsStringerBot?.value, stair.nsStringerBot?.unit);
-        const pFSBot  = parseArchitecturalInput(stair.fsStringerBot?.value, stair.fsStringerBot?.unit);
-        const pNSTop  = parseArchitecturalInput(stair.nsStringerTop?.value, stair.nsStringerTop?.unit);
-        const pFSTop  = parseArchitecturalInput(stair.fsStringerTop?.value, stair.fsStringerTop?.unit);
-        const pHeight = parseArchitecturalInput(stair.totalHeight?.value, stair.totalHeight?.unit);
+        // ── Collect Stair Flights ───────────────────────────────────
+        const rise  = toInchesFull(stair.rise);
+        const run   = toInchesFull(stair.run);
+        const width = toFeetFull(stair.stairWidth);
 
-        stairFlights.push({
-          stairWidthFt:      normalizeToFeet(pWidth.value, pWidth.unit),
-          totalHeightIn:     normalizeToInches(pHeight.value, pHeight.unit),
-          riseIn:            normalizeToInches(pRise.value, pRise.unit),
-          runIn:             normalizeToInches(pRun.value, pRun.unit),
-          numRisers:         parseInt(stair.numRisers || stair.systemCalc?.numRisers) || 0,
-          stringerSize:      stair.stringerSize || '',
-          stairType:         stair.stairType || 'pan-concrete',
-          extentBotNSFt:     normalizeToFeet(pNSBot.value, pNSBot.unit),
-          extentBotFSFt:     normalizeToFeet(pFSBot.value, pFSBot.unit),
-          extentTopNSFt:     normalizeToFeet(pNSTop.value, pNSTop.unit),
-          extentTopFSFt:     normalizeToFeet(pFSTop.value, pFSTop.unit),
-          connectionTypeBot: stair.nsStringerConnBot || 'WELDED',
-          connectionTypeTop: stair.nsStringerConnTop || 'WELDED',
-          finish:            stair.finish || 'Primer'
-        });
+        // Only include stairs with valid geometry
+        if (rise && run && width) {
+          stairFlights.push({
+            id:                stair.id,
+            width,
+            rise,
+            run,
+            totalHeight:       toInchesFull(stair.totalHeight),
+            numRisers:         parseInt(stair.numRisers || stair.systemCalc?.numRisers) || 0,
+            stringerSize:      stair.stringerSize || '',
+            stringerType:      stair.stringerType || 'Rolled',
+            stairType:         stair.stairType || 'pan-concrete',
+            gratingTreadType:  stair.gratingType || '',
+            nsStringerBot:     toFeetFull(stair.nsStringerBot),
+            fsStringerBot:     toFeetFull(stair.fsStringerBot),
+            nsStringerTop:     toFeetFull(stair.nsStringerTop),
+            fsStringerTop:     toFeetFull(stair.fsStringerTop),
+            nsStringerConnBot: stair.nsStringerConnBot || 'Welded',
+            fsStringerConnBot: stair.fsStringerConnBot || 'Welded',
+            nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
+            fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
+            finish:            stair.finish || 'Primer',
+            mountingType:      stair.mountingType || 'anchored',
+            flights:           stair.flights || [],
+          });
+        }
       });
 
       const payload = {
         rails,
         platforms,
         stairs: stairFlights,
+        config: localConfig,
         estimateId: projectData.projectId
       };
 
@@ -1063,6 +1156,20 @@ export default function StairEstimation() {
         setEstimationResult(data);
         setReportData(data); // Set report data but don't jump to report automatically
         toast.success('Estimation calculated ✓');
+        
+        // 💾 AUTO-SAVE calculation summary back to DB immediately
+        if (projectData.projectId && token) {
+          fetch(`${API_BASE_URL}/api/projects/${projectData.projectId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ estimationResult: data })
+          }).catch(err => console.error('Failed to auto-save estimation result:', err));
+        }
+
+        // 📜 Scroll to summary for UX
+        setTimeout(() => {
+          document.getElementById('calculation-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
       } else {
         toast.error(data.error || 'Calculation failed');
       }
@@ -1072,7 +1179,8 @@ export default function StairEstimation() {
     } finally {
       setCalculating(false);
     }
-  }, [projectData.projectId]);
+  // 🔄 FIX: Include isDirty, localConfig, and saveChanges to prevent stale closure bugs
+  }, [projectData.projectId, isDirty, localConfig, saveChanges]);
 
   // ── Live per-change calculation (debounced 400ms) ─────────────────────────
   // Fires whenever stair data changes; embeds calc results back into each rail + landing.
@@ -1107,20 +1215,26 @@ export default function StairEstimation() {
           stairs.push({
             id: stair.id,
             risers: parseInt(stair.numRisers) || 0,
-            run,
-            rise,
-            totalHeight: hFeet, 
-            width,
-            stairType: stair.stairType || 'Standard',
-            panType: stair.panType || 'pan-concrete',
-            panPlThk: toInches(stair.panPlThk),
+            run: stair.run,
+            rise: stair.rise,
+            totalHeight: stair.totalHeight, 
+            width: stair.stairWidth,
+            stairType: stair.stairType || 'pan-concrete',
+            panPlThk: stair.panPlThk,
+            gratingTreadType: stair.gratingType || '',
             stringerSize: stair.stringerSize || '',
             stringerType: stair.stringerType || 'Rolled',
-            nsStringerBot: toFeet(stair.nsStringerBot),
-            fsStringerBot: toFeet(stair.fsStringerBot),
-            nsStringerTop: toFeet(stair.nsStringerTop),
-            fsStringerTop: toFeet(stair.fsStringerTop),
-            finish: stair.finish || 'Primer'
+            nsStringerBot: stair.nsStringerBot,
+            fsStringerBot: stair.fsStringerBot,
+            nsStringerTop: stair.nsStringerTop,
+            fsStringerTop: stair.fsStringerTop,
+            nsStringerConnBot: stair.nsStringerConnBot || 'Welded',
+            fsStringerConnBot: stair.fsStringerConnBot || 'Welded',
+            nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
+            fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
+            finish: stair.finish || 'Primer',
+            mountingType: stair.mountingType || 'anchored',
+            flights: stair.flights || []
           });
         }
 
@@ -1129,14 +1243,16 @@ export default function StairEstimation() {
           const lLen = toFeet(l.platformLength);
           const lWid = toFeet(l.platformWidth);
 
-          if (lLen && lWid) {
+          // BOTH Length and Width are mandatory as per user rule
+          if (lLen > 0 && lWid > 0) {
             platforms.push({
               id: l.id,
               platformType: l.platformType || l.type || 'Standard',
               length: lLen,
               width: lWid,
               quantity: 1,
-              finish: stair.finish || 'Primer'
+              finish: l.finish || stair.finish || 'Primer',
+              mountingType: l.mountingType || stair.mountingType || 'anchored'
             });
           }
         });
@@ -1170,11 +1286,13 @@ export default function StairEstimation() {
               typeCode: getTypeCode(rType),
               length: rLen,
               maxSpacing: toFeet(r.postSpacing),
-              mountingType: r.mountingType || '',
+              mountingType: r.mountingType || 'anchored',
               finish: r.finish || 'Primer',
               intermediateRails: parseInt(r.intermediateRails) || 0,
               toeplateRequired: r.toeplateRequired || 'No', // Keep as string "Yes"/"No" to match state expectations
-              toeWidth: toFeet(r.toeWidth)
+              toeWidth: toFeet(r.toeWidth),
+              isLvlAtBot: r.isLvlAtBot || false,
+              isLvlAtTop: r.isLvlAtTop || false
             });
           }
         });
@@ -1183,7 +1301,7 @@ export default function StairEstimation() {
       if (rails.length === 0 && platforms.length === 0 && stairs.length === 0) return;
 
       const { calculateFull } = await import('../../services/estimationService');
-      const result = await calculateFull({ rails, platforms, stairs });
+      const result = await calculateFull({ rails, platforms, stairs, config: localConfig });
 
       // 📊 DEBUG LOGGING (MANDATORY)
       console.log("📤 Payload:", { rails, platforms, stairs });
@@ -1237,15 +1355,21 @@ export default function StairEstimation() {
             updatedStair.landings = updatedStair.landings.map(l => {
               const lLen = toFeet(l.platformLength);
               const lWid = toFeet(l.platformWidth);
-              if (lLen && lWid) {
-                const lCalc = result.breakdown?.platforms?.[landingIdx++] || {};
+              
+              if (lLen > 0 && lWid > 0) {
+                const lCalcRaw = result.breakdown?.platforms?.[landingIdx++] || {};
+                // 🔄 PERSISTENCE FIX: Strip backend geometry fields that would overwrite user inputs
+                // lCalc returns {length, width} plain numbers — these must NOT replace {platformLength, platformWidth}
+                const { length: _l, width: _w, ...lCalc } = lCalcRaw;
                 return { 
                   ...l, 
                   ...lCalc,
                   systemCalc: lCalc.systemCalc || {}
                 };
+              } else {
+                // Clear stale calculations if inputs are incomplete
+                return { ...l, totalCost: 0, systemCalc: null };
               }
-              return l;
             });
           }
 
@@ -1254,7 +1378,10 @@ export default function StairEstimation() {
             updatedStair.rails = updatedStair.rails.map(r => {
               const rLen = toFeet(r.railLength);
               if (rLen && (r.railType || r.rail_type_id)) {
-                const rCalc = result.breakdown?.rails?.[railIdx++] || {};
+                const rCalcRaw = result.breakdown?.rails?.[railIdx++] || {};
+                // 🔄 PERSISTENCE FIX: Strip backend geometry fields that would overwrite user inputs
+                // rCalc returns {length, maxSpacing} plain numbers — must NOT replace {railLength, postSpacing}
+                const { length: _l, maxSpacing: _ms, ...rCalc } = rCalcRaw;
                 return { 
                   ...r, 
                   ...rCalc,
@@ -1272,16 +1399,27 @@ export default function StairEstimation() {
     }, 400);
   }, []);
 
-  // Trigger live calc whenever stairs change, but NOT when we wrote calc results ourselves
+  // Trigger live calc whenever stairs change, but NOT when we wrote results or restored from DB
   useEffect(() => {
     if (isUpdatingFromCalc.current) {
-      isUpdatingFromCalc.current = false;
+      isUpdatingFromCalc.current = false; // Reset suppression flag
       return;
     }
-    if (stairs.length === 0) return;
+    // Only set dirty if it was a user change (not a db load/sync)
+    setIsDirty(true);
     triggerLiveCalc(stairs);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stairs]);
+  }, [stairs, triggerLiveCalc]);
+
+  // 💾 Auto-Save Draft (to localStorage)
+  useEffect(() => {
+    if (isDirty && stairs.length > 0) {
+      const timer = setTimeout(() => {
+        const draftKey = `stair_draft_${projectData.projectId || 'global'}`;
+        localStorage.setItem(draftKey, JSON.stringify(stairs));
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [stairs, isDirty, projectData.projectId]);
 
 
   const openTemplateModal = () => {
@@ -1309,11 +1447,15 @@ export default function StairEstimation() {
           stairWidth: { value: '4.0', unit: 'FT' },
           run: { value: '11.0', unit: 'IN' },
           rise: { value: '7.0', unit: 'IN' },
-          totalHeight: { value: '', unit: 'IN' },
+          panPlThk: { value: '0', unit: 'IN' },
+          totalHeight: { value: '', unit: 'FT' },
           nsStringerBot: { value: '0', unit: 'FT' },
           fsStringerBot: { value: '0', unit: 'FT' },
           nsStringerTop: { value: '0', unit: 'FT' },
           fsStringerTop: { value: '0', unit: 'FT' },
+          stringerType: 'Rolled',
+          stringerSize: '',
+          selectionSource: 'auto'
         };
       case 'industrial':
         return {
@@ -1322,11 +1464,14 @@ export default function StairEstimation() {
           stairWidth: { value: '3.0', unit: 'FT' },
           run: { value: '10.0', unit: 'IN' },
           rise: { value: '7.5', unit: 'IN' },
-          totalHeight: { value: '', unit: 'IN' },
+          totalHeight: { value: '', unit: 'FT' },
           nsStringerBot: { value: '0', unit: 'FT' },
           fsStringerBot: { value: '0', unit: 'FT' },
           nsStringerTop: { value: '0', unit: 'FT' },
           fsStringerTop: { value: '0', unit: 'FT' },
+          stringerType: 'Rolled',
+          stringerSize: '',
+          selectionSource: 'auto',
           steelGrade: 'A36'
         };
       default:
@@ -1336,11 +1481,15 @@ export default function StairEstimation() {
           stairWidth: { value: '', unit: 'FT' },
           run: { value: '', unit: 'IN' },
           rise: { value: '', unit: 'IN' },
-          totalHeight: { value: '', unit: 'IN' },
+          panPlThk: { value: '0', unit: 'IN' },
+          totalHeight: { value: '', unit: 'FT' },
           nsStringerBot: { value: '', unit: 'FT' },
           fsStringerBot: { value: '', unit: 'FT' },
           nsStringerTop: { value: '', unit: 'FT' },
           fsStringerTop: { value: '', unit: 'FT' },
+          stringerType: 'Rolled',
+          stringerSize: '',
+          selectionSource: 'auto',
           steelGrade: 'A36'
         };
     }
@@ -1366,6 +1515,7 @@ export default function StairEstimation() {
       rails: [],
       history: { lastDeleted: null },
       template,
+      selectionSource: 'auto',
       ...templateDefaults
     };
 
@@ -1583,8 +1733,19 @@ export default function StairEstimation() {
   );
 
   // Use estimation result for weight/cost if available
-  const estimatedSteelWeight = estimationResult?.totalSteelWeight ?? stairs.reduce((sum, s) => sum + (s.systemCalc?.totalWeight || 0), 0);
-  const estimatedCost = estimationResult?.totalEstimatedCost ?? stairs.reduce((sum, s) => sum + (s.systemCalc?.totalCost || 0), 0);
+  const estimatedSteelWeight = estimationResult?.summary?.totalSteelWeight ?? estimationResult?.sfeSummary?.totalSteelWeight ?? stairs.reduce((sum, s) => {
+    let w = s.totalWeight || 0;
+    (s.rails || []).forEach(r => w += (r.totalWeight || 0));
+    (s.landings || []).forEach(l => w += (l.totalWeight || 0));
+    return sum + w;
+  }, 0);
+
+  const estimatedCost = estimationResult?.summary?.grandTotal ?? estimationResult?.sfeSummary?.grandTotal ?? estimationResult?.totalEstimatedCost ?? stairs.reduce((sum, s) => {
+    let c = s.totalCost || 0;
+    (s.rails || []).forEach(r => c += (r.totalCost || 0));
+    (s.landings || []).forEach(l => c += (l.totalCost || 0));
+    return sum + c;
+  }, 0);
 
   if (showReport) {
     return (
@@ -1779,13 +1940,6 @@ export default function StairEstimation() {
     }
     .sc-meta-chip.chip-customer .sc-meta-label { color: #10a37f; }
 
-    .sc-meta-label {
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-size: 9px;
-      opacity: 0.8;
-    }
     .sc-meta-val {
       color: var(--sf-text);
       font-weight: 600;
@@ -1794,6 +1948,122 @@ export default function StairEstimation() {
       width: 1px;
       height: 12px;
       background: var(--sf-border);
+    }
+    .sc-rail-save-btn {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+      color: #64748b !important;
+      margin-top: 8px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: relative;
+    }
+    .sc-rail-save-btn:hover {
+      background: #ffffff !important;
+      border-color: var(--sf-accent) !important;
+      color: var(--sf-accent) !important;
+    }
+    .sc-dirty-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 6px;
+      height: 6px;
+      background: #10a37f;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(16,163,127,0.2);
+    }
+    .sc-dirty-ping {
+       animation: sc-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    @keyframes sc-ping {
+      75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    /* Classic Confirm Modal Styling */
+    .sc-confirm-modal {
+      width: 420px;
+      max-width: 90%;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 50px rgba(0,0,0,0.12);
+      border: 1px solid #e5e7eb;
+    }
+    .sc-confirm-header {
+      padding: 24px 28px 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .sc-confirm-icon {
+      width: 36px;
+      height: 36px;
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      color: #d97706;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .sc-confirm-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+    }
+    .sc-confirm-body {
+      padding: 4px 28px 24px;
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.55;
+    }
+    .sc-confirm-actions {
+      padding: 16px 20px;
+      background: #fafafa;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      border-top: 1px solid #f0f0f0;
+    }
+    .confirm-btn-outline {
+      padding: 9px 18px;
+      border-radius: 9px;
+      border: 1px solid #e5e7eb;
+      background: white;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .confirm-btn-outline:hover {
+      background: #f9fafb;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+    .confirm-btn-solid {
+      padding: 9px 18px;
+      border-radius: 9px;
+      background: #111827;
+      color: white;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .confirm-btn-solid:hover {
+      background: #000000;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
   `;
 
@@ -1805,6 +2075,26 @@ export default function StairEstimation() {
 
       {/* ══ LEFT RAIL ══════════════════════════════════════════════════════ */}
       <aside className="sc-rail">
+
+        {/* Customer Information Card */}
+        {projectData.customerInfo && (
+          <div className="sc-rail-section" style={{ borderBottom: '2px solid var(--border-blueprint)', background: 'var(--color-primary-50)', margin: '-16px -16px 16px -16px', padding: '16px' }}>
+            <div className="sc-rail-heading" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary-700)' }}>
+              <Building2 size={13} /> Customer Details
+            </div>
+            <div className="sc-customer-card">
+              <div className="sc-cust-primary">{projectData.customerInfo.company}</div>
+              <div className="sc-cust-contact">
+                <User size={11} /> {projectData.customerInfo.contact || 'No contact person'}
+              </div>
+              <div className="sc-cust-meta">
+                <div className="sc-cust-item"><Mail size={11} /> {projectData.customerInfo.email || '—'}</div>
+                <div className="sc-cust-item"><Phone size={11} /> {projectData.customerInfo.phone || '—'}</div>
+                <div className="sc-cust-item"><MapPin size={11} /> {projectData.customerInfo.city ? `${projectData.customerInfo.city}, ${projectData.customerInfo.state}` : '—'}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mini stat summary */}
         <div className="sc-rail-section">
@@ -1869,31 +2159,37 @@ export default function StairEstimation() {
         {/* Stair navigation */}
         <div className="sc-rail-section">
           <div className="sc-rail-heading">Stairs</div>
-          {stairs.map(stair => (
-            <div key={stair.id} className="sc-stair-nav-wrapper">
-              <button
-                className={`sc-stair-nav ${activeId === stair.id ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveId(stair.id);
-                  document.getElementById(`stair-${stair.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-              >
-                <span className="sc-nav-bullet" />
-                <span className="sc-nav-name">{stair.label}</span>
-                {stair.totalCost > 0 && (
-                  <span className="sc-nav-tag">${Math.round(stair.totalCost).toLocaleString()}</span>
-                )}
-                <button 
-                  className="sc-stair-copy-btn" 
-                  title="Duplicate Entire Stair"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    duplicateStair(stair.id);
+          {stairs.map(stair => {
+            // Aggregate the total cost of the complete assembly (Stair + Rails + Landings)
+            const assemblyTotal = (stair.totalCost || 0) + 
+                                  (stair.rails || []).reduce((sum, r) => sum + (r.totalCost || 0), 0) + 
+                                  (stair.landings || []).reduce((sum, l) => sum + (l.totalCost || 0), 0);
+            
+            return (
+              <div key={stair.id} className="sc-stair-nav-wrapper">
+                <button
+                  className={`sc-stair-nav ${activeId === stair.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveId(stair.id);
+                    document.getElementById(`stair-${stair.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
                 >
-                  <Copy size={12} />
+                  <span className="sc-nav-bullet" />
+                  <span className="sc-nav-name">{stair.label}</span>
+                  {assemblyTotal > 0 && (
+                    <span className="sc-nav-tag">${Math.round(assemblyTotal).toLocaleString()}</span>
+                  )}
+                  <button 
+                    className="sc-stair-copy-btn" 
+                    title="Duplicate Entire Stair"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      duplicateStair(stair.id);
+                    }}
+                  >
+                    <Copy size={12} />
+                  </button>
                 </button>
-              </button>
               
               <AnimatePresence>
                 {activeId === stair.id && (
@@ -1935,7 +2231,8 @@ export default function StairEstimation() {
                 )}
               </AnimatePresence>
             </div>
-          ))}
+          );
+        })}
           <button className="sc-add-stair" onClick={openTemplateModal} id="btn-add-stair">
             + Add Stair
           </button>
@@ -1952,6 +2249,14 @@ export default function StairEstimation() {
             disabled={calculating}
           >
             {calculating ? '⏳ Calculating…' : '⚡ Run Estimation'}
+          </button>
+          <button
+            className="sc-rail-action-btn sc-rail-save-btn"
+            onClick={saveChanges}
+            disabled={saving}
+          >
+            {saving ? '⏳ Saving…' : '📂 Save Assembly'}
+            {isDirty && <div className="sc-dirty-dot" />}
           </button>
           {estimationResult && (
             <button className="sc-rail-action-btn sc-rail-outline" onClick={() => setShowReport(true)}>
@@ -1999,6 +2304,13 @@ export default function StairEstimation() {
                 <FileText size={14} /> SFE Report
               </button>
             )}
+            <button 
+              className={`header-btn header-btn-outline ${Object.keys(localConfig).length > 0 ? '!border-amber-400 !bg-amber-50 !text-amber-700' : ''}`} 
+              onClick={() => setShowPricingModal(true)}
+              title="Override Pricing Modifiers locally"
+            >
+              <Settings size={14} /> {Object.keys(localConfig).length > 0 ? 'Custom Rates Active' : 'Rates'}
+            </button>
             <button
               className="header-btn"
               style={{ background: '#10a37f', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -2013,8 +2325,8 @@ export default function StairEstimation() {
         {/* Project banner removed - moved to header chips */}
 
         {/* ── Estimation Result Summary (GPT-reskinned) ── */}
-        {estimationResult && estimationResult.summary && (
-          <div className="sc-summary-panel">
+        {summaryData && (
+          <div className="sc-summary-panel" id="calculation-summary">
             <div className="sc-summary-header">
               <div>
                 <h3 className="sc-summary-title">Calculation Summary</h3>
@@ -2038,40 +2350,67 @@ export default function StairEstimation() {
                 <tbody>
                   <tr>
                     <td className="sc-row-label">Sub Total</td>
-                    <td className="sc-num-cell">{estimationResult.summary.baseSteelWeight.toFixed(3)}</td>
-                    <td className="sc-num-cell sc-amber">5.500</td>
-                    <td className="sc-num-cell sc-amber">5.750</td>
-                    <td className="sc-num-cell sc-col-shaded">{estimationResult.summary.scrapWeight.toFixed(3)}</td>
-                    <td className="sc-num-cell sc-col-shaded">{estimationResult.summary.totalShopHours.toFixed(2)}</td>
-                    <td className="sc-num-cell sc-col-shaded">{estimationResult.summary.totalFieldHours.toFixed(2)}</td>
+                    <td className="sc-num-cell">{(summaryData.baseSteelWeight || 0).toFixed(3)}</td>
+                    <td className="sc-num-cell sc-amber">{(summaryData.totalGalvanizeShopHours || 0).toFixed(3)}</td>
+                    <td className="sc-num-cell sc-amber">{(summaryData.totalGalvanizeFieldHours || 0).toFixed(3)}</td>
+                    <td className="sc-num-cell sc-col-shaded">{(summaryData.scrapWeight || 0).toFixed(3)}</td>
+                    <td className="sc-num-cell sc-col-shaded">{(summaryData.totalShopHours || 0).toFixed(2)}</td>
+                    <td className="sc-num-cell sc-col-shaded">{(summaryData.totalFieldHours || 0).toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="sc-row-label">Steel Price</td>
-                    <td className="sc-num-cell sc-money">${estimationResult.summary.baseSteelCost.toFixed(2)}</td>
+                    <td className="sc-num-cell sc-money">${(summaryData.baseSteelCost || 0).toFixed(2)}</td>
                     <td /><td />
-                    <td className="sc-num-cell sc-col-shaded sc-money">${(estimationResult.summary.scrapWeight * 0.75).toFixed(2)}</td>
-                    <td className="sc-num-cell sc-col-shaded sc-money">${estimationResult.summary.shopLaborCost.toFixed(2)}</td>
-                    <td className="sc-num-cell sc-col-shaded sc-money">${estimationResult.summary.fieldLaborCost.toFixed(2)}</td>
+                    <td className="sc-num-cell sc-col-shaded sc-money">${(summaryData.scrapWeightCost || 0).toFixed(2)}</td>
+                    <td className="sc-num-cell sc-col-shaded sc-money">${(summaryData.shopLaborCost || 0).toFixed(2)}</td>
+                    <td className="sc-num-cell sc-col-shaded sc-money">${(summaryData.fieldLaborCost || 0).toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="sc-row-label">Stair Pan Total Price</td>
-                    <td className="sc-num-cell sc-money">{estimationResult.summary.pansMaterialPrice.toFixed(2)}</td>
+                    <td className="sc-num-cell sc-money">{(summaryData.pansMaterialPrice || 0).toFixed(2)}</td>
                     <td colSpan={5} />
                   </tr>
                   <tr>
-                    <td className="sc-row-label"><span className="sc-yes-badge">YES</span> Stair Grating</td>
-                    <td className="sc-num-cell sc-money">—</td>
+                    <td className="sc-row-label">
+                      {summaryData.gratingTotalCost > 0 && <span className="sc-yes-badge">YES</span>} Stair Grating
+                    </td>
+                    <td className="sc-num-cell sc-money">
+                      {summaryData.gratingTotalCost > 0 ? `$${(summaryData.gratingTotalCost || 0).toFixed(2)}` : '—'}
+                    </td>
                     <td colSpan={5} />
                   </tr>
                   <tr>
                     <td className="sc-row-label"><span className="sc-yes-badge">YES</span> Galvanize</td>
-                    <td className="sc-num-cell sc-money">${estimationResult.summary.galvanizeCost.toFixed(2)}</td>
+                    <td className="sc-num-cell sc-money">${(summaryData.galvanizeCost || 0).toFixed(2)}</td>
+                    <td colSpan={5} />
+                  </tr>
+                  <tr>
+                    <td className="sc-row-label">Anchor Bolts</td>
+                    <td className="sc-num-cell sc-money">${(summaryData.anchorBoltsCost || 0).toFixed(2)}</td>
+                    <td colSpan={5} />
+                  </tr>
+                  <tr>
+                    <td className="sc-row-label">POR ROK ANCHORS</td>
+                    <td className="sc-num-cell sc-money">${(summaryData.porRokAnchorsCost || 0).toFixed(2)}</td>
+                    <td colSpan={5} />
+                  </tr>
+                  <tr>
+                    <td className="sc-row-label">
+                       {(summaryData.mountingCharges > 0) ? 'Mounting (Add-ons)' : 'Mounting Cost'}
+                    </td>
+                    <td className="sc-num-cell sc-money">${(summaryData.mountingCharges || 0).toFixed(2)}</td>
                     <td colSpan={5} />
                   </tr>
                   <tr>
                     <td className="sc-row-label" style={{ fontWeight: 700, color: 'var(--gpt-text-primary)' }}>Total Material Price</td>
                     <td className="sc-num-cell sc-money sc-total-num">
-                      ${(estimationResult.summary.baseSteelCost + estimationResult.summary.pansMaterialPrice + estimationResult.summary.galvanizeCost + estimationResult.summary.anchorBoltsCost).toFixed(2)}
+                      ${(
+                        (summaryData.baseSteelCost || 0) + 
+                        (summaryData.pansMaterialPrice || 0) + 
+                        (summaryData.gratingTotalCost || 0) + 
+                        (summaryData.galvanizeCost || 0) + 
+                        (summaryData.mountingCharges || 0)
+                      ).toFixed(2)}
                     </td>
                     <td colSpan={5} />
                   </tr>
@@ -2081,15 +2420,15 @@ export default function StairEstimation() {
             <div className="sc-totals-box">
               <div className="sc-total-row">
                 <span>Sub Total Without Tax</span>
-                <span>${estimationResult.summary.subtotalWithoutTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span>${(summaryData.subtotalWithoutTax || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="sc-total-row">
                 <span>Sales Tax (6%)</span>
-                <span>${estimationResult.summary.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span>${(summaryData.taxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="sc-total-row sc-grand-total">
                 <span>Total Estimate</span>
-                <span>${estimationResult.summary.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="pulsing-total">${(summaryData.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -2192,6 +2531,47 @@ export default function StairEstimation() {
                   <div className="sc-template-desc">{t.desc}</div>
                 </button>
               ))}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── Pricing Settings Modal ── */}
+      <PricingOverridesModal 
+        isOpen={showPricingModal} 
+        onClose={() => setShowPricingModal(false)}
+        localConfig={localConfig}
+        setLocalConfig={setLocalConfig}
+        onApply={calculateEstimation}
+      />
+
+      {/* ══ CLASSIC CONFIRMATION MODAL ═══════════════════════════════════ */}
+      {confirmModal.isOpen && (
+        <div className="sc-modal-backdrop" style={{ zIndex: 1200 }}>
+          <motion.div
+            className="sc-confirm-modal"
+            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="sc-confirm-header">
+              <div className="sc-confirm-icon">⚠️</div>
+              <h3 className="sc-confirm-title">{confirmModal.title}</h3>
+            </div>
+            <div className="sc-confirm-body">{confirmModal.message}</div>
+            <div className="sc-confirm-actions">
+              <button 
+                className="confirm-btn-outline" 
+                onClick={() => { confirmModal.resolve(false); setConfirmModal(prev => ({...prev, isOpen: false })) }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn-solid" 
+                onClick={() => { confirmModal.resolve(true); setConfirmModal(prev => ({...prev, isOpen: false })) }}
+              >
+                Continue
+              </button>
             </div>
           </motion.div>
         </div>

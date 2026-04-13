@@ -55,10 +55,10 @@ class EstimationController {
 
     async create(req, res) {
         try {
-            const { projectName, customer_name, dueDate } = req.body;
+            const { projectName, customer_name, customer_id, dueDate } = req.body;
             // First create the row to get the ID
             const id = await estimationRepository.create({ 
-                projectName, customer_name, dueDate, createdBy: req.userId 
+                projectName, customer_name, customer_id, dueDate, createdBy: req.userId 
             });
             
             // Now apply all the extra detailed fields (architect, vendor, etc.) via updateData

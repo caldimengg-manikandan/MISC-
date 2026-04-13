@@ -75,6 +75,24 @@
   --transition: 180ms cubic-bezier(0.4,0,0.2,1);
 }
 
+/* ── Light Mode Color Overrides ── */
+body.light-mode {
+  --gpt-sidebar-bg:       #ffffff;
+  --gpt-sidebar-border:   #e5e5e5;
+  --gpt-sidebar-hover:    #f2f2f2;
+  --gpt-sidebar-active:   #f2f2f2;
+  --gpt-sidebar-text:     #0d0d0d;
+  --gpt-sidebar-muted:    #6e6e80;
+  --gpt-sidebar-label:    #8e8ea0;
+  
+  --gpt-body-bg:          #ffffff;
+  --gpt-surface:          #f9f9f9;
+  --gpt-border:           #e5e5e5;
+  
+  --panel-bg:             #ffffff;
+  --bg-main:              #ffffff;
+}
+
 /* ===================== RESET & BASE ===================== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -364,8 +382,8 @@ body {
   top: 30px;
   right: -10px;
   width: 200px;
-  background-color: var(--surface-light);
-  border: 1px solid var(--border-light);
+  background-color: #343541; /* GPT-solid dark surface */
+  border: 1px solid var(--gpt-sidebar-border);
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   z-index: 9999;
@@ -405,16 +423,16 @@ body {
 /* ── Profile Dropdown Styling ── */
 .profile-menu-dropdown {
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 10px;
-  width: 240px;
-  background-color: var(--surface-light);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  z-index: 10000;
+  bottom: calc(100% + 12px);
+  left: 0;
+  width: 260px;
+  background-color: #2D2D30; /* Solid dark background to prevent bleed-through */
+  border: 1px solid var(--gpt-sidebar-border);
+  border-radius: 14px;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  z-index: 10001;
   overflow: hidden;
-  padding: 8px 0;
+  padding: 10px 0;
   display: flex;
   flex-direction: column;
 }
@@ -422,9 +440,46 @@ body {
 .profile-menu-header {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 12px 16px;
   gap: 12px;
-  pointer-events: none; /* Just display, unclickable */
+  border-bottom: 1px solid var(--gpt-sidebar-border);
+  margin-bottom: 6px;
+  pointer-events: none;
+}
+
+.context-menu-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--gpt-sidebar-text);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  width: 100%;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+}
+
+.context-menu-option:hover {
+  background-color: var(--gpt-sidebar-hover);
+  color: #fff;
+}
+
+.context-menu-option svg {
+  opacity: 0.7;
+}
+
+.context-menu-option:hover svg {
+  opacity: 1;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: var(--gpt-sidebar-border);
+  margin: 6px 0;
 }
 
 /* ── Footer ── */

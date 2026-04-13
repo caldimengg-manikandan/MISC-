@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, X, Save, Edit2, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import API_BASE_URL from '../../config/api';
 
@@ -11,6 +12,12 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
   const [shopLaborMhLf, setShopLaborMhLf] = useState('');
   const [fieldLaborMhLf, setFieldLaborMhLf] = useState('');
   const [description, setDescription] = useState('');
+  const [widthMax, setWidthMax] = useState('');
+  const [spanMin, setSpanMin] = useState('');
+  const [spanMax, setSpanMax] = useState('');
+  
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ label: '', steelLbsLf: '', shopLaborMhLf: '', fieldLaborMhLf: '', description: '', widthMax: '', spanMin: '', spanMax: '' });
 
   const hasBenchmarkFields = category && (
     category.toLowerCase().includes('rail_type') || 
@@ -20,20 +27,83 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     category === 'stringer_size'
   );
 
-  // Calculate position based on triggerRect
+  const [dragPos, setDragPos] = useState(() => {
+    const saved = localStorage.getItem('quickModalPos');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartOffset = useRef({ x: 0, y: 0 });
+
+  // Calculate position based on triggerRect or remembered dragPos
   const getModalStyle = () => {
-    if (!triggerRect) return {};
-    const margin = 10;
     const modalWidth = 900;
-    const modalHeight = 500; // Estimated max height
+    const modalHeight = 500;
+    
+    // 1. If we have a dragged position, use it
+    if (dragPos) {
+      return { 
+        position: 'fixed', 
+        top: `${dragPos.y}px`, 
+        left: `${dragPos.x}px`, 
+        margin: 0 
+      };
+    }
+
+    // 2. Default positioning relative to triggerRect
+    if (!triggerRect) return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+    
+    const margin = 10;
     let left = triggerRect.left;
     let top = triggerRect.bottom + margin;
+
+    // Boundary checks for initial placement
     if (left + modalWidth > window.innerWidth) left = window.innerWidth - modalWidth - 20;
     if (top + modalHeight > window.innerHeight) top = triggerRect.top - modalHeight - margin;
+    
     left = Math.max(20, left);
     top = Math.max(20, top);
+
     return { position: 'fixed', top: `${top}px`, left: `${left}px`, margin: 0 };
   };
+
+  const onMouseDown = (e) => {
+    // Only drag from header, not from close button
+    if (e.target.closest('.close-btn')) return;
+    
+    const rect = e.currentTarget.closest('.quick-modal').getBoundingClientRect();
+    dragStartOffset.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      const newPos = {
+        x: e.clientX - dragStartOffset.current.x,
+        y: e.clientY - dragStartOffset.current.y
+      };
+      
+      // Boundaries
+      newPos.x = Math.max(0, Math.min(newPos.x, window.innerWidth - 100));
+      newPos.y = Math.max(0, Math.min(newPos.y, window.innerHeight - 100));
+      
+      setDragPos(newPos);
+      localStorage.setItem('quickModalPos', JSON.stringify(newPos));
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const modalStyle = getModalStyle();
 
@@ -87,7 +157,10 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           steelLbsLf: hasBenchmarkFields ? parseFloat(steelLbsLf) || 0 : null,
           shopLaborMhLf: hasBenchmarkFields ? parseFloat(shopLaborMhLf) || 0 : null,
           fieldLaborMhLf: hasBenchmarkFields ? parseFloat(fieldLaborMhLf) || 0 : null,
-          description: (category === 'platform_type') ? description : null
+          description: (category === 'platform_type') ? description : null,
+          widthMax: category === 'stringer_size' && widthMax !== '' ? parseFloat(widthMax) : null,
+          spanMin: category === 'stringer_size' && spanMin !== '' ? parseFloat(spanMin) : null,
+          spanMax: category === 'stringer_size' && spanMax !== '' ? parseFloat(spanMax) : null
         })
       });
       
@@ -99,6 +172,9 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         setShopLaborMhLf('');
         setFieldLaborMhLf('');
         setDescription('');
+        setWidthMax('');
+        setSpanMin('');
+        setSpanMax('');
         fetchEntries();
         if (onUpdate) onUpdate();
       } else {
@@ -128,12 +204,65 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     }
   };
 
+  const handleEditClick = (entry) => {
+    setEditingId(entry.id || entry._id);
+    setEditForm({
+      label: entry.label || '',
+      steelLbsLf: entry.steelLbsLf || '',
+      shopLaborMhLf: entry.shopLaborMhLf || '',
+      fieldLaborMhLf: entry.fieldLaborMhLf || '',
+      description: entry.description || '',
+      widthMax: entry.widthMax ?? '',
+      spanMin: entry.spanMin ?? '',
+      spanMax: entry.spanMax ?? ''
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = async (id) => {
+    if (!editForm.label) return toast.error('Label is required');
+    try {
+      const token = localStorage.getItem('steel_token');
+      const res = await fetch(`${API_BASE_URL}/api/dictionary/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...editForm,
+          widthMax: editForm.widthMax !== '' ? parseFloat(editForm.widthMax) : null,
+          spanMin: editForm.spanMin !== '' ? parseFloat(editForm.spanMin) : null,
+          spanMax: editForm.spanMax !== '' ? parseFloat(editForm.spanMax) : null,
+          category,
+          value: editForm.label.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-'),
+          isActive: true
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Updated successfully');
+        setEditingId(null);
+        fetchEntries();
+        if (onUpdate) onUpdate();
+      } else {
+        toast.error(data.message || 'Update failed');
+      }
+    } catch (e) {
+      toast.error('Update failed');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="quick-modal-overlay" onClick={onClose}>
       <div className="quick-modal" style={modalStyle} onClick={e => e.stopPropagation()}>
-        <div className="quick-modal-header">
+        <div className="quick-modal-header" onMouseDown={onMouseDown} style={{ cursor: isDragging ? 'grabbing' : 'grab' }}>
           <h3>Manage {categoryLabel}</h3>
           <button onClick={onClose} className="close-btn"><X size={18} /></button>
         </div>
@@ -142,7 +271,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           <form onSubmit={handleAdd} className="quick-add-form">
             <input 
               className="form-input"
-              style={{ gridColumn: hasBenchmarkFields ? 'span 3' : 'span 2' }}
+              style={{ gridColumn: hasBenchmarkFields ? (category === 'stringer_size' ? 'span 6' : 'span 3') : 'span 2' }}
               placeholder="Enter New Option (Display Name)"
               value={newLabel} 
               onChange={e => setNewLabel(e.target.value)}
@@ -153,7 +282,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
               <>
                 <input 
                   type="number" step="0.001"
-                  placeholder="STEEL (+10% SCRAP) LBS" 
+                  placeholder="STEEL LBS/LF" 
                   value={steelLbsLf} 
                   onChange={e => setSteelLbsLf(e.target.value)}
                   className="form-input"
@@ -175,6 +304,34 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                   className="form-input"
                   title="Field Labor (MH/LF)"
                 />
+                {category === 'stringer_size' && (
+                  <>
+                    <input 
+                      type="number" step="0.01"
+                      placeholder="MAX WIDTH (FT)" 
+                      value={widthMax} 
+                      onChange={e => setWidthMax(e.target.value)}
+                      className="form-input"
+                      title="Max Stair Width (ft) for this stringer"
+                    />
+                    <input 
+                      type="number" step="0.01"
+                      placeholder="MIN SPAN (FT)" 
+                      value={spanMin} 
+                      onChange={e => setSpanMin(e.target.value)}
+                      className="form-input"
+                      title="Min Stringer Length Span (ft)"
+                    />
+                    <input 
+                      type="number" step="0.01"
+                      placeholder="MAX SPAN (FT)" 
+                      value={spanMax} 
+                      onChange={e => setSpanMax(e.target.value)}
+                      className="form-input"
+                      title="Max Stringer Length Span (ft)"
+                    />
+                  </>
+                )}
                 {category === 'platform_type' && (
                   <input 
                     type="number" step="0.001"
@@ -188,7 +345,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
               </>
             )}
 
-            <button type="submit" className="add-btn" style={{ gridColumn: (hasBenchmarkFields && category !== 'platform_type') ? 'span 3' : 'auto' }}>
+            <button type="submit" className="add-btn" style={{ gridColumn: (hasBenchmarkFields && category !== 'platform_type') ? (category === 'stringer_size' ? 'span 6' : 'span 3') : 'auto' }}>
               <Plus size={16} /> Add {categoryLabel.replace(' Types', '')}
             </button>
           </form>
@@ -196,7 +353,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           <div className="quick-entries-list">
             <div className="list-header" style={{ 
               display: 'grid', 
-              gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 40px' : '40px 1fr 140px 140px 140px 40px', 
+              gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 80px' : (category === 'stringer_size' ? '40px 1fr 100px 80px 80px 80px 80px 80px 80px' : '40px 1fr 140px 140px 140px 80px'), 
               padding: '0 14px', 
               fontSize: '10px' 
             }}>
@@ -204,41 +361,143 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
               <span>Description</span>
               {hasBenchmarkFields && (
                 <>
-                  <span style={{ textAlign: 'center' }}>STEEL ({category === 'platform_type' ? 'LBS/SF' : '+10% SCRAP'})</span>
+                  <span style={{ textAlign: 'center' }}>STEEL ({category === 'platform_type' ? 'LBS/SF' : 'LBS/LF'})</span>
                   <span style={{ textAlign: 'center' }}>SHOP HOURS</span>
                   <span style={{ textAlign: 'center' }}>FIELD HOURS</span>
                   {category === 'platform_type' && <span style={{ textAlign: 'center' }}>PAN RISER</span>}
+                  {category === 'stringer_size' && (
+                    <>
+                      <span style={{ textAlign: 'center' }}>W. MAX(FT)</span>
+                      <span style={{ textAlign: 'center' }}>S. MIN(FT)</span>
+                      <span style={{ textAlign: 'center' }}>S. MAX(FT)</span>
+                    </>
+                  )}
                 </>
               )}
               <span></span>
             </div>
             {loading ? <div className="loading-txt">Loading...</div> : (
               <>
-                {entries.map((entry, index) => (
-                  <div key={entry.id || entry._id || index} className="quick-entry-item" style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 40px' : '40px 1fr 140px 140px 140px 40px', 
-                    fontSize: '12px' 
-                  }}>
-                    <div className="sno" style={{ opacity: 0.5, fontWeight: 700 }}>{index + 1}.</div>
-                    <div className="entry-label" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.label}</div>
-                    
-                    {hasBenchmarkFields ? (
-                      <>
-                        <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.steelLbsLf || 0).toFixed(3)}</div>
-                        <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.shopLaborMhLf || 0).toFixed(3)}</div>
-                        <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.fieldLaborMhLf || 0).toFixed(3)}</div>
-                        {category === 'platform_type' && (
-                          <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{parseFloat(entry.description || 0).toFixed(3)}</div>
+                {entries.map((entry, index) => {
+                  const isEditing = editingId === (entry.id || entry._id);
+                  return (
+                    <div key={entry.id || entry._id || index} className={`quick-entry-item ${isEditing ? 'is-editing' : ''}`} style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 80px' : (category === 'stringer_size' ? '40px 1fr 100px 80px 80px 80px 80px 80px 80px' : '40px 1fr 140px 140px 140px 80px'), 
+                      fontSize: '12px',
+                      alignItems: 'center'
+                    }}>
+                      <div className="sno" style={{ opacity: 0.5, fontWeight: 700 }}>{index + 1}.</div>
+                      
+                      {isEditing ? (
+                        <>
+                          <input 
+                            className="edit-input"
+                            value={editForm.label}
+                            onChange={e => setEditForm({ ...editForm, label: e.target.value })}
+                            autoFocus
+                          />
+                          {hasBenchmarkFields && (
+                            <>
+                              <input 
+                                className="edit-input center"
+                                type="number" step="0.001"
+                                value={editForm.steelLbsLf}
+                                onChange={e => setEditForm({ ...editForm, steelLbsLf: e.target.value })}
+                              />
+                              <input 
+                                className="edit-input center"
+                                type="number" step="0.001"
+                                value={editForm.shopLaborMhLf}
+                                onChange={e => setEditForm({ ...editForm, shopLaborMhLf: e.target.value })}
+                              />
+                              <input 
+                                className="edit-input center"
+                                type="number" step="0.001"
+                                value={editForm.fieldLaborMhLf}
+                                onChange={e => setEditForm({ ...editForm, fieldLaborMhLf: e.target.value })}
+                              />
+                              {category === 'platform_type' && (
+                                <input 
+                                  className="edit-input center"
+                                  type="number" step="0.001"
+                                  value={editForm.description}
+                                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                                />
+                              )}
+                              {category === 'stringer_size' && (
+                                <>
+                                  <input 
+                                    className="edit-input center"
+                                    type="number" step="0.01"
+                                    value={editForm.widthMax}
+                                    onChange={e => setEditForm({ ...editForm, widthMax: e.target.value })}
+                                  />
+                                  <input 
+                                    className="edit-input center"
+                                    type="number" step="0.01"
+                                    value={editForm.spanMin}
+                                    onChange={e => setEditForm({ ...editForm, spanMin: e.target.value })}
+                                  />
+                                  <input 
+                                    className="edit-input center"
+                                    type="number" step="0.01"
+                                    value={editForm.spanMax}
+                                    onChange={e => setEditForm({ ...editForm, spanMax: e.target.value })}
+                                  />
+                                </>
+                              )}
+                            </>
+                          )}
+                          {!hasBenchmarkFields && <div></div>}
+                        </>
+                      ) : (
+                        <>
+                          <div className="entry-label" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.label}</div>
+                          {hasBenchmarkFields ? (
+                            <>
+                              <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.steelLbsLf || 0)}</div>
+                              <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.shopLaborMhLf || 0)}</div>
+                              <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.fieldLaborMhLf || 0)}</div>
+                              {category === 'platform_type' && (
+                                <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.description || 0)}</div>
+                              )}
+                              {category === 'stringer_size' && (
+                                <>
+                                  <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{entry.widthMax !== null ? entry.widthMax : '-'}</div>
+                                  <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{entry.spanMin !== null ? entry.spanMin : '-'}</div>
+                                  <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{entry.spanMax !== null ? entry.spanMax : '-'}</div>
+                                </>
+                              )}
+                            </>
+                          ) : <><div></div><div></div><div></div>{category === 'platform_type' && <div></div>}</>}
+                        </>
+                      )}
+  
+                      <div className="entry-actions" style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                        {isEditing ? (
+                          <>
+                            <button onClick={() => handleSaveEdit(entry.id || entry._id)} className="save-edit-btn" title="Save">
+                              <Check size={14} />
+                            </button>
+                            <button onClick={handleCancelEdit} className="cancel-edit-btn" title="Cancel">
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => handleEditClick(entry)} className="edit-btn" title="Edit">
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => handleDelete(entry.id || entry._id)} className="del-btn" title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          </>
                         )}
-                      </>
-                    ) : <><div></div><div></div><div></div>{category === 'platform_type' && <div></div>}</>}
-
-                    <button onClick={() => handleDelete(entry.id || entry._id)} className="del-btn" title="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+                      </div>
+                    </div>
+                  );
+                })}
                 
                 {showDefaults && defaultOptions.map((opt, idx) => (
                   <div key={`def-${idx}`} className="quick-entry-item default-item">
@@ -289,7 +548,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         .close-btn:hover { color: #ef4444; }
         
         .quick-modal-body { padding: 20px; }
-        .quick-add-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .quick-add-form { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
         .quick-add-form .form-input { padding: 10px 14px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; }
         .quick-add-form .form-input:focus { border-color: var(--color-primary-500); outline: none; box-shadow: 0 0 0 2px var(--color-primary-50); }
         .add-btn { 
@@ -314,6 +573,15 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         .del-btn { color: #94a3b8; background: none; border: none; cursor: pointer; padding: 6px; transition: all 0.2s; }
         .del-btn:hover { color: #ef4444; background: #fee2e2; border-radius: 6px; }
         .del-placeholder { padding: 6px; cursor: help; }
+        .edit-btn { color: #94a3b8; background: none; border: none; cursor: pointer; padding: 6px; transition: all 0.2s; }
+        .edit-btn:hover { color: #3b82f6; background: #dbeafe; border-radius: 6px; }
+        .save-edit-btn { color: #10b981; background: none; border: none; cursor: pointer; padding: 6px; transition: all 0.2s; }
+        .save-edit-btn:hover { background: #d1fae5; border-radius: 6px; }
+        .cancel-edit-btn { color: #f43f5e; background: none; border: none; cursor: pointer; padding: 6px; transition: all 0.2s; }
+        .cancel-edit-btn:hover { background: #ffe4e6; border-radius: 6px; }
+        .edit-input { width: 90%; background: #fff; border: 1px solid #3b82f6; border-radius: 4px; padding: 4px 8px; font-size: 13px; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .edit-input.center { text-align: center; width: 80%; margin: 0 auto; }
+        .quick-entry-item.is-editing { background: #eff6ff; }
         .loading-txt { text-align: center; font-size: 13px; color: #94a3b8; padding: 30px; }
         .empty-txt { text-align: center; font-size: 13px; color: #94a3b8; padding: 30px; }
       `}</style>

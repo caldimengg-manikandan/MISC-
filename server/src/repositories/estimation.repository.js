@@ -12,35 +12,46 @@ class EstimationRepository {
     }
 
     async findAll(filters = {}) {
-        let query = 'SELECT * FROM projects WHERE 1=1';
+        let query = `
+            SELECT p.*, c.companyName as customer_name, c.contactPerson, c.email, c.phone
+            FROM projects p
+            LEFT JOIN customers c ON p.customer_id = c.id
+            WHERE 1=1
+        `;
         let params = [];
 
         if (filters.status) {
-            query += ' AND status = ?';
+            query += ' AND p.status = ?';
             params.push(filters.status);
         }
         if (filters.engineerId) {
-            query += ' AND engineerId = ?';
+            query += ' AND p.engineerId = ?';
             params.push(filters.engineerId);
         }
 
-        query += ' ORDER BY updatedAt DESC';
+        query += ' ORDER BY p.updatedAt DESC';
         const [rows] = await db.query(query, params);
         return rows;
     }
 
     async findById(id) {
-        const [rows] = await db.query('SELECT * FROM projects WHERE id = ?', [id]);
+        const [rows] = await db.query(`
+            SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
+                   c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip
+            FROM projects p
+            LEFT JOIN customers c ON p.customer_id = c.id
+            WHERE p.id = ?
+        `, [id]);
         return rows[0];
     }
 
     async create(data) {
-        const { projectName, customer_name, dueDate, createdBy } = data;
+        const { projectName, customer_name, customer_id, dueDate, createdBy } = data;
         const [result] = await db.query(`
-            INSERT INTO projects (projectName, customer_name, dueDate, status, userId, createdBy, created_at, updatedAt)
+            INSERT INTO projects (projectName, customer_name, customer_id, dueDate, status, userId, createdBy, created_at, updatedAt)
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, 'NEW', ?, ?, GETDATE(), GETDATE())
-        `, [projectName, customer_name, dueDate ? dueDate : null, createdBy, createdBy]);
+            VALUES (?, ?, ?, ?, 'NEW', ?, ?, GETDATE(), GETDATE())
+        `, [projectName, customer_name, customer_id ? customer_id : null, dueDate ? dueDate : null, createdBy, createdBy]);
         return result[0].id;
     }
 
@@ -88,6 +99,7 @@ class EstimationRepository {
         addField('totalCost',      totalCost);
         addField('projectName',    projectName);
         addField('customer_name',  customer_name);
+        addField('customer_id',    customer_id);
         addField('dueDate',        dueDate);
         addField('projectNumber',  projectNumber);
         addField('projectLocation',projectLocation);
@@ -121,14 +133,14 @@ class EstimationRepository {
         const cloneName = src.projectName ? (src.projectName + ' (Copy)') : 'Cloned Project';
         const [result] = await db.query(`
             INSERT INTO projects (
-                projectName, customer_name, dueDate, status, userId, createdBy, created_at, updatedAt,
+                projectName, customer_name, customer_id, dueDate, status, userId, createdBy, created_at, updatedAt,
                 projectNumber, projectLocation, architect, eor, gcName, detailer, vendorName, aiscCertified, units,
                 modules, isPinned, isArchived
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, 'NEW', ?, ?, GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+            VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
         `, [
-            cloneName, src.customer_name, src.dueDate, userId, userId,
+            cloneName, src.customer_name, src.customer_id, src.dueDate, userId, userId,
             src.projectNumber, src.projectLocation, src.architect, src.eor, src.gcName, src.detailer, src.vendorName, src.aiscCertified, src.units,
             src.modules
         ]);

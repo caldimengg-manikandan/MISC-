@@ -12,6 +12,10 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { motion } from 'framer-motion';
+import axios from 'axios';
+import API_BASE_URL from '../../config/api';
+import SearchableSelect from '../../components/common/SearchableSelect';
+import QuickAddCustomerModal from '../../components/project/QuickAddCustomerModal';
 import './EstimationDetail.css';
 
 /* ─── Lifecycle stages ──────────────────────────────────────────── */
@@ -48,6 +52,10 @@ export default function EstimationDetail() {
   const { fetchEstimationDetail, updateEstimationStatus, saveEstimationData, createEstimation, loading } = useEstimation();
   const [form, setForm] = useState(initialData);
   const [saved, setSaved] = useState(false);
+  const [goingToEstimation, setGoingToEstimation] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [customersLoading, setCustomersLoading] = useState(false);
 
   const queryParams = new URLSearchParams(location.search);
   const projectId = queryParams.get('id');
@@ -66,7 +74,25 @@ export default function EstimationDetail() {
         }
       });
     }
+    fetchCustomers();
   }, [projectId]);
+
+  const fetchCustomers = async () => {
+    setCustomersLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE_URL}/customers?status=active`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setCustomers(res.data.customers);
+      }
+    } catch (err) {
+      console.error("Failed to fetch customers:", err);
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
 
   // Listen for global Save from the header button
   useEffect(() => {
@@ -79,7 +105,7 @@ export default function EstimationDetail() {
     // Basic validation
     if (!form.projectName?.trim()) {
       toast.error('Project Name is required.');
-      return;
+      return null; // Return null to signal failure
     }
 
     const toastId = toast.loading('Saving project details...');
@@ -92,7 +118,7 @@ export default function EstimationDetail() {
         setTimeout(() => setSaved(false), 3000);
         // Replace URL so we are now on the detail page for this specific new project
         navigate(`/project-info?id=${newId}`, { replace: true });
-        return;
+        return newId; // Return the new ID for callers
       }
 
       // Updating an existing project
@@ -100,8 +126,70 @@ export default function EstimationDetail() {
       toast.success('Project saved successfully!', { id: toastId });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      return projectId; // Return existing ID for callers
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Save failed. Please try again.', { id: toastId });
+      return null; // Return null to signal failure
+    }
+  };
+
+  // ── Go to Estimation — auto-save first if needed ────────────────
+  const goToEstimation = async () => {
+    if (!form.projectName?.trim()) {
+      toast.error('Project Name is required before entering the estimation module.');
+      return;
+    }
+    setGoingToEstimation(true);
+    try {
+      // Always save/create before navigating so the estimation module gets a valid projectId
+      let resolvedId = projectId;
+      if (!projectId) {
+        // New project — create it first
+        const toastId = toast.loading('Saving project before entering estimation...');
+        try {
+          resolvedId = await createEstimation(form);
+          toast.success('Project saved ✓', { id: toastId });
+          // Update the URL so browser history is consistent
+          navigate(`/project-info?id=${resolvedId}`, { replace: true });
+        } catch (err) {
+          toast.error(err?.response?.data?.message || 'Could not save project. Please try again.', { id: toastId });
+          return;
+        }
+      } else {
+        // Existing project — save any unsaved changes silently
+        try {
+          await saveEstimationData(projectId, form);
+        } catch (_) {
+          // Non-blocking: still navigate even if update fails
+        }
+      }
+
+      // Write project info to localStorage for the estimation module
+      localStorage.setItem('steelProjectInfo', JSON.stringify({
+        id: resolvedId,
+        projectName: form.projectName,
+        projectNumber: form.projectNumber,
+        customerName: form.customer_name || '',
+        customerId: form.customer_id || null,
+        projectLocation: form.projectLocation || ''
+      }));
+      navigate('/estimate/stair-railings');
+    } finally {
+      setGoingToEstimation(false);
+    }
+  };
+
+  const handleCustomerSelect = (customer) => {
+    if (!customer) {
+      setForm(f => ({ ...f, customer_id: null, customer_name: '' }));
+    } else {
+      setForm(f => ({ 
+        ...f, 
+        customer_id: customer.id, 
+        customer_name: customer.companyName,
+        // Auto-fill location if project location is empty
+        projectLocation: f.projectLocation ? f.projectLocation : (customer.city ? `${customer.city}, ${customer.state}` : f.projectLocation)
+      }));
     }
   };
 
@@ -165,8 +253,8 @@ export default function EstimationDetail() {
           </div>
         </div>
         <div className="ed-header-actions">
-          <button className="ed-btn ed-btn-outline" id="btn-save" onClick={handleSave} disabled={!projectId}>
-            <Save size={14} /> {saved ? 'Saved ✓' : 'Save Changes'}
+          <button className="ed-btn ed-btn-outline" id="btn-save" onClick={handleSave}>
+            <Save size={14} /> {saved ? 'Saved ✓' : 'Save'}
           </button>
         </div>
       </div>
@@ -244,7 +332,7 @@ export default function EstimationDetail() {
           >
             <div className="ed-card-header">
               <span className="ed-card-title">Project Details</span>
-              <button className="ed-save-chip" onClick={handleSave} disabled={!projectId} id="btn-save-chip">
+              <button className="ed-save-chip" onClick={handleSave} id="btn-save-chip">
                 <Save size={12} /> {saved ? 'Saved ✓' : 'Save Changes'}
               </button>
             </div>
@@ -257,8 +345,33 @@ export default function EstimationDetail() {
                   <input className="ed-input" value={form.projectName || ''} onChange={e => set('projectName', e.target.value)} placeholder="e.g. Westside Industrial" />
                 </div>
                 <div className="ed-field">
-                  <label className="ed-label">Customer Name</label>
-                  <input className="ed-input" value={form.customer_name || ''} onChange={e => set('customer_name', e.target.value)} placeholder="e.g. Acme Structures" />
+                  <label className="ed-label">Customer Master <span style={{color: '#ef4444'}}>*</span></label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <SearchableSelect 
+                      options={customers}
+                      valueKey="id"
+                      displayKey="companyName"
+                      placeholder="Select a customer..."
+                      value={form.customer_id}
+                      onSelect={handleCustomerSelect}
+                      loading={customersLoading}
+                      className="ed-customer-select"
+                    />
+                    <button 
+                      className="ed-action-btn" 
+                      style={{ padding: '0 12px', height: '38px', marginTop: 0 }}
+                      onClick={() => setShowAddCustomer(true)}
+                      type="button"
+                    >
+                      <UserPlus size={14} />
+                    </button>
+                  </div>
+                  {form.customer_name && !form.customer_id && (
+                    <div className="ed-legacy-alert">
+                      ⚠️ Legacy Customer: <strong>{form.customer_name}</strong>. 
+                      Link this project to a record for better tracking.
+                    </div>
+                  )}
                 </div>
                 <div className="ed-field">
                   <label className="ed-label">Project Number</label>
@@ -349,23 +462,27 @@ export default function EstimationDetail() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            onClick={() => {
-              // Persist project details for the estimation module
-              localStorage.setItem('steelProjectInfo', JSON.stringify({
-                id: projectId,
-                projectName: form.projectName,
-                projectNumber: form.projectNumber,
-                customerName: form.customer_name || '',
-                projectLocation: form.projectLocation || ''
-              }));
-              navigate('/estimate/stair-railings');
-            }}
+            onClick={goToEstimation}
+            disabled={goingToEstimation}
+            style={{ opacity: goingToEstimation ? 0.7 : 1, cursor: goingToEstimation ? 'wait' : 'pointer' }}
           >
             <div className="ed-cta-left">
-              <div className="ed-cta-icon"><Zap size={20} /></div>
+              <div className="ed-cta-icon">
+                {goingToEstimation ? (
+                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 18 }}>⏳</span>
+                ) : (
+                  <Zap size={20} />
+                )}
+              </div>
               <div>
-                <div className="ed-cta-title">Go to Estimation Module</div>
-                <div className="ed-cta-sub">Configure stairs, railings, landings, and run the SFE engine</div>
+                <div className="ed-cta-title">
+                  {goingToEstimation ? 'Saving & Opening…' : 'Go to Estimation Module'}
+                </div>
+                <div className="ed-cta-sub">
+                  {goingToEstimation
+                    ? 'Saving project details before entering…'
+                    : 'Configure stairs, railings, landings, and run the SFE engine'}
+                </div>
               </div>
             </div>
             <ArrowUpRight size={18} className="ed-cta-arrow" />
@@ -436,6 +553,15 @@ export default function EstimationDetail() {
           </motion.div>
         </div>
       </div>
+
+      <QuickAddCustomerModal 
+        isOpen={showAddCustomer}
+        onClose={() => setShowAddCustomer(false)}
+        onCustomerAdded={(newCust) => {
+          setCustomers(prev => [...prev, newCust]);
+          handleCustomerSelect(newCust);
+        }}
+      />
     </div>
   );
 }

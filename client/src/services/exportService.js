@@ -120,30 +120,36 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   ];
 
   // Extraction of calculated summary data
-  const res = estimationResult?.summary || {};
-  const priceLb = 0.75;
-  const laborRate = 70;
+  const res = estimationResult?.sfeSummary || estimationResult?.summary || {};
+  const priceLb = res.steel_price_per_lb || 0.75;
+  const shopRate = res.shop_hourly_rate || 70;
+  const fieldRate = res.field_hourly_rate || 70;
+  const taxRate = res.tax_rate || 0.06;
   
-  const steelWeight = res.baseSteelWeight || stairs.reduce((sum, s) => sum + (s.systemCalc?.stairWeight || 0), 0);
-  const scrapWeight = res.scrapWeight || (steelWeight * 0.1);
-  const shopHours = res.totalShopHours || stairs.reduce((sum, s) => sum + (s.systemCalc?.totalShopHours || 0), 0);
-  const fieldHours = res.totalFieldHours || stairs.reduce((sum, s) => sum + (s.systemCalc?.totalFieldHours || 0), 0);
+  const steelWeight = res.baseSteelWeight || 0;
+  const scrapWeight = res.scrapWeight || (steelWeight * 0.11);
+  const shopHours = res.totalShopHours || 0;
+  const fieldHours = res.totalFieldHours || 0;
+  const galvShopHrs = res.totalGalvanizeShopHours || 0;
+  const galvFieldHrs = res.totalGalvanizeFieldHours || 0;
 
-  const steelPrice = steelWeight * priceLb;
-  const scrapPrice = scrapWeight * priceLb;
-  const shopLabor = shopHours * laborRate;
-  const fieldLabor = fieldHours * laborRate;
+  const steelPrice = res.baseSteelCost || (steelWeight * priceLb);
+  const scrapPrice = res.scrapWeightCost || (scrapWeight * priceLb);
+  const shopLabor = res.shopLaborCost || (shopHours * shopRate);
+  const fieldLabor = res.fieldLaborCost || (fieldHours * fieldRate);
 
   const pansPrice = res.pansMaterialPrice || 0;
-  const gratingPrice = res.gratingCost || 0;
+  const gratingPrice = res.gratingTotalCost || 0;
   const galvPrice = res.galvanizeCost || 0;
   const anchorsPrice = res.anchorBoltsCost || 0;
-  const porRokPrice = res.porRokCost || 0;
+  const porRokPrice = res.porRokAnchorsCost || 0;
+  const mountingCharges = res.mountingCharges || 0;
 
-  const totalMaterialPrice = steelPrice + pansPrice + gratingPrice + galvPrice + anchorsPrice + porRokPrice;
-  const tax = totalMaterialPrice * 0.06;
-  const subtotalNoTax = totalMaterialPrice + shopLabor + fieldLabor + scrapPrice;
-  const totalEstimate = subtotalNoTax + tax;
+  // 🔄 PARITY FIX: Bind purely to backend totals to eliminate double counting logic natively 
+  const totalMaterialPrice = steelPrice + pansPrice + gratingPrice + galvPrice + mountingCharges;
+  const subtotalNoTax = res.subtotalWithoutTax || 0;
+  const tax = res.taxAmount || 0;
+  const totalEstimate = res.grandTotal || 0;
 
   // Header Title
   const titleRow = worksheet.getRow(2);
@@ -214,8 +220,8 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   worksheet.getRow(tableStart+1).getCell(2).value = 'SUB TOTAL';
   worksheet.getRow(tableStart+1).getCell(2).alignment = { horizontal: 'right' };
   worksheet.getRow(tableStart+1).getCell(3).value = steelWeight;
-  worksheet.getRow(tableStart+1).getCell(4).value = 5.5;
-  worksheet.getRow(tableStart+1).getCell(5).value = 5.75;
+  worksheet.getRow(tableStart+1).getCell(4).value = galvShopHrs;
+  worksheet.getRow(tableStart+1).getCell(5).value = galvFieldHrs;
   worksheet.getRow(tableStart+1).getCell(6).value = scrapWeight;
   worksheet.getRow(tableStart+1).getCell(7).value = shopHours;
   worksheet.getRow(tableStart+1).getCell(8).value = fieldHours;
@@ -241,8 +247,9 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   applyCellStyles(tableStart+3, 4, 8);
 
   // Row: Grating
-  worksheet.getRow(tableStart+4).getCell(1).value = 'Yes';
-  worksheet.getRow(tableStart+4).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCF2D1' } };
+  worksheet.getRow(tableStart+4).getCell(1).value = gratingPrice > 0 ? 'Yes' : 'No';
+  worksheet.getRow(tableStart+4).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: gratingPrice > 0 ? 'FFCCF2D1' : 'FFF1F5F9' } };
+  worksheet.getRow(tableStart+4).getCell(1).font = { bold: true, color: { argb: gratingPrice > 0 ? 'FF166534' : 'FF94A3B8' } };
   worksheet.getRow(tableStart+4).getCell(2).value = 'STAIR GRATING';
   worksheet.getRow(tableStart+4).getCell(2).alignment = { horizontal: 'right' };
   worksheet.getRow(tableStart+4).getCell(3).value = gratingPrice;
@@ -250,8 +257,9 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   applyCellStyles(tableStart+4, 4, 8);
 
   // Row: Galvanize
-  worksheet.getRow(tableStart+5).getCell(1).value = 'Yes';
-  worksheet.getRow(tableStart+5).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCF2D1' } };
+  worksheet.getRow(tableStart+5).getCell(1).value = galvPrice > 0 ? 'Yes' : 'No';
+  worksheet.getRow(tableStart+5).getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: galvPrice > 0 ? 'FFCCF2D1' : 'FFF1F5F9' } };
+  worksheet.getRow(tableStart+5).getCell(1).font = { bold: true, color: { argb: galvPrice > 0 ? 'FF166534' : 'FF94A3B8' } };
   worksheet.getRow(tableStart+5).getCell(2).value = 'Galvanize';
   worksheet.getRow(tableStart+5).getCell(2).alignment = { horizontal: 'right' };
   worksheet.getRow(tableStart+5).getCell(3).value = galvPrice;
@@ -285,27 +293,7 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   worksheet.getRow(tableStart+9).getCell(3).value = res.pricePerRiser || 0;
   applyCellStyles(tableStart+9, 2, 3, true, 'FFF59E0B', null);
 
-  // Constants Sidebar (Yellow Inputs)
-  const sideCol = 10;
-  worksheet.getRow(11).getCell(sideCol).value = 'Price Per LB:';
-  worksheet.getRow(11).getCell(sideCol+1).value = 0.75;
-  worksheet.getRow(13).getCell(sideCol).value = 'Shop Hourly Rate:';
-  worksheet.getRow(13).getCell(sideCol+1).value = 70;
-  worksheet.getRow(14).getCell(sideCol).value = 'Field Hourly Rate:';
-  worksheet.getRow(14).getCell(sideCol+1).value = 70;
-  worksheet.getRow(15).getCell(sideCol).value = 'Sales Tax:';
-  worksheet.getRow(15).getCell(sideCol+1).value = 0.06;
 
-  [11, 13, 14].forEach(r => {
-    worksheet.getRow(r).getCell(sideCol+1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
-    worksheet.getRow(r).getCell(sideCol+1).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
-    worksheet.getRow(r).getCell(sideCol+1).font = { bold: true };
-    worksheet.getRow(r).getCell(sideCol+1).numFmt = '"$" #,##0.00';
-  });
-  worksheet.getRow(15).getCell(sideCol+1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
-  worksheet.getRow(15).getCell(sideCol+1).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
-  worksheet.getRow(15).getCell(sideCol+1).font = { bold: true };
-  worksheet.getRow(15).getCell(sideCol+1).numFmt = '0%';
 
   // Subtotals Section (Bottom Right)
   const finalStart = 22;

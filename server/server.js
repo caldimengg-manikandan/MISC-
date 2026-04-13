@@ -41,6 +41,7 @@ const authRoutes = require('./src/routes/authRoutes');
 // Import debug routes
 const debugRoutes = require('./src/routes/debug');
 const noteRoutes = require('./src/routes/notes');
+const customerRoutes = require('./src/routes/customer.routes');
 // Remove duplicate import: const excelDebugRoutes = require('./src/routes/excelDebugRoutes');
 
 // Import authentication middleware
@@ -113,7 +114,7 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    if (allowedOrigins.indexOf(origin) !== -1 || !process.env.NODE_ENV || process.env.NODE_ENV === 'development' || /192\.168\.\d+\.\d+/.test(origin)) {
       callback(null, true);
     } else {
       logger.warn(`CORS blocked origin: ${origin}`);
@@ -297,6 +298,7 @@ app.use('/api/debug', authMiddleware, debugRoutes);
 app.use('/api/secure/prices', authMiddleware, priceRoutes);
 app.use('/api/secure/excel', authMiddleware, excelRoutes);
 app.use('/api/notes', authMiddleware, noteRoutes);
+app.use('/api/customers', authMiddleware, customerRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
 
 // IMPORTANT: Make sure you have this route for flight geometry

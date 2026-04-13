@@ -39,7 +39,8 @@ router.get('/', auth, async (req, res) => {
       ...p,
       stairs: tryParseJson(p.stairs),
       guardRails: tryParseJson(p.guardRails),
-      customRailValues: tryParseJson(p.customRailValues)
+      customRailValues: tryParseJson(p.customRailValues),
+      estimationResult: tryParseJson(p.estimationResult)
     }));
 
     res.json({
@@ -242,24 +243,7 @@ router.get('/:projectId', auth, async (req, res) => {
     project.stairs = tryParseJson(project.stairs);
     project.guardRails = tryParseJson(project.guardRails);
     project.customRailValues = tryParseJson(project.customRailValues);
-    
-    // Ensure flights array exists (matching existing logic)
-    if (project.stairs && project.stairs[0]) {
-      if (!project.stairs[0].flights || project.stairs[0].flights.length === 0) {
-        const defaultFlights = project.stairs[0].flightGeometries && project.stairs[0].flightGeometries.length > 0
-          ? project.stairs[0].flightGeometries.map((geo, index) => ({
-              id: geo.flightId || `flight-${index + 1}`,
-              number: geo.flightNumber || `FL-${String(index + 1).padStart(3, '0')}`
-            }))
-          : [
-              { id: '1', number: 'FL-001' },
-              { id: '2', number: 'FL-002' }
-            ];
-        
-        project.stairs[0].flights = defaultFlights;
-        await db.query('UPDATE projects SET stairs = ? WHERE id = ?', [JSON.stringify(project.stairs), project.id]);
-      }
-    }
+    project.estimationResult = tryParseJson(project.estimationResult);
     
     res.json({ success: true, project });
   } catch (error) {
@@ -284,7 +268,7 @@ router.put('/:projectId', auth, async (req, res) => {
       'architect', 'eor', 'gcName', 'detailer', 'vendorName', 
       'aiscCertified', 'units', 'notes', 'stairs', 'guardRails', 
       'customRailValues', 'status', 'totalWeight', 'totalCost',
-      'assignedEngineer', 'enquiryDate', 'submissionDeadline'
+      'assignedEngineer', 'enquiryDate', 'submissionDeadline', 'estimationResult'
     ];
     
     let setClause = [];
@@ -293,7 +277,7 @@ router.put('/:projectId', auth, async (req, res) => {
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key)) {
         setClause.push(`${key} = ?`);
-        if (['stairs', 'guardRails', 'customRailValues'].includes(key)) {
+        if (['stairs', 'guardRails', 'customRailValues', 'estimationResult'].includes(key)) {
            queryParams.push(JSON.stringify(updates[key]));
         } else {
            queryParams.push(updates[key]);
