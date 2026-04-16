@@ -34,10 +34,13 @@ export async function calculateFull(payload, debug = false) {
     // 📊 DEBUG LOGGING (MANDATORY)
     console.log("📤 Payload:", payload);
 
-    const url = new URL(FULL_CALC_ENDPOINT);
+    // Safely construct the URL (handles both relative and absolute paths)
+    const base = FULL_CALC_ENDPOINT.startsWith('http') ? undefined : window.location.origin;
+    const url = new URL(FULL_CALC_ENDPOINT, base);
+    
     if (debug) url.searchParams.append('debug', 'true');
 
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
