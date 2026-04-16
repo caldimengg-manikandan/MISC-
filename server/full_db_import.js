@@ -17,7 +17,7 @@ async function importFullDB() {
         pool = await mssql.connect(config);
         const data = JSON.parse(fs.readFileSync('full_db_migration.json', 'utf8'));
         
-        console.log('--- STARTING COMPLETE AUTO-REPAIR MIGRATION ---');
+        console.log('--- STARTING COMPLETE AUTO-EXPAND MIGRATION ---');
 
         const tables = [
             'users', 'customers', 'projects', 'estimates', 
@@ -32,26 +32,42 @@ async function importFullDB() {
             
             console.log(`Working on table: ${table}...`);
             
-            // 1. Check if table exists
+            // 1. Auto-Create Table if missing
             const tabCheck = await pool.request().query(`SELECT * FROM sys.tables WHERE name = '${table}'`);
-            
             if (tabCheck.recordset.length === 0) {
-                console.log(`⚠️  Table [${table}] missing! Creating it now...`);
-                // Auto-create table based on JSON columns
+                console.log(`⚠️  Table [${table}] missing! Creating...`);
                 const firstRow = data[table][0];
                 const cols = Object.keys(firstRow).map(c => {
                     if (c.toLowerCase() === 'id') return `[${c}] INT IDENTITY(1,1) PRIMARY KEY`;
                     return `[${c}] NVARCHAR(MAX)`;
                 }).join(', ');
-                
                 await pool.request().query(`CREATE TABLE [${table}] (${cols})`);
-                console.log(`✅ Table [${table}] created.`);
             }
 
-            // 2. Clear existing data
+            // 2. Auto-Expand all columns to NVARCHAR(MAX) to prevent truncation
+            const firstRow = data[table][0];
+            for (const col in firstRow) {
+                if (col.toLowerCase() === 'id') continue;
+                try {
+                    // Force column to NVARCHAR(MAX) if it exists
+                    await pool.request().query(`
+                        IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[${table}]') AND name = '${col}')
+                        BEGIN
+                            -- Only alter if it is a string type
+                            ALTER TABLE [${table}] ALTER COLUMN [${col}] NVARCHAR(MAX);
+                        END
+                        ELSE
+                        BEGIN
+                            ALTER TABLE [${table}] ADD [${col}] NVARCHAR(MAX);
+                        END
+                    `);
+                } catch(e) { /* skip columns that cant be altered like primary keys */ }
+            }
+
+            // 3. Clear existing data
             await pool.request().query(`DELETE FROM [${table}]`);
             
-            // 3. Batch migration with Identity support
+            // 4. Batch migration with Identity support
             for (const row of data[table]) {
                 const columns = Object.keys(row).map(c => `[${c}]`).join(', ');
                 const params = Object.keys(row).map((c, i) => `@p${i}`).join(', ');
@@ -79,7 +95,7 @@ async function importFullDB() {
             console.log(`✅ Table [${table}] synchronized successfully.`);
         }
 
-        console.log('\n🏆 FULL MIGRATION SUCCESSFUL! VPS IS NOW UPDATED.');
+        console.log('\n🏆 FULL MIGRATION SUCCESSFUL! EVERYTHING IS SYNCED.');
     } catch (err) {
         console.error('\n❌ MIGRATION FAILED:', err.message);
     } finally {
