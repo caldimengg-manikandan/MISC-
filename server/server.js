@@ -83,6 +83,9 @@ initCron();
 
 const app = express();
 
+// Trust Nginx proxy for correct IP tracking and rate limiting
+app.set('trust proxy', 1);
+
 // ================ SECURITY MIDDLEWARE ================
 
 // Enhanced Helmet configuration
