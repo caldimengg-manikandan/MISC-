@@ -17,7 +17,7 @@ async function importFullDB() {
         pool = await mssql.connect(config);
         const data = JSON.parse(fs.readFileSync('full_db_migration.json', 'utf8'));
         
-        console.log('--- STARTING COMPLETE MIGRATION (GITHUB VERSION) ---');
+        console.log('--- STARTING COMPLETE MIGRATION (NUCLEAR VERSION) ---');
 
         const tables = [
             'users', 'customers', 'projects', 'estimates', 
@@ -28,59 +28,48 @@ async function importFullDB() {
         ];
 
         for (const table of tables) {
-            if (!data[table] || data[table].length === 0) continue;
-            
-            console.log(`Importing ${table} (${data[table].length} rows)...`);
-            
-            const transaction = new mssql.Transaction(pool);
-            await transaction.begin();
-            
-            try {
-                // 1. Clear existing data
-                await transaction.request().query(`DELETE FROM ${table}`);
-                
-                // 2. Identity Insert Logic
-                let hasIdentity = false;
-                try {
-                    // Force ON and catch error to see if table lacks Identity
-                    await transaction.request().query(`SET IDENTITY_INSERT [${table}] ON`);
-                    hasIdentity = true;
-                } catch(e) {
-                    // If it fails with "table does not have identity", that's fine.
-                    if (!e.message.includes('does not have the identity property')) {
-                        console.warn(`⚠️  Identity check for ${table}: ${e.message}`);
-                    }
-                }
-
-                // 3. Insert and await each to ensure session consistency
-                for (const row of data[table]) {
-                    const columns = Object.keys(row).map(c => `[${c}]`).join(', ');
-                    const params = Object.keys(row).map((c, i) => `@p${i}`).join(', ');
-                    
-                    const request = transaction.request();
-                    Object.keys(row).forEach((c, i) => {
-                        request.input(`p${i}`, row[c]);
-                    });
-
-                    await request.query(`INSERT INTO [${table}] (${columns}) VALUES (${params})`);
-                }
-                
-                if (hasIdentity) {
-                    await transaction.request().query(`SET IDENTITY_INSERT [${table}] OFF`);
-                }
-                
-                await transaction.commit();
-                console.log(`✅ ${table} imported.`);
-            } catch (err) {
-                await transaction.rollback();
-                console.error(`❌ Error in table ${table}:`, err.message);
-                throw err;
+            if (!data[table] || data[table].length === 0) {
+                console.log(`Skipping ${table} (No data)`);
+                continue;
             }
+            
+            console.log(`Migrating ${table} (${data[table].length} rows)...`);
+            
+            // 1. Clear existing data
+            await pool.request().query(`DELETE FROM [${table}]`);
+            
+            // 2. Insert rows one-by-one with bundled IDENTITY_INSERT commands
+            for (const row of data[table]) {
+                const columns = Object.keys(row).map(c => `[${c}]`).join(', ');
+                const params = Object.keys(row).map((c, i) => `@p${i}`).join(', ');
+                
+                const request = pool.request();
+                Object.keys(row).forEach((c, i) => { request.input(`p${i}`, row[c]); });
+
+                // THE NUCLEAR TRICK: Bundle SET ON and SET OFF in the SAME query call
+                const sql = `
+                    IF OBJECTPROPERTY(OBJECT_ID('[${table}]'), 'TableHasIdentity') = 1 
+                        SET IDENTITY_INSERT [${table}] ON;
+                    
+                    INSERT INTO [${table}] (${columns}) VALUES (${params});
+                    
+                    IF OBJECTPROPERTY(OBJECT_ID('[${table}]'), 'TableHasIdentity') = 1 
+                        SET IDENTITY_INSERT [${table}] OFF;
+                `;
+
+                try {
+                    await request.query(sql);
+                } catch (err) {
+                    console.error(`❌ Error in ${table} row:`, err.message);
+                    throw err; // Stop on first error
+                }
+            }
+            console.log(`✅ ${table} fully migrated.`);
         }
 
-        console.log('\n🏆 FULL MIGRATION SUCCESSFUL!');
+        console.log('\n🏆 FULL MIGRATION SUCCESSFUL! YOUR VPS NOW MATCHES LOCAL.');
     } catch (err) {
-        console.error('\n❌ CRITICAL MIGRATION ERROR:', err.message);
+        console.error('\n❌ MIGRATION FAILED:', err.message);
     } finally {
         if (pool) await pool.close();
     }
