@@ -65,7 +65,8 @@ const LoginPage = () => {
           const result = await register({ 
             email, 
             password, 
-            name: email.split('@')[0] // Default name from email
+            name: email.split('@')[0], 
+            company: "Forge Metalworks" // Default company name required by backend
           });
           if (result.success) {
             toast.success("Welcome to the Forge!");
