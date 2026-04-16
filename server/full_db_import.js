@@ -19,13 +19,7 @@ async function importFullDB() {
         
         console.log('--- STARTING COMPLETE AUTO-EXPAND MIGRATION ---');
 
-        const tables = [
-            'users', 'customers', 'projects', 'estimates', 
-            'takeoff_items', 'estimate_results', 'rail_types', 
-            'platform_types', 'stringer_types', 'labor_rates', 
-            'system_config', 'categories', 'dictionary', 
-            'notifications', 'pricing'
-        ];
+        const tables = ["users","customers","projects","rail_types","platform_types","stringer_types","labor_rates","system_config","categories","dictionary","activity_log","notifications","estimation_activity_logs","project_attachments","estimates","project_notes","galvanized_labor","takeoff_items","estimate_results","pricing"];
 
         for (const table of tables) {
             console.log(`Checking table: ${table}...`);

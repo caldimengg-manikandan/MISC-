@@ -121,6 +121,42 @@
       "full_name": "tester"
     }
   ],
+  "customers": [
+    {
+      "id": 1,
+      "companyName": "Caldim",
+      "contactPerson": "vignesh",
+      "email": "vigneshgovardhan5163@gmail.com",
+      "phone": "9080054733",
+      "street": "P O Box 21140, Manama Kingdom of Bahrain",
+      "city": "hosur",
+      "state": "tamilnadu",
+      "zip": "635109",
+      "status": "active",
+      "notes": null,
+      "createdBy": 3,
+      "updatedBy": 3,
+      "createdAt": "2026-04-09T18:22:04.447Z",
+      "updatedAt": "2026-04-14T14:16:16.963Z"
+    },
+    {
+      "id": 2,
+      "companyName": "Caldimengg",
+      "contactPerson": "Vignesh G",
+      "email": "vigneshgovardhan5163@gmail.com",
+      "phone": "9080054733",
+      "street": "P O Box 21140, Manama Kingdom of Bahrain",
+      "city": "hosur",
+      "state": "tamilnadu",
+      "zip": "635109",
+      "status": "active",
+      "notes": "",
+      "createdBy": 3,
+      "updatedBy": 3,
+      "createdAt": "2026-04-14T16:00:17.480Z",
+      "updatedAt": "2026-04-14T16:00:17.480Z"
+    }
+  ],
   "projects": [
     {
       "id": "131",
@@ -355,9 +391,6 @@
       "sent_to_email": null
     }
   ],
-  "estimates": [],
-  "takeoff_items": [],
-  "estimate_results": [],
   "rail_types": [
     {
       "id": "1",
@@ -2602,6 +2635,18 @@
       "spanMax": null
     }
   ],
+  "activity_log": [
+    {
+      "id": 1,
+      "project_id": 134,
+      "user_id": 4,
+      "action": "assign_engineer",
+      "comment": "Assigned to logaprasath@caldimengg.in",
+      "from_status": "new",
+      "to_status": "assigned",
+      "createdAt": "2026-04-16T10:26:13.857Z"
+    }
+  ],
   "notifications": [
     {
       "id": 1,
@@ -2613,41 +2658,660 @@
       "createdAt": "2026-04-16T10:26:13.893Z"
     }
   ],
-  "customers": [
+  "estimation_activity_logs": [
+    {
+      "id": "223",
+      "estimationId": "131",
+      "action": "CREATED",
+      "performedBy": "3",
+      "timestamp": "2026-04-15T14:44:11.217Z",
+      "notes": null
+    },
+    {
+      "id": "224",
+      "estimationId": "132",
+      "action": "CREATED",
+      "performedBy": "3",
+      "timestamp": "2026-04-15T15:16:59.627Z",
+      "notes": null
+    },
+    {
+      "id": "225",
+      "estimationId": "133",
+      "action": "CREATED",
+      "performedBy": "4",
+      "timestamp": "2026-04-16T03:58:23.983Z",
+      "notes": null
+    },
+    {
+      "id": "226",
+      "estimationId": "134",
+      "action": "CREATED",
+      "performedBy": "4",
+      "timestamp": "2026-04-16T04:55:21.683Z",
+      "notes": null
+    }
+  ],
+  "project_attachments": [
     {
       "id": 1,
-      "companyName": "Caldim",
-      "contactPerson": "vignesh",
-      "email": "vigneshgovardhan5163@gmail.com",
-      "phone": "9080054733",
-      "street": "P O Box 21140, Manama Kingdom of Bahrain",
-      "city": "hosur",
-      "state": "tamilnadu",
-      "zip": "635109",
-      "status": "active",
-      "notes": null,
-      "createdBy": 3,
-      "updatedBy": 3,
-      "createdAt": "2026-04-09T18:22:04.447Z",
-      "updatedAt": "2026-04-14T14:16:16.963Z"
+      "projectId": 37,
+      "userId": 3,
+      "filename": "1775811915001_97bfbaa4af08_MISC_Estimate_BOM__1_.xlsx",
+      "original_name": "MISC_Estimate_BOM (1).xlsx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "file_size": "7858",
+      "file_path": "D:\\Caldim\\MISC--main\\MISC--main\\MISC--main\\uploads\\attachments\\MISC_37\\1775811915001_97bfbaa4af08_MISC_Estimate_BOM__1_.xlsx",
+      "category": "excel",
+      "createdAt": "2026-04-10T14:35:15.020Z",
+      "is_deleted": false,
+      "doc_type": null,
+      "folder_name": "MISC_37"
     },
     {
       "id": 2,
-      "companyName": "Caldimengg",
-      "contactPerson": "Vignesh G",
-      "email": "vigneshgovardhan5163@gmail.com",
-      "phone": "9080054733",
-      "street": "P O Box 21140, Manama Kingdom of Bahrain",
-      "city": "hosur",
-      "state": "tamilnadu",
-      "zip": "635109",
-      "status": "active",
-      "notes": "",
-      "createdBy": 3,
-      "updatedBy": 3,
-      "createdAt": "2026-04-14T16:00:17.480Z",
-      "updatedAt": "2026-04-14T16:00:17.480Z"
+      "projectId": 37,
+      "userId": 3,
+      "filename": "1775812482941_f35c06f56b64_MISC_Estimate_BOM__1_.xlsx",
+      "original_name": "MISC_Estimate_BOM (1).xlsx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "file_size": "7858",
+      "file_path": "D:\\Caldim\\MISC--main\\MISC--main\\MISC--main\\uploads\\attachments\\MISC_37\\1775812482941_f35c06f56b64_MISC_Estimate_BOM__1_.xlsx",
+      "category": "excel",
+      "createdAt": "2026-04-10T14:44:42.967Z",
+      "is_deleted": false,
+      "doc_type": "SFE Master Sheet",
+      "folder_name": "MISC_37"
+    },
+    {
+      "id": 3,
+      "projectId": 37,
+      "userId": 3,
+      "filename": "1775813479973_fadb07ed18a1_Caldim_Estimate_BOM.xlsx",
+      "original_name": "Caldim_Estimate_BOM.xlsx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "file_size": "7732",
+      "file_path": "D:\\Caldim\\MISC--main\\MISC--main\\MISC--main\\server\\uploads\\attachments\\MISC_37\\1775813479973_fadb07ed18a1_Caldim_Estimate_BOM.xlsx",
+      "category": "excel",
+      "createdAt": "2026-04-10T15:01:20.003Z",
+      "is_deleted": false,
+      "doc_type": "SFE Master Sheet",
+      "folder_name": "MISC_37"
     }
   ],
+  "estimates": [],
+  "project_notes": [
+    {
+      "id": "182",
+      "projectId": "131",
+      "userId": "3",
+      "title": "New Note",
+      "content": "",
+      "note_type": "personal",
+      "pos_x": 1149,
+      "pos_y": 473,
+      "isPinned": false,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-15T16:30:09.640Z",
+      "updatedAt": "2026-04-15T16:30:10.990Z",
+      "is_deleted": true,
+      "deleted_at": "2026-04-15T16:30:10.990Z",
+      "is_locked": false,
+      "context_type": "global",
+      "context_id": null
+    },
+    {
+      "id": "183",
+      "projectId": "134",
+      "userId": "4",
+      "title": "New Note",
+      "content": "",
+      "note_type": "personal",
+      "pos_x": 1149,
+      "pos_y": 473,
+      "isPinned": false,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-16T04:58:06.960Z",
+      "updatedAt": "2026-04-16T04:58:27.063Z",
+      "is_deleted": true,
+      "deleted_at": "2026-04-16T04:58:27.063Z",
+      "is_locked": false,
+      "context_type": "global",
+      "context_id": null
+    },
+    {
+      "id": "184",
+      "projectId": "134",
+      "userId": "4",
+      "title": "New Note",
+      "content": "",
+      "note_type": "personal",
+      "pos_x": 1179,
+      "pos_y": 503,
+      "isPinned": false,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-16T04:58:07.787Z",
+      "updatedAt": "2026-04-16T04:58:26.513Z",
+      "is_deleted": true,
+      "deleted_at": "2026-04-16T04:58:26.513Z",
+      "is_locked": false,
+      "context_type": "global",
+      "context_id": null
+    },
+    {
+      "id": "185",
+      "projectId": "134",
+      "userId": "4",
+      "title": "New Note",
+      "content": "",
+      "note_type": "personal",
+      "pos_x": 1209,
+      "pos_y": 533,
+      "isPinned": false,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-16T04:58:08.387Z",
+      "updatedAt": "2026-04-16T04:58:25.927Z",
+      "is_deleted": true,
+      "deleted_at": "2026-04-16T04:58:25.927Z",
+      "is_locked": false,
+      "context_type": "global",
+      "context_id": null
+    },
+    {
+      "id": "186",
+      "projectId": "134",
+      "userId": "4",
+      "title": "New Note",
+      "content": "",
+      "note_type": "general",
+      "pos_x": 1490.484375,
+      "pos_y": 299.23828125,
+      "isPinned": false,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-16T04:58:08.810Z",
+      "updatedAt": "2026-04-16T04:58:58.667Z",
+      "is_deleted": true,
+      "deleted_at": "2026-04-16T04:58:58.667Z",
+      "is_locked": false,
+      "context_type": "global",
+      "context_id": null
+    },
+    {
+      "id": "187",
+      "projectId": "134",
+      "userId": "4",
+      "title": "New Note",
+      "content": "",
+      "note_type": "personal",
+      "pos_x": 1486,
+      "pos_y": 314,
+      "isPinned": true,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-16T04:58:59.903Z",
+      "updatedAt": "2026-04-16T04:59:07.253Z",
+      "is_deleted": true,
+      "deleted_at": "2026-04-16T04:59:07.253Z",
+      "is_locked": false,
+      "context_type": "global",
+      "context_id": null
+    },
+    {
+      "id": "188",
+      "projectId": "134",
+      "userId": "4",
+      "title": "New Note",
+      "content": "",
+      "note_type": "personal",
+      "pos_x": 910,
+      "pos_y": 354,
+      "isPinned": false,
+      "color": "#e0f7fa",
+      "mentions": "[]",
+      "createdAt": "2026-04-16T10:31:13.880Z",
+      "updatedAt": "2026-04-16T10:31:13.880Z",
+      "is_deleted": false,
+      "deleted_at": null,
+      "is_locked": false,
+      "context_type": "stair",
+      "context_id": "135"
+    }
+  ],
+  "galvanized_labor": [
+    {
+      "id": 1,
+      "category": "guardRail_type",
+      "label": "1-Line Handrailing on Guardrail - 1 1/4\" SCH 40 pipe",
+      "shop_mh_per_lf": 0.25,
+      "field_mh_per_lf": 0.25
+    },
+    {
+      "id": 2,
+      "category": "guardRail_type",
+      "label": "1-Line Handrailing on Guardrail - 1 1/2\" SCH 40 pipe",
+      "shop_mh_per_lf": 0.25,
+      "field_mh_per_lf": 0.25
+    },
+    {
+      "id": 3,
+      "category": "guardRail_type",
+      "label": "1-Line Hand Railing wall bolted - 1 1/4\" SCH 40 pipe",
+      "shop_mh_per_lf": 0.25,
+      "field_mh_per_lf": 0.25
+    },
+    {
+      "id": 4,
+      "category": "guardRail_type",
+      "label": "1-Line Hand Railing wall bolted - 1 1/2\" SCH 40  pipe",
+      "shop_mh_per_lf": 0.25,
+      "field_mh_per_lf": 0.25
+    },
+    {
+      "id": 5,
+      "category": "guardRail_type",
+      "label": "1-Line Steel Floor Mounted Handrail 1 1/4\" SCH. 40 pipe",
+      "shop_mh_per_lf": 0.035,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 6,
+      "category": "guardRail_type",
+      "label": "1-Line Steel Floor Mounted Handrail 1 1/2\" SCH. 40 pipe",
+      "shop_mh_per_lf": 0.035,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 7,
+      "category": "guardRail_type",
+      "label": "1-Line Steel Floor Mounted Handrail 1 1/4\" SCH. 40 Rail and 1 1/4\" SCH. 80 Post",
+      "shop_mh_per_lf": 0.035,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 8,
+      "category": "guardRail_type",
+      "label": "1-Line Steel Floor Mounted Handrail 1 1/2\" SCH. 40 Rail and 1 1/2\" SCH. 80 Post",
+      "shop_mh_per_lf": 0.035,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 9,
+      "category": "guardRail_type",
+      "label": "2-Line Steel Pipe Guardrail 1 1/4\" Sch. 40 Pipe Rails and Post",
+      "shop_mh_per_lf": 0.04,
+      "field_mh_per_lf": 0.065
+    },
+    {
+      "id": 10,
+      "category": "guardRail_type",
+      "label": "2-Line Steel Pipe Guardrail 1 1/2\" Sch. 40 Pipe Rails and Post",
+      "shop_mh_per_lf": 0.04,
+      "field_mh_per_lf": 0.065
+    },
+    {
+      "id": 11,
+      "category": "guardRail_type",
+      "label": "2-Line Steel Pipe Guardrail 1 1/4\" Sch. 40 Pipe Rails and SCH. 80 Post",
+      "shop_mh_per_lf": 0.04,
+      "field_mh_per_lf": 0.065
+    },
+    {
+      "id": 12,
+      "category": "guardRail_type",
+      "label": "2-Line Steel Pipe Guardrail 1 1/2\" Sch. 40 Pipe Rails and SCH. 80 Post",
+      "shop_mh_per_lf": 0.04,
+      "field_mh_per_lf": 0.065
+    },
+    {
+      "id": 13,
+      "category": "guardRail_type",
+      "label": "3-Line Steel Pipe Guardrail 1 1/4\" SCH. 40 Pipe Rails and Posts",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 14,
+      "category": "guardRail_type",
+      "label": "3-Line Steel Pipe Guardrail 1 1/2\" SCH. 40 Pipe Rails and Posts",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 15,
+      "category": "guardRail_type",
+      "label": "3-Line Steel Pipe Guardrail 1 1/4\" SCH. 40 Pipe Rails and SCH 80 Posts",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 16,
+      "category": "guardRail_type",
+      "label": "3-Line Steel Pipe Guardrail 1 1/2\" SCH. 40 Pipe Rails and SCH. 80 Posts",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 17,
+      "category": "guardRail_type",
+      "label": "8-Line Steel Pipe Guardrail 1 1/4\" SCH. 40 Pipe Rails and Posts",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.25
+    },
+    {
+      "id": 18,
+      "category": "guardRail_type",
+      "label": "8-Line Steel Pipe Guardrail 1 1/2\" SCH. 40 Pipe Rails and Posts",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.25
+    },
+    {
+      "id": 19,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/1/2\" pickets - 1 1/4\" Pipe Rails and Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 20,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/1/2\" pickets - 1 1/2\" Pipe Rails and Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 21,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/1/2\" pickets - 1 1/4\" Pipe Rails and SCH 80 Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 22,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/1/2\" pickets - 1 1/2\" Pipe Rails and SCH 80 Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 23,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/3/4\" pickets - 1 1/4\" Pipe Rails and Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 24,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/3/4\" pickets - 1 1/2\" Pipe Rails and Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 25,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/3/4\" pickets - 1 1/4\" Pipe Rails and SCH 80 Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 26,
+      "category": "guardRail_type",
+      "label": "2-Line Picket Guardrail w/3/4\" pickets - 1 1/2\" Pipe Rails and SCH 80 Post",
+      "shop_mh_per_lf": 0.05,
+      "field_mh_per_lf": 0.075
+    },
+    {
+      "id": 27,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/1/2\" pickets - 1 1/4\" SCH 40 Rails and Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 28,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/1/2\" pickets - 1 1/2\" SCH 40 Rails and Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 29,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/1/2\" pickets - 1 1/4\" SCH 40 Rails and SCH 80 Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 30,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/1/2\" pickets - 1 1/2\" SCH 40 Rails and SCH 80 Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 31,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/3/4\" pickets - 1 1/4\" SCH 40 Rails and Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 32,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/3/4\" pickets - 1 1/2\" SCH 40 Rails and Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 33,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/3/4\" pickets - 1 1/4\" SCH 40 Rails and SCH. 80 Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 34,
+      "category": "guardRail_type",
+      "label": "3-Line Picket Guardrail w/3/4\" pickets - 1 1/2\" SCH 40 Rails and SCH. 80 Post",
+      "shop_mh_per_lf": 0.06,
+      "field_mh_per_lf": 0.085
+    },
+    {
+      "id": 35,
+      "category": "guardRail_type",
+      "label": "2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/4 SCH 40 RAILS AND POST",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 36,
+      "category": "guardRail_type",
+      "label": "2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2 SCH 40 RAILS AND POST",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 37,
+      "category": "guardRail_type",
+      "label": "2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/4 SCH 40 RAILS AND SCH 80 POST",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 38,
+      "category": "guardRail_type",
+      "label": "2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2\" SCH 40 RAILS AND SCH 80 POST",
+      "shop_mh_per_lf": 0.045,
+      "field_mh_per_lf": 0.07
+    },
+    {
+      "id": 39,
+      "category": "platform_type",
+      "label": "Metal pan stair platform 8'-0\" wide",
+      "shop_mh_per_lf": 0,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 40,
+      "category": "platform_type",
+      "label": "Metal pan stair platform 10'-0\" wide",
+      "shop_mh_per_lf": 0,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 41,
+      "category": "platform_type",
+      "label": "Metal pan stair platform 12'-0\" wide",
+      "shop_mh_per_lf": 0,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 42,
+      "category": "platform_type",
+      "label": "Grating pan stair platform 8'-0\" wide",
+      "shop_mh_per_lf": 0,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 43,
+      "category": "platform_type",
+      "label": "Grating pan stair platform 10'-0\" wide",
+      "shop_mh_per_lf": 0,
+      "field_mh_per_lf": 0.05
+    },
+    {
+      "id": 44,
+      "category": "stringer_size",
+      "label": "Std.3'-8\" to  4'-0\" wide < 14'-0\" Stingers/MC 12 X 10.6",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 45,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide 14'-0 - 19'-0\" Long Stringer/MC 12 X 14.3",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 46,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide > 19'-0\" Long Stringer/C 12 X 20.7",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 47,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide > 14'-0\" Long Stringer/TS 12 X 2 x 3/16",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 48,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide > 14'-0\" to 19'-0\" Long Stringer/TS 12 X 2 x 1/4\"",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 49,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide < 14'-0\" Long Stringers /MC 12 X 10.6",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 50,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide 14'-0 Long Stringers/TS 12 X 2 X 3/16",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 51,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide 14'-0 UP TO 19'-0\" Long Stringers/ TS 12 X 2 X 1/4\"",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 52,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide 14'-0 over 19'-0\" Long Stringers/ C12 X 20.7",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 53,
+      "category": "stringer_size",
+      "label": "Std. 6'-0\" wide < 14'-0\" span metal pan stairs/MC 12 X 10.6",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 54,
+      "category": "stringer_size",
+      "label": "Std. 6'-0\" wide 14'-0 - 19'-0\" span metal pan stairs/MC 12 X 14.3",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 55,
+      "category": "stringer_size",
+      "label": "Std. 6'-0\" wide > 19'-0\" span metal pan stairs",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 56,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide < 14'-0\" span grating tread stairs/MC 12 X 10.6",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 57,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide 14'-0 - 19'-0\" span grating tread stairs/MC 12 X 14.3",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 58,
+      "category": "stringer_size",
+      "label": "Std. 4'-0\" wide > 19'-0\" span grating tread stairs",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 59,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide < 14'-0\" span grating tread stairs/MC 12 X 10.6",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 60,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide 14'-0 - 19'-0\" span grating tread stairs/MC 12 X 14.3",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    },
+    {
+      "id": 61,
+      "category": "stringer_size",
+      "label": "Std. 5'-0\" wide > 19'-0\" span grating tread stairs",
+      "shop_mh_per_lf": 0.15,
+      "field_mh_per_lf": 0.1
+    }
+  ],
+  "takeoff_items": [],
+  "estimate_results": [],
   "pricing": []
 }
