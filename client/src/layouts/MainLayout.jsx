@@ -17,6 +17,7 @@ import ToolsDock from '../modules/Stair/components/ToolsDock';
 import StickyNote from '../modules/Stair/components/StickyNote';
 import NotificationBell from '../components/notifications/NotificationBell';
 import toast from 'react-hot-toast';
+import { API_BASE_URL } from '../config/api';
 
 // ── Navigation definition ─────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -161,7 +162,6 @@ export default function MainLayout({ children }) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting]   = useState(false);
 
-  const { API_BASE_URL } = require('../config/api');
   const API = API_BASE_URL;
   const getToken = () => localStorage.getItem('steel_token');
 
