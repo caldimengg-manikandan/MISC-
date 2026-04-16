@@ -9,7 +9,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/dashboard";
-  const { login, loading } = useAuth();
+  const { login, register, loading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,21 +21,20 @@ const LoginPage = () => {
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
 
+  const isSignUpMode = location.search.includes('mode=signup');
+
   // Check if we started in signup mode
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("mode") === "signup") {
-      // If we had an isSignUp state, we'd set it here.
-      // For now, let's just update the toast to be more welcoming.
+    if (isSignUpMode) {
       const timer = setTimeout(() => {
-        toast("Initiating ‘Join the Forge’ request. Please enter your email to proceed.", {
+        toast("Initiating ‘Join the Forge’ request. Please enter details to proceed.", {
           icon: '⚙️',
           duration: 3000
         });
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [location.search]);
+  }, [isSignUpMode]);
 
   // Email validation
   const validateEmail = (email) => {
@@ -61,7 +60,21 @@ const LoginPage = () => {
 
     if (email && password && validateEmail(email)) {
       try {
-        await login(email, password, false, from);
+        if (isSignUpMode) {
+          // Perform Registration
+          const result = await register({ 
+            email, 
+            password, 
+            name: email.split('@')[0] // Default name from email
+          });
+          if (result.success) {
+            toast.success("Welcome to the Forge!");
+            navigate("/home");
+          }
+        } else {
+          // Perform Login
+          await login(email, password, false, from);
+        }
       } catch (error) {
         toast.error(error.message || "Authentication failed");
       }
@@ -257,9 +270,12 @@ const LoginPage = () => {
 
 
           <p className="asl-signup-prompt">
-            Don&apos;t have an account?{" "}
-            <a href="#" onClick={(e) => { e.preventDefault(); toast("Contact your administrator to create an account."); }}>
-              Sign up
+            {isSignUpMode ? "Already have an account? " : "Don't have an account? "}
+            <a href="#" onClick={(e) => { 
+                e.preventDefault(); 
+                navigate(isSignUpMode ? "/login" : "/login?mode=signup");
+            }}>
+              {isSignUpMode ? "Sign In" : "Sign Up"}
             </a>
           </p>
         </div>
