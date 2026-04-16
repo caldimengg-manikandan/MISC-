@@ -17,7 +17,7 @@ async function importFullDB() {
         pool = await mssql.connect(config);
         const data = JSON.parse(fs.readFileSync('full_db_migration.json', 'utf8'));
         
-        console.log('--- STARTING COMPLETE MIGRATION (NUCLEAR VERSION) ---');
+        console.log('--- STARTING COMPLETE AUTO-REPAIR MIGRATION ---');
 
         const tables = [
             'users', 'customers', 'projects', 'estimates', 
@@ -28,17 +28,30 @@ async function importFullDB() {
         ];
 
         for (const table of tables) {
-            if (!data[table] || data[table].length === 0) {
-                console.log(`Skipping ${table} (No data)`);
-                continue;
+            if (!data[table] || data[table].length === 0) continue;
+            
+            console.log(`Working on table: ${table}...`);
+            
+            // 1. Check if table exists
+            const tabCheck = await pool.request().query(`SELECT * FROM sys.tables WHERE name = '${table}'`);
+            
+            if (tabCheck.recordset.length === 0) {
+                console.log(`⚠️  Table [${table}] missing! Creating it now...`);
+                // Auto-create table based on JSON columns
+                const firstRow = data[table][0];
+                const cols = Object.keys(firstRow).map(c => {
+                    if (c.toLowerCase() === 'id') return `[${c}] INT IDENTITY(1,1) PRIMARY KEY`;
+                    return `[${c}] NVARCHAR(MAX)`;
+                }).join(', ');
+                
+                await pool.request().query(`CREATE TABLE [${table}] (${cols})`);
+                console.log(`✅ Table [${table}] created.`);
             }
-            
-            console.log(`Migrating ${table} (${data[table].length} rows)...`);
-            
-            // 1. Clear existing data
+
+            // 2. Clear existing data
             await pool.request().query(`DELETE FROM [${table}]`);
             
-            // 2. Insert rows one-by-one with bundled IDENTITY_INSERT commands
+            // 3. Batch migration with Identity support
             for (const row of data[table]) {
                 const columns = Object.keys(row).map(c => `[${c}]`).join(', ');
                 const params = Object.keys(row).map((c, i) => `@p${i}`).join(', ');
@@ -46,7 +59,6 @@ async function importFullDB() {
                 const request = pool.request();
                 Object.keys(row).forEach((c, i) => { request.input(`p${i}`, row[c]); });
 
-                // THE NUCLEAR TRICK: Bundle SET ON and SET OFF in the SAME query call
                 const sql = `
                     IF OBJECTPROPERTY(OBJECT_ID('[${table}]'), 'TableHasIdentity') = 1 
                         SET IDENTITY_INSERT [${table}] ON;
@@ -60,14 +72,14 @@ async function importFullDB() {
                 try {
                     await request.query(sql);
                 } catch (err) {
-                    console.error(`❌ Error in ${table} row:`, err.message);
-                    throw err; // Stop on first error
+                    console.error(`❌ Row failed in ${table}:`, err.message);
+                    throw err;
                 }
             }
-            console.log(`✅ ${table} fully migrated.`);
+            console.log(`✅ Table [${table}] synchronized successfully.`);
         }
 
-        console.log('\n🏆 FULL MIGRATION SUCCESSFUL! YOUR VPS NOW MATCHES LOCAL.');
+        console.log('\n🏆 FULL MIGRATION SUCCESSFUL! VPS IS NOW UPDATED.');
     } catch (err) {
         console.error('\n❌ MIGRATION FAILED:', err.message);
     } finally {
