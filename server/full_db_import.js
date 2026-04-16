@@ -28,20 +28,34 @@ async function importFullDB() {
         ];
 
         for (const table of tables) {
-            if (!data[table] || data[table].length === 0) continue;
+            console.log(`Checking table: ${table}...`);
             
-            console.log(`Working on table: ${table}...`);
-            
-            // 1. Auto-Create Table if missing
+            // 1. Auto-Create Table if missing (even if data is empty)
             const tabCheck = await pool.request().query(`SELECT * FROM sys.tables WHERE name = '${table}'`);
             if (tabCheck.recordset.length === 0) {
                 console.log(`⚠️  Table [${table}] missing! Creating...`);
-                const firstRow = data[table][0];
-                const cols = Object.keys(firstRow).map(c => {
-                    if (c.toLowerCase() === 'id') return `[${c}] INT IDENTITY(1,1) PRIMARY KEY`;
-                    return `[${c}] NVARCHAR(MAX)`;
-                }).join(', ');
+                
+                // Find column definitions from data or use defaults if totally empty
+                const firstRow = (data[table] && data[table].length > 0) ? data[table][0] : null;
+                
+                let cols = "[id] INT IDENTITY(1,1) PRIMARY KEY";
+                if (firstRow) {
+                    cols = Object.keys(firstRow).map(c => {
+                        if (c.toLowerCase() === 'id') return `[${c}] INT IDENTITY(1,1) PRIMARY KEY`;
+                        return `[${c}] NVARCHAR(MAX)`;
+                    }).join(', ');
+                } else if (table === 'pricing') {
+                    // Special case for pricing if it's empty
+                    cols = "[id] INT IDENTITY(1,1) PRIMARY KEY, [item_key] NVARCHAR(MAX), [rate] NVARCHAR(MAX), [updatedAt] NVARCHAR(MAX)";
+                }
+
                 await pool.request().query(`CREATE TABLE [${table}] (${cols})`);
+                console.log(`✅ Table [${table}] created.`);
+            }
+
+            if (!data[table] || data[table].length === 0) {
+                console.log(`ℹ️  Skipping data import for ${table} (No rows).`);
+                continue;
             }
 
             // 2. Auto-Expand all columns to NVARCHAR(MAX) to prevent truncation
