@@ -40,7 +40,7 @@ function LandingHeader({ scrolled }) {
     >
       {/* Logo / Brand */}
       <a
-        href="/landing"
+        href="./landing"
         style={{
           display: "flex",
           alignItems: "center",
@@ -127,7 +127,7 @@ function LandingHeader({ scrolled }) {
       {/* Auth Button */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
         <a
-          href="/login"
+          href="./login"
           style={{
             padding: "0.45rem 1rem",
             borderRadius: "8px",
@@ -152,7 +152,7 @@ function LandingHeader({ scrolled }) {
           Login
         </a>
         <a
-          href="/login?mode=signup"
+          href="./login?mode=signup"
           style={{
             padding: "0.45rem 1.25rem",
             borderRadius: "8px",
@@ -638,12 +638,12 @@ export default function GlobeScrollDemo() {
         {
           label: "Join the Forge",
           variant: "primary",
-          onClick: () => (window.location.href = "/login?mode=signup"),
+          onClick: () => (window.location.href = "login?mode=signup"),
         },
         {
           label: "Login",
           variant: "secondary",
-          onClick: () => (window.location.href = "/login"),
+          onClick: () => (window.location.href = "login"),
         },
       ],
     },
@@ -730,12 +730,12 @@ export default function GlobeScrollDemo() {
         {
           label: "Initialize Workspace",
           variant: "primary",
-          onClick: () => (window.location.href = "/login?mode=signup"),
+          onClick: () => (window.location.href = "login?mode=signup"),
         },
         {
           label: "Login",
           variant: "secondary",
-          onClick: () => (window.location.href = "/login"),
+          onClick: () => (window.location.href = "login"),
         },
       ],
     },
