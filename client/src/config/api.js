@@ -1,4 +1,6 @@
-let apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const isProd = process.env.NODE_ENV === 'production';
+let apiUrl = process.env.REACT_APP_API_URL || (isProd ? '/misc/api' : 'http://localhost:5001');
+
 if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
     apiUrl = apiUrl.replace('localhost', window.location.hostname);
 }
