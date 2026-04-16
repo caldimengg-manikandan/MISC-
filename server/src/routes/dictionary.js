@@ -19,8 +19,21 @@ router.get('/:category', async (req, res) => {
       'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax FROM dictionary WHERE category = ? AND isActive = 1 ORDER BY [order] ASC, label ASC',
       [req.params.category]
     );
-    
-    res.json({ success: true, data: entries });
+
+    // 🔧 CRITICAL FIX: MSSQL NVARCHAR columns return numeric values as strings.
+    // The frontend uses strict comparison (=== widthBucket where widthBucket is a number),
+    // so we must cast all numeric fields to actual numbers before sending to the client.
+    const normalized = entries.map(e => ({
+      ...e,
+      steelLbsLf:     e.steelLbsLf     != null ? parseFloat(e.steelLbsLf)     : null,
+      shopLaborMhLf:  e.shopLaborMhLf  != null ? parseFloat(e.shopLaborMhLf)  : null,
+      fieldLaborMhLf: e.fieldLaborMhLf != null ? parseFloat(e.fieldLaborMhLf) : null,
+      widthMax:       e.widthMax       != null ? parseFloat(e.widthMax)        : null,
+      spanMin:        e.spanMin        != null ? parseFloat(e.spanMin)         : null,
+      spanMax:        e.spanMax        != null ? parseFloat(e.spanMax)         : null,
+    }));
+
+    res.json({ success: true, data: normalized });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -30,17 +30,24 @@ class StairFlightCalculationService {
       estimateId = null,
     } = payload;
 
-    // 1. Fetch Global Configs
+    // 1. Fetch Global Configs & Rates
+    const configManager = require('../../utils/configManager');
+    if (!configManager.isLoaded) await configManager.loadConfigs();
+
     const [configs] = await db.query('SELECT config_key, config_value FROM system_config');
-    const markup = parseFloat(configs.find(c => c.config_key === 'material_markup')?.config_value || 0.11);
-    const taxRate = parseFloat(configs.find(c => c.config_key === 'tax_rate')?.config_value || 0.06);
+    const markup = configManager.get('material_markup', 0.11);
+    const taxRate = configManager.get('tax_rate', 0.06);
 
     const [laborRows] = await db.query('SELECT labor_type, rate FROM labor_rates');
     const rates = {};
     laborRows.forEach(r => rates[r.labor_type.toUpperCase()] = parseFloat(r.rate));
-    const SHOP_RATE = rates['SHOP'] || 75.00;
-    const FIELD_RATE = rates['FIELD'] || 85.00;
-    const BASE_STEEL_PRICE = 0.75;
+    
+    // Priorities: configManager > labor_rates table > Defaults
+    const SHOP_RATE = configManager.get('shop_hourly_rate', rates['SHOP'] || 75.00);
+    const FIELD_RATE = configManager.get('field_hourly_rate', rates['FIELD'] || 85.00);
+    const BASE_STEEL_PRICE = configManager.get('steel_price_per_lb', 0.75);
+    const PAN_RATE = configManager.get('stair_pan_rate', 1.00);
+    const GALV_RATE = configManager.get('galvanize_rate', 0.75);
 
     // 2. Stringer Profile Data
     const [sRows] = await db.query('SELECT * FROM stringer_types WHERE name = ?', [stringerProfileId]);
@@ -71,11 +78,17 @@ class StairFlightCalculationService {
     const connTypes = [connectionTypeBot, connectionTypeTop];
     connTypes.forEach(conn => {
       if (conn?.toUpperCase() === 'WELDED') {
-        shopLaborHrs += 0.5;
-        fieldLaborHrs += 0.5;
-      } else if (conn?.toUpperCase() === 'BOLTED') {
-        // Flat hardware cost $15.00 per connection (acting as anchors)
-        hardwareCost += 15.00;
+        shopLaborHrs += configManager.get('welded_shop_mh', 0.5);
+        fieldLaborHrs += configManager.get('welded_field_mh', 0.5);
+      } else if (conn?.toUpperCase() === 'BOLTED' || conn?.toUpperCase() === 'ANCHORED') {
+        // Use consistent mounting rates from config
+        const rate = (conn?.toUpperCase() === 'ANCHORED') 
+          ? configManager.get('mounting_anchored_rate', 15.00)
+          : configManager.get('mounting_embedded_rate', 10.00);
+        hardwareCost += rate;
+        
+        shopLaborHrs += configManager.get('bolted_shop_mh', 1.0);
+        fieldLaborHrs += configManager.get('bolted_field_mh', 0.5);
       }
     });
 
@@ -109,23 +122,24 @@ class StairFlightCalculationService {
       // Weep-hole penalty
       shopLaborHrs += totalStringerLF * 0.15;
       fieldLaborHrs += totalStringerLF * 0.10;
-      // Galv Material Cost: Burdened Weight * $0.50
-      finishCost = burdenedWeight * galvRatePerLb;
+      // Galv Material Cost: Burdened Weight * Dynamic Rate
+      finishCost = burdenedWeight * GALV_RATE;
     }
 
     // 9. Monetize and Aggregate
     const laborCost = (shopLaborHrs * SHOP_RATE) + (fieldLaborHrs * FIELD_RATE);
     const steelCost = burdenedWeight * BASE_STEEL_PRICE;
+    const panPlateCost = panWeight * PAN_RATE;
     
-    const subtotal = laborCost + steelCost + finishCost + hardwareCost + gratingTreadCost;
+    const subtotal = laborCost + steelCost + panPlateCost + finishCost + hardwareCost + gratingTreadCost;
     const taxAmount = subtotal * taxRate;
     const grandTotal = subtotal + taxAmount;
 
     const result = {
       success: true,
       geometry: { slope: this.roundExcel(slope, 4), angle: this.roundExcel(angle, 2), stepSlopeIn: this.roundExcel(slope, 2) },
-      stringer: { totalLF: this.roundExcel(totalLF || totalStringerLF, 2), rawWeight, burdenedWeight },
-      panPlate: { areaSqFt: componentArea, burdenedWeight: panWeight },
+      stringer: { totalLF: totalStringerLF, rawWeight, burdenedWeight },
+      panPlate: { areaSqFt: componentArea, burdenedWeight: panWeight, cost: this.roundExcel(panPlateCost, 2) },
       labor: { totalShopHrs: this.roundExcel(shopLaborHrs, 2), totalFieldHrs: this.roundExcel(fieldLaborHrs, 2), shopLaborCost: this.roundExcel(shopLaborHrs * SHOP_RATE, 2), fieldLaborCost: this.roundExcel(fieldLaborHrs * FIELD_RATE, 2), shopRatePerHr: SHOP_RATE, fieldRatePerHr: FIELD_RATE },
       finish: { galvMaterialCost: this.roundExcel(finishCost, 2) },
       components: {

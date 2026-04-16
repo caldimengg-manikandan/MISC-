@@ -358,12 +358,6 @@ class StairCalculationService {
    * Convert takeoff units to weights and labor hours using lookups.
    */
   async calculateEstimate(takeoff) {
-    const materialMarkup = 0.00;
-    const fabricationFactor = 1.00;
-
-    const [stringerProfiles] = await db.query('SELECT name, steel_lbs_per_ft FROM stringer_types');
-    const lookupSheet = 'Table Data';
-
     // 🧠 PRICING HIERARCHY: Local Estimate `takeoff.config` Overrides > Global `configManager` > Fallback
     const getRate = (key, defaultVal) => {
       if (takeoff.config && typeof takeoff.config[key] === 'number') {
@@ -371,6 +365,9 @@ class StairCalculationService {
       }
       return configManager.get(key, defaultVal);
     };
+
+    const materialMarkup = getRate('material_markup', 0.11);
+    const fabricationFactor = getRate('fabrication_factor', 1.00);
 
     const steelPrice = getRate('steel_price_per_lb', 0.75);
     const panRate = getRate('stair_pan_rate', 1.00);
@@ -553,11 +550,12 @@ class StairCalculationService {
         // 3. finishCost = finishRate × steelLbsTotal (never × scrap)
         // Calculated above as finishTotalCost.
 
-        // 4. porRokCost = postQty × mountingRate (anchored=$6, embedded=$5)
+        // 4. porRokCost = postQty × mountingRate (anchored=$6, embedded=$5, or specialized por_rok_rate)
         // 5. anchorBoltsCost = steelLbsTotal × anchor_bolt_rate
         const anchorBoltRate = getRate('anchor_bolt_rate', 0.025);
         const embeddedRate = configManager.get('mounting_embedded_rate', 5.00);
         const anchoredRate = configManager.get('mounting_anchored_rate', 6.00);
+        const porRokRateOverride = configManager.get('por_rok_anchor_rate', 0.0);
 
         const mTypeVal = rail.config?.mountingType || rail.mountingType || '';
         const mType = (mTypeVal && typeof mTypeVal === 'string') ? mTypeVal.toLowerCase() : '';
@@ -570,7 +568,10 @@ class StairCalculationService {
           if (mType.includes('embedded')) {
             porRokCost = rail.postQty * embeddedRate;
           } else if (mType.includes('anchored')) {
-            porRokCost = rail.postQty * anchoredRate;
+            // 🔄 EXCEL PARITY: If a specific POR ROK Anchor Rate is set, it overrides the generic anchored rate.
+            // This allows the user to differentiate between standard anchors and high-strength POR ROK anchors.
+            porRokCost = rail.postQty * (porRokRateOverride > 0 ? porRokRateOverride : anchoredRate);
+            trace[`stair_${rail.id}_mounting`] = `Anchored: ${rail.postQty} @ ${porRokRateOverride > 0 ? porRokRateOverride : anchoredRate}`;
           }
         }
 
