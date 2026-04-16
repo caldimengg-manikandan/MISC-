@@ -650,7 +650,7 @@ export default function CaldimCalculates({ onClose, dragControls }) {
         alignItems: "center",
         cursor: dragControls ? "grab" : "default"
       }}>
-        <span>🧮 Caldim Calculates</span>
+        <span>🧮 Vantage Geometry Pro</span>
         <div style={{ display: "flex", gap: 4 }}>
           <button 
             style={{ ...BS(), fontSize: 10, padding: "1px 6px" }}
@@ -1128,7 +1128,7 @@ export default function CaldimCalculates({ onClose, dragControls }) {
             justifyContent: "space-between",
             alignItems: "center",
           }}>
-            <span>Caldim Calculates - Help</span>
+            <span>Vantage Geometry Pro - Help</span>
             <button
               style={{ ...BS(T.clear), fontSize: 12, padding: "2px 6px" }}
               onClick={() => setShowHelp(false)}

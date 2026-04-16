@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, SlidersHorizontal, ArrowUpRight,
   Clock, FolderOpen, AlertCircle,
-  Loader2, ChevronRight, Grid3x3, List, Trash2, X, AlertTriangle
+  Loader2, ChevronRight, Grid3x3, List, Trash2, X, AlertTriangle,
+  CheckSquare, Square, MinusSquare
 } from 'lucide-react';
 import { useEstimation } from '../../contexts/EstimationContext';
 import ProjectContextMenu from '../../components/ProjectContextMenu';
+import WorkflowStatusBadge from '../../components/workflow/WorkflowStatusBadge';
 import { format, differenceInDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -34,8 +37,11 @@ function DaysLeftBadge({ dueDate }) {
 }
 
 /* ─── Delete Confirmation Modal ─────────────────────────────────── */
-function DeleteConfirmModal({ project, onConfirm, onCancel, deleting }) {
-  return (
+/* ─── Delete Confirmation Modal ─────────────────────────────────── */
+function DeleteConfirmModal({ project, projects = [], onConfirm, onCancel, deleting }) {
+  const isBulk = projects.length > 0;
+  
+  const content = (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
       background: 'rgba(15, 23, 42, 0.55)',
@@ -53,6 +59,7 @@ function DeleteConfirmModal({ project, onConfirm, onCancel, deleting }) {
           width: '100%', maxWidth: '420px',
           overflow: 'hidden', border: '1px solid #e2e8f0'
         }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div style={{
@@ -70,7 +77,7 @@ function DeleteConfirmModal({ project, onConfirm, onCancel, deleting }) {
           </div>
           <div style={{ flex: 1 }}>
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.3px' }}>
-              Delete Project?
+              {isBulk ? `Delete ${projects.length} Projects?` : 'Delete Project?'}
             </h3>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
               This action cannot be undone.
@@ -87,24 +94,44 @@ function DeleteConfirmModal({ project, onConfirm, onCancel, deleting }) {
 
         {/* Body */}
         <div style={{ padding: '20px 24px' }}>
-          <div style={{
-            background: '#f8fafc', border: '1px solid #e2e8f0',
-            borderRadius: '10px', padding: '14px 16px', marginBottom: '16px'
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-              Project to delete
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
-              {project.projectName}
-            </div>
-            {project.customer_name && (
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                {project.customer_name}
+          {isBulk ? (
+            <div style={{
+              background: '#f8fafc', border: '1px solid #e2e8f0',
+              borderRadius: '10px', padding: '14px 16px', marginBottom: '16px',
+              maxHeight: '120px', overflowY: 'auto'
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px' }}>
+                Projects to be deleted
               </div>
-            )}
-          </div>
+              {projects.map(p => (
+                <div key={p.id} style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  {p.projectName}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              background: '#f8fafc', border: '1px solid #e2e8f0',
+              borderRadius: '10px', padding: '14px 16px', marginBottom: '16px'
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                Project to delete
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
+                {project.projectName}
+              </div>
+              {project.customer_name && (
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  {project.customer_name}
+                </div>
+              )}
+            </div>
+          )}
           <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
-            All estimation data, stairs, railings, and notes associated with this project will be permanently removed.
+            {isBulk 
+              ? `All data associated with these ${projects.length} projects will be permanently removed.`
+              : 'All estimation data, stairs, railings, and notes associated with this project will be permanently removed.'
+            }
           </p>
         </div>
 
@@ -144,16 +171,19 @@ function DeleteConfirmModal({ project, onConfirm, onCancel, deleting }) {
       </motion.div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }
 
 /* ─── Component ─────────────────────────────────────────────────── */
 export default function EstimationList() {
   const navigate = useNavigate();
-  const { estimations, loading, fetchEstimations, deleteEstimation } = useEstimation();
+  const { estimations, loading, fetchDashboardStats, fetchEstimations, deleteEstimation, bulkDeleteEstimations } = useEstimation();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('table');
-  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null); // { project: null, projects: [] }
   const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => { fetchEstimations(); }, []);
 
@@ -164,22 +194,53 @@ export default function EstimationList() {
 
   const handleDeleteClick = (e, project) => {
     e.stopPropagation();
-    setDeleteModal(project);
+    setDeleteModal({ project });
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedIds.length === 0) return;
+    const projects = estimations.filter(p => selectedIds.includes(p.id));
+    setDeleteModal({ projects });
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteModal) return;
     setDeleting(true);
-    const toastId = toast.loading(`Deleting "${deleteModal.projectName}"…`);
+    
+    const isBulk = deleteModal.projects?.length > 0;
+    const label = isBulk ? `${deleteModal.projects.length} projects` : `"${deleteModal.project.projectName}"`;
+    const toastId = toast.loading(`Deleting ${label}…`);
+    
     try {
-      await deleteEstimation(deleteModal.id);
-      toast.success('Project deleted successfully.', { id: toastId });
+      if (isBulk) {
+        await bulkDeleteEstimations(selectedIds);
+        setSelectedIds([]);
+      } else {
+        await deleteEstimation(deleteModal.project.id);
+        setSelectedIds(prev => prev.filter(id => id !== deleteModal.project.id));
+      }
+      toast.success('Deleted successfully.', { id: toastId });
       setDeleteModal(null);
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to delete project.', { id: toastId });
+      toast.error(err?.response?.data?.message || 'Failed to delete.', { id: toastId });
     } finally {
       setDeleting(false);
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filtered.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map(p => p.id));
+    }
+  };
+
+  const toggleSelect = (e, id) => {
+    e.stopPropagation();
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -189,7 +250,8 @@ export default function EstimationList() {
       <AnimatePresence>
         {deleteModal && (
           <DeleteConfirmModal
-            project={deleteModal}
+            project={deleteModal.project}
+            projects={deleteModal.projects}
             deleting={deleting}
             onConfirm={handleDeleteConfirm}
             onCancel={() => !deleting && setDeleteModal(null)}
@@ -273,6 +335,14 @@ export default function EstimationList() {
             <table className="el-table">
               <thead>
                 <tr>
+                  <th style={{ width: 44 }}>
+                    <button className="el-selection-btn" onClick={toggleSelectAll}>
+                      {selectedIds.length === filtered.length && filtered.length > 0 
+                        ? <CheckSquare size={16} color="var(--gpt-accent)" /> 
+                        : selectedIds.length > 0 ? <MinusSquare size={16} color="var(--gpt-accent)" /> : <Square size={16} />
+                      }
+                    </button>
+                  </th>
                   <th style={{ width: 90 }}>ID</th>
                   <th>Project Name</th>
                   <th>Customer</th>
@@ -289,19 +359,28 @@ export default function EstimationList() {
                   return (
                     <motion.tr
                       key={p.id}
-                      className="el-table-row"
+                      className={`el-table-row ${selectedIds.includes(p.id) ? 'selected' : ''}`}
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03 }}
                       onClick={() => navigate('/project-info?id=' + p.id)}
                     >
+                      <td onClick={e => toggleSelect(e, p.id)}>
+                        <button className="el-selection-btn">
+                          {selectedIds.includes(p.id) ? <CheckSquare size={16} color="var(--gpt-accent)" /> : <Square size={16} />}
+                        </button>
+                      </td>
                       <td><span className="el-id-chip">#{p.id.toString().slice(-6).toUpperCase()}</span></td>
                       <td className="el-td-name">{p.projectName}</td>
                       <td className="el-td-muted">{p.customer_name || '—'}</td>
                       <td>
-                        <span className="el-status-pill" style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}>
-                          {st.label}
-                        </span>
+                        {p.workflow_status ? (
+                          <WorkflowStatusBadge status={p.workflow_status} size="sm" />
+                        ) : (
+                          <span className="el-status-pill" style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}>
+                            {st.label}
+                          </span>
+                        )}
                       </td>
                       <td className="el-td-muted">{p.engineerId || '—'}</td>
                       <td className="el-td-date">{p.dueDate ? format(new Date(p.dueDate), 'dd MMM yyyy') : '—'}</td>
@@ -337,12 +416,15 @@ export default function EstimationList() {
               return (
                 <motion.div
                   key={p.id}
-                  className="el-grid-card"
+                  className={`el-grid-card ${selectedIds.includes(p.id) ? 'selected' : ''}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
                   onClick={() => navigate('/project-info?id=' + p.id)}
                 >
+                  <div className={`el-grid-selection ${selectedIds.includes(p.id) ? 'active' : ''}`} onClick={e => toggleSelect(e, p.id)}>
+                    {selectedIds.includes(p.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                  </div>
                   <div className="el-grid-top">
                     <span className="el-id-chip">#{p.id.toString().slice(-6).toUpperCase()}</span>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
@@ -350,9 +432,13 @@ export default function EstimationList() {
                         <Trash2 size={13} />
                       </button>
                       <ProjectContextMenu project={p} isPinned={p.isPinned} onRenameStart={() => {}} />
-                      <span className="el-status-pill" style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}>
-                        {st.label}
-                      </span>
+                      {p.workflow_status ? (
+                        <WorkflowStatusBadge status={p.workflow_status} size="sm" />
+                      ) : (
+                        <span className="el-status-pill" style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}>
+                          {st.label}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="el-grid-name">{p.projectName}</div>
@@ -365,6 +451,32 @@ export default function EstimationList() {
                 </motion.div>
               );
             })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* ══ BULK ACTIONS BAR ═══════════════════════════════════════ */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            className="el-bulk-bar"
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          >
+            <div className="el-bulk-info">
+              <span className="el-bulk-count">{selectedIds.length}</span>
+              <span className="el-bulk-text">item{selectedIds.length !== 1 ? 's' : ''} selected</span>
+            </div>
+            <div className="el-bulk-actions">
+              <button className="el-bulk-btn cancel" onClick={() => setSelectedIds([])}>
+                Clear
+              </button>
+              <button className="el-bulk-btn delete" onClick={handleBulkDeleteClick}>
+                <Trash2 size={15} /> Delete Selected
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

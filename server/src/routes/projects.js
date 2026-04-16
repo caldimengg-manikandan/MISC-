@@ -4,6 +4,7 @@ const router = express.Router();
 const db = require('../config/mssql');
 const auth = require('../middleware/auth');
 const dashboardService = require('../services/DashboardService');
+const notif = require('../services/NotificationService');
 
 const tryParseJson = (val) => {
   if (typeof val !== 'string') return val;
@@ -29,10 +30,16 @@ const removeEmptyGeometries = (geometries) => {
   });
 };
 
-// Get all projects for user
+// Get all projects for user (admin sees ALL, estimator sees own)
 router.get('/', auth, async (req, res) => {
   try {
-    const [projects] = await db.query('SELECT * FROM projects WHERE userId = ? ORDER BY updatedAt DESC', [req.userId]);
+    const isAdmin = req.userRole === 'admin';
+    const query = isAdmin
+      ? 'SELECT * FROM projects ORDER BY updatedAt DESC'
+      : 'SELECT * FROM projects WHERE userId = ? OR assigned_engineer_id = ? ORDER BY updatedAt DESC';
+    const params = isAdmin ? [] : [req.userId, req.userId];
+
+    const [projects] = await db.query(query, params);
     
     // Parse JSON fields
     const parsedProjects = projects.map(p => ({
@@ -58,7 +65,7 @@ router.get('/dashboard-metrics', auth, async (req, res) => {
   try {
     const userId = req.userId;
     // Fetch all projects for the user from the database
-    const [rows] = await db.query('SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status, enquiryDate, submissionDeadline, updatedAt, createdAt FROM projects WHERE userId = ?', [userId]);
+    const [rows] = await db.query('SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status, enquiryDate, submissionDeadline, updatedAt, createdAt FROM projects WHERE userId = ? OR assigned_engineer_id = ?', [userId, userId]);
     
     // Use the Dashboard Service to compute metrics and recent items
     const { metrics, projects } = dashboardService.computeMetrics(rows);
@@ -82,6 +89,7 @@ router.post('/upsert', auth, async (req, res) => {
       projectNumber, 
       projectName, 
       customerName,
+      customerId,
       projectLocation,
       architect,
       eor,
@@ -108,7 +116,7 @@ router.post('/upsert', auth, async (req, res) => {
 
     let existingProject = null;
     if (id) {
-      const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND userId = ?', [id, userId]);
+      const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)', [id, userId, userId]);
       existingProject = rows[0];
       if (!existingProject) {
         return res.status(404).json({ success: false, message: 'Project not found' });
@@ -131,43 +139,55 @@ router.post('/upsert', auth, async (req, res) => {
       // Update
       await db.query(
         `UPDATE projects SET 
-          projectNumber = ?, projectName = ?, customer_name = ?, project_location = ?, 
+          projectNumber = ?, projectName = ?, customer_name = ?, customer_id = ?, project_location = ?, 
           architect = ?, eor = ?, gc_name = ?, detailer = ?, vendor_name = ?, 
           aisc_certified = ?, units = ?, notes = ?, stairs = ?, guardRails = ?, 
           customRailValues = ?, assignedEngineer = ?, enquiryDate = ?, submissionDeadline = ?, status = ?, updatedAt = GETDATE() 
-        WHERE id = ? AND userId = ?`,
+        WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)`,
         [
-          projectNumber, projectName, customerName || '', projectLocation || '',
+          projectNumber, projectName, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
           stairsJson, guardRailsJson, customRailValuesJson, 
           assignedEngineer || null, enquiryDate || null, submissionDeadline || null, status || 'Project Created',
-          id, userId
+          id, userId, userId
         ]
       );
       
-      const [updated] = await db.query('SELECT * FROM projects WHERE id = ?', [id]);
+      const [updated] = await db.query(`
+        SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email 
+        FROM projects p 
+        LEFT JOIN users u ON p.assigned_engineer_id = u.id 
+        WHERE p.id = ?`, [id]);
       res.json({ success: true, projectId: id, project: updated[0] });
     } else {
-      // Insert
+      // Insert new project
       const [rows] = await db.query(
         `INSERT INTO projects 
-          (projectNumber, projectName, userId, customer_name, project_location, 
+          (projectNumber, projectName, userId, customer_name, customer_id, project_location, 
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units, 
-           notes, stairs, guardRails, customRailValues, status, assignedEngineer, enquiryDate, submissionDeadline) 
+           notes, stairs, guardRails, customRailValues, status, workflow_status, assigned_engineer_id, enquiryDate, submissionDeadline) 
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?)`,
         [
-          projectNumber, projectName, userId, customerName || '', projectLocation || '',
+          projectNumber, projectName, userId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
           stairsJson, guardRailsJson, customRailValuesJson, status || 'Project Created',
-          assignedEngineer || null, enquiryDate || new Date(), submissionDeadline || null
+          req.body.assigned_engineer_id || userId, enquiryDate || new Date(), submissionDeadline || null
         ]
       );
       
       const newId = rows[0].id;
-      const [inserted] = await db.query('SELECT * FROM projects WHERE id = ?', [newId]);
+      const [inserted] = await db.query(`
+        SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email 
+        FROM projects p 
+        LEFT JOIN users u ON p.assigned_engineer_id = u.id 
+        WHERE p.id = ?`, [newId]);
+      
+      // Fire notification: new project created
+      try { await notif.onProjectCreated(newId, req.user || { email: req.userId }); } catch (e) {}
+
       res.json({ success: true, projectId: newId, project: inserted[0] });
     }
     
@@ -183,7 +203,7 @@ router.post('/:projectId/save-flight-geometry', auth, async (req, res) => {
     const { projectId } = req.params;
     const { flightData, flightIndex, stairIndex = 0, flights } = req.body;
     
-    const [projects] = await db.query('SELECT * FROM projects WHERE id = ? AND userId = ?', [projectId, req.userId]);
+    const [projects] = await db.query('SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)', [projectId, req.userId, req.userId]);
     const project = projects[0];
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
@@ -233,7 +253,18 @@ router.post('/:projectId/save-flight-geometry', auth, async (req, res) => {
 // Get project by ID
 router.get('/:projectId', auth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND userId = ?', [req.params.projectId, req.userId]);
+    const [rows] = await db.query(`
+      SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
+             c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip,
+             COALESCE(u.full_name, creator.full_name) as assigned_engineer_name, 
+             COALESCE(u.email, creator.email) as assigned_engineer_email
+      FROM projects p
+      LEFT JOIN customers c ON p.customer_id = c.id
+      LEFT JOIN users u ON p.assigned_engineer_id = u.id
+      LEFT JOIN users creator ON p.userId = creator.id
+      WHERE p.id = ? AND (p.userId = ? OR p.assigned_engineer_id = ?)
+    `, [req.params.projectId, req.userId, req.userId]);
+    
     const project = rows[0];
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
@@ -258,13 +289,13 @@ router.put('/:projectId', auth, async (req, res) => {
     const { projectId } = req.params;
     const updates = req.body;
     
-    const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND userId = ?', [projectId, req.userId]);
+    const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)', [projectId, req.userId, req.userId]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
     
     const allowedFields = [
-      'projectNumber', 'projectName', 'customerName', 'projectLocation', 
+      'projectNumber', 'projectName', 'customerName', 'customerId', 'projectLocation', 
       'architect', 'eor', 'gcName', 'detailer', 'vendorName', 
       'aiscCertified', 'units', 'notes', 'stairs', 'guardRails', 
       'customRailValues', 'status', 'totalWeight', 'totalCost',
@@ -279,6 +310,12 @@ router.put('/:projectId', auth, async (req, res) => {
         setClause.push(`${key} = ?`);
         if (['stairs', 'guardRails', 'customRailValues', 'estimationResult'].includes(key)) {
            queryParams.push(JSON.stringify(updates[key]));
+        } else if (key === 'customerId') {
+           setClause[setClause.length - 1] = 'customer_id = ?';
+           queryParams.push(updates[key]);
+        } else if (key === 'customerName') {
+           setClause[setClause.length - 1] = 'customer_name = ?';
+           queryParams.push(updates[key]);
         } else {
            queryParams.push(updates[key]);
         }
@@ -287,9 +324,8 @@ router.put('/:projectId', auth, async (req, res) => {
     
     if (setClause.length > 0) {
       setClause.push('updatedAt = GETDATE()');
-      const query = `UPDATE projects SET ${setClause.join(', ')} WHERE id = ? AND userId = ?`;
-      queryParams.push(projectId, req.userId);
-      await db.query(query, queryParams);
+      queryParams.push(projectId, req.userId, req.userId);
+      await db.query(`UPDATE projects SET ${setClause.join(', ')} WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)`, queryParams);
     }
     
     const [updated] = await db.query('SELECT * FROM projects WHERE id = ?', [projectId]);

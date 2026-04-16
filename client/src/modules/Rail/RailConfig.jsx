@@ -223,6 +223,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     finish: data?.finish || 'Primer',
     selectionSource: data?.selectionSource || (data?.railType ? 'manual' : null),
     filters: data?.filters || { lines: null, pipeSize: null, postType: null, infill: null },
+    intRailSource: data?.intRailSource || (data?.intermediateRails !== undefined && data?.intermediateRails !== '' ? 'manual' : 'auto'),
     ...data
   });
 
@@ -304,13 +305,25 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     }
   }, [form.filters, form.selectionSource, type, getBestMatch]);
 
+  // Track the previous rail type so we can detect a type change
+  const prevRailTypeRef = React.useRef(form.railType);
+
   useEffect(() => {
     if (type === 'guardRail' && form.railType && parsedTypes[form.railType]) {
       const attrs = parsedTypes[form.railType];
-      if (attrs.lines) {
+      const typeChanged = prevRailTypeRef.current !== form.railType;
+      prevRailTypeRef.current = form.railType;
+
+      if (attrs && attrs.lines) {
         const lines = parseInt(attrs.lines);
-        if (lines > 0 && (form.intermediateRails === '' || form.intermediateRails === null)) {
-          set('intermediateRails', (lines - 1).toString());
+        if (lines > 0) {
+          const suggestedInt = (lines - 1).toString();
+          // Always auto-set when type changes; respect 'manual' only if type didn't change
+          if (typeChanged || form.intRailSource !== 'manual') {
+            const updated = { ...form, intermediateRails: suggestedInt, intRailSource: 'auto' };
+            setForm(updated);
+            if (onChange) onChange(updated);
+          }
         }
       }
     }
@@ -571,10 +584,31 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               className="form-input data-type-int"
               type="number"
               value={form.intermediateRails || ''}
-              onChange={(e) => set('intermediateRails', e.target.value)}
+              onChange={(e) => {
+                const updated = { ...form, intermediateRails: e.target.value, intRailSource: 'manual' };
+                setForm(updated);
+                if (onChange) onChange(updated);
+              }}
               onFocus={e => e.target.select()}
               placeholder="0"
             />
+            {/* Auto-set hint */}
+            {type === 'guardRail' && form.intRailSource !== 'manual' && form.railType && parsedTypes[form.railType]?.lines && (
+              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: 'var(--color-text-tertiary, #94a3b8)', fontStyle: 'italic' }}>
+                Auto: based on {parsedTypes[form.railType].lines}-Line type
+              </span>
+            )}
+            {/* Manual override amber note */}
+            {type === 'guardRail' && form.intRailSource === 'manual' && data?.systemCalc?.intRailDelta !== undefined && data.systemCalc.intRailDelta !== 0 && (
+              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic', background: '#fffbeb', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
+                Custom count — steel lbs/LF adjusted proportionally
+              </span>
+            )}
+            {type === 'guardRail' && form.intRailSource === 'manual' && (data?.systemCalc?.intRailDelta === 0 || data?.systemCalc?.intRailDelta === undefined) && form.railType && parsedTypes[form.railType]?.lines && (
+              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic' }}>
+                Custom count
+              </span>
+            )}
           </div>
 
           <div className="form-field" style={{ display: config.hasPosts ? 'block' : 'none' }}>
@@ -691,7 +725,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       </div>
 
 
-      {/* ── Real-time Preview Engine Results (EXCEL SFE ALIGNED) ─────────────────────── */}
+      {/* ── Real-time Preview Engine Results (EXCEL MISC ALIGNED) ─────────────────────── */}
       {data?.systemCalc && form.railType && form.railType !== '' && (
         <div className="mt-6">
           <EstimationPreviewCard 
@@ -723,7 +757,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
         }
       />
 
-      <style jsx>{`
+      <style>{`
         .rail-specs-grid {
           display: grid;
           grid-template-columns: repeat(6, 1fr);

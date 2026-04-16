@@ -123,6 +123,22 @@ export const EstimationProvider = ({ children }) => {
         }
     };
 
+    const bulkDeleteEstimations = async (ids) => {
+        try {
+            const res = await estimationApi.bulkDelete(ids);
+            if (res.data.success) {
+                if (selectedEstimation && ids.includes(selectedEstimation.id)) {
+                    setSelectedEstimation(null);
+                }
+                fetchEstimations();
+                fetchDashboardStats();
+            }
+            return res.data.success;
+        } catch (err) {
+            throw err;
+        }
+    };
+
     const duplicateEstimation = async (id) => {
         try {
             const res = await estimationApi.duplicate(id);
@@ -259,6 +275,7 @@ export const EstimationProvider = ({ children }) => {
             updateEstimationStatus,
             saveEstimationData,
             deleteEstimation,
+            bulkDeleteEstimations,
             duplicateEstimation,
             setSelectedEstimation,
             fetchNotes,

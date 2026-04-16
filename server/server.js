@@ -37,12 +37,18 @@ const excelRoutes = require('./src/routes/excelRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 // Import auth routes ✅
 const authRoutes = require('./src/routes/authRoutes');
+// Import workflow & notification routes ✅
+const workflowRoutes = require('./src/routes/workflowRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 
 // Import debug routes
 const debugRoutes = require('./src/routes/debug');
 const noteRoutes = require('./src/routes/notes');
 const customerRoutes = require('./src/routes/customer.routes');
+const reportRoutes = require('./src/routes/reportRoutes');
 // Remove duplicate import: const excelDebugRoutes = require('./src/routes/excelDebugRoutes');
+
+console.log('🚀 SERVER READY - BULK DELETE RECONFIGURED');
 
 // Import authentication middleware
 const authMiddleware = require('./src/middleware/auth');
@@ -290,6 +296,8 @@ app.get('/api/docs', (req, res) => {
 // Protected routes with authentication
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', authMiddleware, projectRoutes);
+app.use('/api/projects', authMiddleware, workflowRoutes);  // workflow state transitions
+app.use('/api/notifications', authMiddleware, notificationRoutes); // in-app notifications
 app.use('/api/estimations', authMiddleware, estimationsRoutes);
 app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/debug', authMiddleware, debugRoutes);
@@ -300,6 +308,7 @@ app.use('/api/secure/excel', authMiddleware, excelRoutes);
 app.use('/api/notes', authMiddleware, noteRoutes);
 app.use('/api/customers', authMiddleware, customerRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
+app.use('/api/reports', authMiddleware, reportRoutes);
 
 // IMPORTANT: Make sure you have this route for flight geometry
 // This should already be in your projectRoutes file

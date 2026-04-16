@@ -144,7 +144,7 @@ router.get('/templates/download', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Template file not found on server' });
     }
 
-    res.download(filePath, 'SFE_Master_Fabrication_Template.xlsx', (err) => {
+    res.download(filePath, 'Master_Fabrication_Template.xlsx', (err) => {
       if (err) {
         console.error('Download error:', err);
         if (!res.headersSent) {

@@ -135,6 +135,20 @@ class EstimationController {
         }
     }
 
+    async bulkDeleteData(req, res) {
+        try {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids)) {
+                return res.status(400).json({ success: false, message: 'Invalid IDs' });
+            }
+            await estimationRepository.bulkDelete(ids);
+            res.json({ success: true, message: 'Bulk delete successful' });
+        } catch (err) {
+            console.error('BULK DELETE ERROR:', err);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    }
+
     async duplicateData(req, res) {
         try {
             const { id } = req.params;

@@ -3,13 +3,18 @@ const db = require('../config/mssql');
 
 module.exports = async (req, res, next) => {
   try {
+    let token = '';
     const authHeader = req.header('Authorization');
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No authentication token' });
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '').trim();
+    } else if (req.query.token) {
+      token = req.query.token;
     }
 
-    const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) {
+      return res.status(401).json({ error: 'No authentication token' });
+    }
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

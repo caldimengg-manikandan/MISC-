@@ -116,7 +116,7 @@ export default function SystemSettings() {
                  <h2 className="text-xl font-black text-slate-800 mb-2 flex items-center gap-2">
                     <Building size={20} className="text-blue-600" /> Organization Branding
                  </h2>
-                 <p className="text-sm text-slate-500 mb-8 font-medium">Customize how your company appears on official SFE reports and invitations.</p>
+                 <p className="text-sm text-slate-500 mb-8 font-medium">Customize how your company appears on official reports and invitations.</p>
                  
                  <div className="space-y-6">
                     <div>

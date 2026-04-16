@@ -30,10 +30,21 @@ export default function CustomerMaster() {
     fetchCustomers();
   }, []);
 
+  // Global Save Implementation
+  useEffect(() => {
+    const onGlobalSave = () => {
+      // Only trigger if form is open (look for the unique save button in the sliding form)
+      const formBtn = document.querySelector('.cm-save-btn');
+      if (formBtn) formBtn.click();
+    };
+    window.addEventListener('app:save', onGlobalSave);
+    return () => window.removeEventListener('app:save', onGlobalSave);
+  }, []);
+
   const fetchCustomers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_BASE_URL}/customers`, {
+      const token = localStorage.getItem('steel_token');
+      const res = await axios.get(`${API_BASE_URL}/api/customers?status=active`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -84,10 +95,10 @@ export default function CustomerMaster() {
     e.preventDefault();
     const t = toast.loading(editingCustomer ? "Updating customer..." : "Creating customer...");
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('steel_token');
       const url = editingCustomer 
-        ? `${API_BASE_URL}/customers/${editingCustomer.id}` 
-        : `${API_BASE_URL}/customers`;
+        ? `${API_BASE_URL}/api/customers/${editingCustomer.id}` 
+        : `${API_BASE_URL}/api/customers`;
       const method = editingCustomer ? 'put' : 'post';
 
       const res = await axios[method](url, formData, {
@@ -108,8 +119,8 @@ export default function CustomerMaster() {
     const newStatus = customer.status === 'active' ? 'inactive' : 'active';
     const t = toast.loading(`Setting status to ${newStatus}...`);
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.patch(`${API_BASE_URL}/customers/${customer.id}/status`, 
+      const token = localStorage.getItem('steel_token');
+      const res = await axios.patch(`${API_BASE_URL}/api/customers/${customer.id}/status`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );

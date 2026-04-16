@@ -26,8 +26,8 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(`${API_BASE_URL}/customers`, formData, {
+      const token = localStorage.getItem('steel_token');
+      const res = await axios.post(`${API_BASE_URL}/api/customers`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

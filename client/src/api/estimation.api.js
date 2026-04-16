@@ -21,6 +21,7 @@ const estimationApi = {
     updateStatus: (id, action, data) => axios.put(`${API_URL}/estimations/${id}/${action}`, data, { headers: getAuthHeaders() }),
     saveData: (id, data) => axios.put(`${API_URL}/estimations/${id}`, data, { headers: getAuthHeaders() }),
     delete: (id) => axios.delete(`${API_URL}/estimations/${id}`, { headers: getAuthHeaders() }),
+    bulkDelete: (ids) => axios.post(`${API_URL}/estimations/bulk-delete-test`, { ids }, { headers: getAuthHeaders() }),
     duplicate: (id) => axios.post(`${API_URL}/estimations/${id}/duplicate`, {}, { headers: getAuthHeaders() }),
 };
 

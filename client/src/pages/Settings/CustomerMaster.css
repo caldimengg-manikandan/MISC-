@@ -136,6 +136,7 @@
   border-bottom: 1px solid #f8fafc;
   font-size: 14px;
   color: #334155;
+  vertical-align: middle;
 }
 
 /* ─── Premium Side Drawer ─────────────────────────────────────── */
@@ -372,4 +373,44 @@
   align-items: center;
   justify-content: center;
   font-weight: 800;
+}
+
+/* ─── Action Buttons ─────────────────────────────────────────── */
+.cm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cm-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cm-action-icon:hover {
+  background: #f8fafc;
+  color: #2563eb;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.cm-action-icon.danger:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.cm-action-icon.success:hover {
+  background: #f0fdf4;
+  color: #22c55e;
+  border-color: #22c55e;
 }

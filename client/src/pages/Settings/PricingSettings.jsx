@@ -1,25 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw, DollarSign, Percent, Zap, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { 
+  Save, RotateCcw, DollarSign, Percent, Zap, 
+  ShieldCheck, ArrowRight, Gauge, Layers, 
+  Wrench, Hammer, RefreshCw, ChevronRight,
+  Info
+} from 'lucide-react';
 import API_BASE_URL from '../../config/api';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const SettingInput = ({ label, icon, value, onChange, type = "number", step = "0.01", suffix = "" }) => (
-  <div className="flex flex-col gap-2">
-    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
+// ── COMPONENTS ───────────────────────────────────────────────────────────────
+
+/**
+ * Premium numeric input for pricing variables
+ * Uses Geist Mono for technical clarity
+ */
+const PremiumSettingInput = ({ label, icon: Icon, value, onChange, suffix, type = "number", step = "0.01" }) => (
+  <div className="flex flex-col gap-1.5 group">
+    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] pl-1 group-focus-within:text-[--gpt-accent] transition-colors">
+      {label}
+    </label>
     <div className="relative">
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-        {icon}
+      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[--gpt-accent] transition-colors">
+        {Icon && <Icon size={15} strokeWidth={2.5} />}
       </div>
       <input
         type={type}
         step={step}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full pl-10 pr-12 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-semibold text-slate-700"
+        className="w-full pl-10 pr-16 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-[--gpt-accent] focus:ring-4 focus:ring-[rgba(16,163,127,0.08)] outline-none transition-all font-mono text-[13px] font-medium text-slate-800 shadow-sm"
       />
       {suffix && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-slate-50 border border-slate-100 rounded-md text-[9px] font-bold text-slate-500 uppercase">
           {suffix}
         </div>
       )}
@@ -27,9 +40,43 @@ const SettingInput = ({ label, icon, value, onChange, type = "number", step = "0
   </div>
 );
 
+/**
+ * Categorized container for settings
+ */
+const SettingSection = ({ title, subtitle, icon: Icon, children, accentColor = "var(--gpt-accent)" }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 12 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden"
+  >
+    <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+      <div className="flex items-center gap-3">
+        <div 
+          className="p-2.5 rounded-xl text-white shadow-lg"
+          style={{ backgroundColor: accentColor }}
+        >
+          {Icon && <Icon size={18} />}
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-900 leading-tight">{title}</h2>
+          {subtitle && <p className="text-[12px] text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+    <div className="p-6">
+      {children}
+    </div>
+  </motion.div>
+);
+
+// ── MAIN COMPONENT ───────────────────────────────────────────────────────────
+
 export default function PricingSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState('all');
+  
   const [config, setConfig] = useState({
     steel_price_per_lb: 0.75,
     shop_hourly_rate: 70.00,
@@ -41,34 +88,31 @@ export default function PricingSettings() {
     mounting_anchored_rate: 6.00,
     anchor_bolt_rate: 0.025,
     por_rok_anchor_rate: 0.00,
-    company_logo: '',
     scrap_factor_pct: 10,
     galvanize_markup_pct: 10,
     stair_pan_rate: 1.00,
     welded_shop_mh: 0.5,
     welded_field_mh: 0.25,
     bolted_shop_mh: 1.0,
-    bolted_field_mh: 0.5
+    bolted_field_mh: 0.5,
+    grating_factor_bar_125_welded: 1.0,
+    grating_factor_bar_100_welded: 1.0,
+    grating_factor_mcnichols: 1.0,
+    grating_factor_bar_125_bolted: 1.0,
+    grating_factor_bar_100_bolted: 1.0,
+    grating_factor_prefab: 1.0
   });
-
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast.error('Image size should be less than 2MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setConfig(prev => ({ ...prev, company_logo: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   useEffect(() => {
     fetchConfig();
   }, []);
+
+  // Global Save Implementation
+  useEffect(() => {
+    const onGlobalSave = () => handleSave();
+    window.addEventListener('app:save', onGlobalSave);
+    return () => window.removeEventListener('app:save', onGlobalSave);
+  }, [config]);
 
   const fetchConfig = async () => {
     try {
@@ -78,10 +122,10 @@ export default function PricingSettings() {
       });
       const data = await res.json();
       if (data.success) {
-        setConfig(data.data);
+        setConfig(prev => ({ ...prev, ...data.data }));
       }
     } catch (error) {
-      toast.error("Failed to load pricing configurations");
+      toast.error("Cloud parameters unreachable");
     } finally {
       setLoading(false);
     }
@@ -89,7 +133,7 @@ export default function PricingSettings() {
 
   const handleSave = async () => {
     setSaving(true);
-    const saveToast = toast.loading("Updating global pricing...");
+    const t = toast.loading("Propagating global pricing...");
     try {
       const token = localStorage.getItem('steel_token');
       const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
@@ -102,12 +146,12 @@ export default function PricingSettings() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Pricing configurations updated successfully!", { id: saveToast });
+        toast.success("Pricing engine updated", { id: t });
       } else {
-        toast.error(data.error || "Failed to update", { id: saveToast });
+        toast.error(data.error || "Update failed", { id: t });
       }
     } catch (error) {
-      toast.error("Error connecting to server", { id: saveToast });
+      toast.error("Network error", { id: t });
     } finally {
       setSaving(false);
     }
@@ -115,309 +159,264 @@ export default function PricingSettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <RefreshCw className="text-[--gpt-accent] animate-spin" size={32} />
+        <p className="text-slate-400 font-medium animate-pulse">Syncing Pricing Core...</p>
       </div>
     );
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto p-6"
-    >
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Pricing Settings</h1>
-          <p className="text-slate-500 mt-1">Configure global rates and factors for all estimations.</p>
-        </div>
-        <div className="flex gap-3">
-          <button 
-            onClick={fetchConfig}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 font-semibold transition-all"
-          >
-            <RotateCcw size={18} /> Reset
-          </button>
-          <button 
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-bold shadow-lg transition-all disabled:opacity-50"
-          >
-            <Save size={18} /> {saving ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Material & Labor Rates */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <Zap size={20} />
+    <div className="min-h-screen bg-[#fcfcfc] pb-20">
+      {/* ── STICKY HEADER ─────────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 mb-6">
+        <div className="max-w-[1200px] mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-[--gpt-accent] animate-pulse" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing Engine v2.4</span>
             </div>
-            <h2 className="text-lg font-bold text-slate-800">Primary Rates</h2>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Global Rates Configuration</h1>
           </div>
-
-          <SettingInput 
-            label="Price Per LB (Steel)" 
-            icon={<DollarSign size={18} />} 
-            value={config.steel_price_per_lb}
-            onChange={(val) => setConfig(prev => ({ ...prev, steel_price_per_lb: parseFloat(val) }))}
-            suffix="/ lb"
-          />
-
-          <SettingInput 
-            label="Shop Hourly Rate" 
-            icon={<DollarSign size={18} />} 
-            value={config.shop_hourly_rate}
-            onChange={(val) => setConfig(prev => ({ ...prev, shop_hourly_rate: parseFloat(val) }))}
-            suffix="/ hr"
-          />
-
-          <SettingInput 
-            label="Field Hourly Rate" 
-            icon={<DollarSign size={18} />} 
-            value={config.field_hourly_rate}
-            onChange={(val) => setConfig(prev => ({ ...prev, field_hourly_rate: parseFloat(val) }))}
-            suffix="/ hr"
-          />
-
-          <div className="h-px bg-slate-100 my-2"></div>
-
-          <SettingInput 
-            label="Scrap Factor" 
-            icon={<Percent size={18} />} 
-            value={config.scrap_factor_pct}
-            onChange={(val) => setConfig(prev => ({ ...prev, scrap_factor_pct: parseFloat(val) || 0 }))}
-            suffix="%"
-          />
-
-          <SettingInput 
-            label="Galvanize Markup" 
-            icon={<Percent size={18} />} 
-            value={config.galvanize_markup_pct}
-            onChange={(val) => setConfig(prev => ({ ...prev, galvanize_markup_pct: parseFloat(val) || 0 }))}
-            suffix="%"
-          />
-
-          <SettingInput 
-            label="Stair Pan Rate" 
-            icon={<DollarSign size={18} />} 
-            value={config.stair_pan_rate}
-            onChange={(val) => setConfig(prev => ({ ...prev, stair_pan_rate: parseFloat(val) || 0 }))}
-            suffix="/ lb"
-          />
-        </div>
-
-        {/* Factors & Surcharges */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-              <ShieldCheck size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">Tax & Surcharges</h2>
-          </div>
-
-          <SettingInput 
-            label="Sales Tax" 
-            icon={<Percent size={18} />} 
-            value={config.tax_rate * 100}
-            onChange={(val) => setConfig(prev => ({ ...prev, tax_rate: parseFloat(val) / 100 }))}
-            suffix="%"
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <SettingInput 
-              label="Galvanize Charge" 
-              icon={<DollarSign size={18} />} 
-              value={config.galvanize_rate}
-              onChange={(val) => setConfig(prev => ({ ...prev, galvanize_rate: parseFloat(val) || 0 }))}
-              suffix="/ lb"
-            />
-
-            <SettingInput 
-              label="Powder Coat Charge" 
-              icon={<DollarSign size={18} />} 
-              value={config.powder_coat_rate}
-              onChange={(val) => setConfig(prev => ({ ...prev, powder_coat_rate: parseFloat(val) || 0 }))}
-              suffix="/ lb"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 mt-4 mb-2">
-            <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-              <Zap size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">Mounting Rates</h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <SettingInput 
-              label="Embedded Rate" 
-              icon={<DollarSign size={18} />} 
-              value={config.mounting_embedded_rate}
-              onChange={(val) => setConfig(prev => ({ ...prev, mounting_embedded_rate: parseFloat(val) || 0 }))}
-              suffix="/ ea"
-            />
-            <SettingInput 
-              label="Anchored Rate" 
-              icon={<DollarSign size={18} />} 
-              value={config.mounting_anchored_rate}
-              onChange={(val) => setConfig(prev => ({ ...prev, mounting_anchored_rate: parseFloat(val) || 0 }))}
-              suffix="/ ea"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 mt-4 mb-2">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <Zap size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">Anchor Bolt Rates</h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <SettingInput 
-              label="Bolt Rate (per lb)" 
-              icon={<DollarSign size={18} />} 
-              value={config.anchor_bolt_rate}
-              onChange={(val) => setConfig(prev => ({ ...prev, anchor_bolt_rate: parseFloat(val) || 0 }))}
-              suffix="/ lb"
-            />
-            <SettingInput 
-              label="POR ROK Anchors" 
-              icon={<DollarSign size={18} />} 
-              value={config.por_rok_anchor_rate}
-              onChange={(val) => setConfig(prev => ({ ...prev, por_rok_anchor_rate: parseFloat(val) || 0 }))}
-              suffix="Fixed"
-            />
-          </div>
-
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-            <p className="text-sm text-amber-800 font-medium leading-relaxed">
-              <strong>Notice:</strong> These values are applied company-wide. Changing them will affect the real-time previews of all active projects immediately.
-            </p>
-          </div>
-        </div>
-
-        {/* Connection Labor Rates */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-              <Zap size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">Connection Labor Rates</h2>
-          </div>
-
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl mb-2">
-            <p className="text-sm text-slate-600 font-medium leading-relaxed">
-              These rates apply to N/S and F/S stringer connection points. Set by your shop standards.<br/>
-              Rates per active connection point (extent &gt; 0).
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col gap-4">
-              <SettingInput 
-                label="Welded — Shop MH" 
-                icon={<DollarSign size={18} />} 
-                value={config.welded_shop_mh}
-                onChange={(val) => setConfig(prev => ({ ...prev, welded_shop_mh: parseFloat(val) || 0 }))}
-                suffix="MH / pt"
-              />
-              <SettingInput 
-                label="Welded — Field MH" 
-                icon={<DollarSign size={18} />} 
-                value={config.welded_field_mh}
-                onChange={(val) => setConfig(prev => ({ ...prev, welded_field_mh: parseFloat(val) || 0 }))}
-                suffix="MH / pt"
-              />
-            </div>
-            <div className="flex flex-col gap-4">
-              <SettingInput 
-                label="Bolted — Shop MH" 
-                icon={<DollarSign size={18} />} 
-                value={config.bolted_shop_mh}
-                onChange={(val) => setConfig(prev => ({ ...prev, bolted_shop_mh: parseFloat(val) || 0 }))}
-                suffix="MH / pt"
-              />
-              <SettingInput 
-                label="Bolted — Field MH" 
-                icon={<DollarSign size={18} />} 
-                value={config.bolted_field_mh}
-                onChange={(val) => setConfig(prev => ({ ...prev, bolted_field_mh: parseFloat(val) || 0 }))}
-                suffix="MH / pt"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Grating Tread Type Factors */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6 md:col-span-2">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-teal-50 text-teal-600 rounded-lg">
-              <Zap size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">Grating Tread Type Factors</h2>
-          </div>
-
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl mb-2">
-            <p className="text-sm text-slate-600 font-medium leading-relaxed">
-              Multiplier applied to the base grating tread price (set by stair width). Default 1.00 matches Excel standard pricing. Modify to apply type-specific cost differences.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col gap-4">
-              <SettingInput 
-                label="1 1/4&quot; Bar grating/Welded" 
-                icon={<DollarSign size={18} />} 
-                value={config.grating_factor_bar_125_welded}
-                onChange={(val) => setConfig(prev => ({ ...prev, grating_factor_bar_125_welded: Math.max(0.01, parseFloat(val) || 1.00) }))}
-                suffix="&times;"
-              />
-              <SettingInput 
-                label="1&quot; Bar grating/Welded" 
-                icon={<DollarSign size={18} />} 
-                value={config.grating_factor_bar_100_welded}
-                onChange={(val) => setConfig(prev => ({ ...prev, grating_factor_bar_100_welded: Math.max(0.01, parseFloat(val) || 1.00) }))}
-                suffix="&times;"
-              />
-              <SettingInput 
-                label="McNichols treads" 
-                icon={<DollarSign size={18} />} 
-                value={config.grating_factor_mcnichols}
-                onChange={(val) => setConfig(prev => ({ ...prev, grating_factor_mcnichols: Math.max(0.01, parseFloat(val) || 1.00) }))}
-                suffix="&times;"
-              />
-            </div>
-            <div className="flex flex-col gap-4">
-              <SettingInput 
-                label="1 1/4&quot; Bar grating/Bolted" 
-                icon={<DollarSign size={18} />} 
-                value={config.grating_factor_bar_125_bolted}
-                onChange={(val) => setConfig(prev => ({ ...prev, grating_factor_bar_125_bolted: Math.max(0.01, parseFloat(val) || 1.00) }))}
-                suffix="&times;"
-              />
-              <SettingInput 
-                label="1&quot; Bar grating/Bolted" 
-                icon={<DollarSign size={18} />} 
-                value={config.grating_factor_bar_100_bolted}
-                onChange={(val) => setConfig(prev => ({ ...prev, grating_factor_bar_100_bolted: Math.max(0.01, parseFloat(val) || 1.00) }))}
-                suffix="&times;"
-              />
-              <SettingInput 
-                label="Other Pre-fabricated Treads" 
-                icon={<DollarSign size={18} />} 
-                value={config.grating_factor_prefab}
-                onChange={(val) => setConfig(prev => ({ ...prev, grating_factor_prefab: Math.max(0.01, parseFloat(val) || 1.00) }))}
-                suffix="&times;"
-              />
-            </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={fetchConfig}
+              className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-800 font-semibold transition-colors"
+            >
+              <RotateCcw size={16} /> <span className="text-sm">Reset</span>
+            </button>
+            <button 
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold shadow-xl shadow-slate-200 transition-all disabled:opacity-50 active:scale-95"
+            >
+              <Save size={18} /> {saving ? 'Propagating...' : 'Save Changes'}
+            </button>
           </div>
         </div>
       </div>
-    </motion.div>
+
+      <div className="max-w-[1200px] mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Main Content Area */}
+          <div className="lg:col-span-8 space-y-8">
+            
+            {/* 1. Core Material & Labor */}
+            <SettingSection 
+              title="Primary Material & Base Rates"
+              subtitle="The fundamental costs driving the core estimation engine."
+              icon={Gauge}
+              accentColor="#10a37f"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                <PremiumSettingInput 
+                  label="Steel Price (Base)" icon={DollarSign} value={config.steel_price_per_lb}
+                  onChange={(v) => setConfig(p => ({...p, steel_price_per_lb: parseFloat(v)}))} 
+                  suffix="/ lb"
+                />
+                <div className="space-y-6">
+                  <PremiumSettingInput 
+                    label="Shop Hourly Rate" icon={DollarSign} value={config.shop_hourly_rate}
+                    onChange={(v) => setConfig(p => ({...p, shop_hourly_rate: parseFloat(v)}))} 
+                    suffix="/ hr"
+                  />
+                  <PremiumSettingInput 
+                    label="Field Hourly Rate" icon={DollarSign} value={config.field_hourly_rate}
+                    onChange={(v) => setConfig(p => ({...p, field_hourly_rate: parseFloat(v)}))} 
+                    suffix="/ hr"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-10 pt-8 border-t border-slate-50 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <PremiumSettingInput 
+                  label="Scrap Factor" icon={Percent} value={config.scrap_factor_pct}
+                  onChange={(v) => setConfig(p => ({...p, scrap_factor_pct: parseFloat(v)}))} 
+                  suffix="%"
+                />
+                <PremiumSettingInput 
+                  label="Galv Markup" icon={Percent} value={config.galvanize_markup_pct}
+                  onChange={(v) => setConfig(p => ({...p, galvanize_markup_pct: parseFloat(v)}))} 
+                  suffix="%"
+                />
+                <PremiumSettingInput 
+                  label="Stair Pan Rate" icon={DollarSign} value={config.stair_pan_rate}
+                  onChange={(v) => setConfig(p => ({...p, stair_pan_rate: parseFloat(v)}))} 
+                  suffix="/ lb"
+                />
+              </div>
+            </SettingSection>
+
+            {/* 2. Connection Labor */}
+            <SettingSection 
+              title="Connection Engineering"
+              subtitle="Mandatory labor hours per active connection point."
+              icon={Hammer}
+              accentColor="#f59e0b"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                  <div className="text-[11px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-50 pb-2">Welded Construction</div>
+                  <PremiumSettingInput 
+                    label="Shop MH / Point" icon={Wrench} value={config.welded_shop_mh}
+                    onChange={(v) => setConfig(p => ({...p, welded_shop_mh: parseFloat(v)}))} 
+                    suffix="MH"
+                  />
+                  <PremiumSettingInput 
+                    label="Field MH / Point" icon={Wrench} value={config.welded_field_mh}
+                    onChange={(v) => setConfig(p => ({...p, welded_field_mh: parseFloat(v)}))} 
+                    suffix="MH"
+                  />
+                </div>
+                <div className="space-y-6">
+                  <div className="text-[11px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-50 pb-2">Bolted Construction</div>
+                  <PremiumSettingInput 
+                    label="Shop MH / Point" icon={Wrench} value={config.bolted_shop_mh}
+                    onChange={(v) => setConfig(p => ({...p, bolted_shop_mh: parseFloat(v)}))} 
+                    suffix="MH"
+                  />
+                  <PremiumSettingInput 
+                    label="Field MH / Point" icon={Wrench} value={config.bolted_field_mh}
+                    onChange={(v) => setConfig(p => ({...p, bolted_field_mh: parseFloat(v)}))} 
+                    suffix="MH"
+                  />
+                </div>
+              </div>
+            </SettingSection>
+
+            {/* 3. Grating */}
+            <SettingSection 
+              title="Grating & Tread Factors"
+              subtitle="Multipliers applied to baseline tread material costs."
+              icon={Layers}
+              accentColor="#6366f1"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                <PremiumSettingInput 
+                  label='1-1/4" Bar / Welded' value={config.grating_factor_bar_125_welded}
+                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_125_welded: parseFloat(v)}))} 
+                  suffix="x Mult"
+                />
+                <PremiumSettingInput 
+                  label='1-1/4" Bar / Bolted' value={config.grating_factor_bar_125_bolted}
+                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_125_bolted: parseFloat(v)}))} 
+                  suffix="x Mult"
+                />
+                <PremiumSettingInput 
+                  label='1" Bar / Welded' value={config.grating_factor_bar_100_welded}
+                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_100_welded: parseFloat(v)}))} 
+                  suffix="x Mult"
+                />
+                <PremiumSettingInput 
+                  label='1" Bar / Bolted' value={config.grating_factor_bar_100_bolted}
+                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_100_bolted: parseFloat(v)}))} 
+                  suffix="x Mult"
+                />
+                <PremiumSettingInput 
+                  label="McNichols Treads" value={config.grating_factor_mcnichols}
+                  onChange={(v) => setConfig(p => ({...p, grating_factor_mcnichols: parseFloat(v)}))} 
+                  suffix="x Mult"
+                />
+                <PremiumSettingInput 
+                  label="Other Prefab Treads" value={config.grating_factor_prefab}
+                  onChange={(v) => setConfig(p => ({...p, grating_factor_prefab: parseFloat(v)}))} 
+                  suffix="x Mult"
+                />
+              </div>
+            </SettingSection>
+          </div>
+
+          {/* Sidebar Area */}
+          <div className="lg:col-span-4 space-y-8">
+            
+            {/* Tax & Surcharges */}
+            <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl shadow-slate-200">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <ShieldCheck size={20} className="text-[--gpt-accent]" />
+                </div>
+                <h2 className="text-lg font-bold">Tax & Surcharges</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                  <PremiumSettingInput 
+                    label="Sales Tax" icon={Percent} value={config.tax_rate * 100}
+                    onChange={(v) => setConfig(p => ({...p, tax_rate: parseFloat(v) / 100}))} 
+                    suffix="%"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                    <PremiumSettingInput 
+                      label="Galv Charge" icon={DollarSign} value={config.galvanize_rate}
+                      onChange={(v) => setConfig(p => ({...p, galvanize_rate: parseFloat(v)}))} 
+                      suffix="/ lb"
+                    />
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                    <PremiumSettingInput 
+                      label="Powder Coat" icon={DollarSign} value={config.powder_coat_rate}
+                      onChange={(v) => setConfig(p => ({...p, powder_coat_rate: parseFloat(v)}))} 
+                      suffix="/ lb"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mounting & Anchors */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-6 font-bold text-slate-800">
+                <Zap size={18} className="text-blue-500" />
+                <span>Mounting & Hardware</span>
+              </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <PremiumSettingInput 
+                    label="Embedded" icon={DollarSign} value={config.mounting_embedded_rate}
+                    onChange={(v) => setConfig(p => ({...p, mounting_embedded_rate: parseFloat(v)}))} 
+                    suffix="/ ea"
+                  />
+                  <PremiumSettingInput 
+                    label="Anchored" icon={DollarSign} value={config.mounting_anchored_rate}
+                    onChange={(v) => setConfig(p => ({...p, mounting_anchored_rate: parseFloat(v)}))} 
+                    suffix="/ ea"
+                  />
+                </div>
+                <div className="h-px bg-slate-50" />
+                <PremiumSettingInput 
+                  label="Bolt Rate" icon={DollarSign} value={config.anchor_bolt_rate}
+                  onChange={(v) => setConfig(p => ({...p, anchor_bolt_rate: parseFloat(v)}))} 
+                  suffix="/ lb"
+                />
+                <PremiumSettingInput 
+                  label="POR ROK Anchors" icon={DollarSign} value={config.por_rok_anchor_rate}
+                  onChange={(v) => setConfig(p => ({...p, por_rok_anchor_rate: parseFloat(v)}))} 
+                  suffix="Fixed"
+                />
+              </div>
+            </div>
+
+            {/* System Info */}
+            <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+              <div className="flex gap-3">
+                <Info size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-[13px] font-bold text-blue-900 mb-1">Global Propagation</h4>
+                  <p className="text-[12px] text-blue-700 leading-relaxed font-medium">
+                    Changes made here propagate to the estimation engine immediately. Active projects will reflect new pricing upon next recalculation or save.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

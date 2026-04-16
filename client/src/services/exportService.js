@@ -36,7 +36,7 @@ export const generateProposalPDF = (projectData, stairs) => {
   doc.setFont('helvetica', 'normal');
   doc.text(`DATE: ${timestamp}`, 160, 15);
   doc.text(`PROJECT ID: EST-${Date.now().toString().slice(-6)}`, 160, 22);
-  doc.text('CALDIM ENGINEERING STANDARDS', 160, 29);
+  doc.text('VANTAGE ENGINEERING STANDARDS', 160, 29);
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(12);
@@ -314,6 +314,168 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   }
   worksheet.getRow(finalStart+2).getCell(6).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
   worksheet.getRow(finalStart+2).getCell(7).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
+
+  // Detailed Line Items Section
+  let currentRow = finalStart + 6;
+  const detailHeaderRow = worksheet.getRow(currentRow);
+  detailHeaderRow.getCell(2).value = 'ITEMIZED ENTRIES (Stringers and Rails)';
+  detailHeaderRow.getCell(2).font = { size: 14, bold: true };
+  currentRow += 2;
+
+  const applyTableStyle = (row, isHeader = false) => {
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      if (colNumber > 1) { // Skip column A
+        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        if (isHeader) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBD5E1' } }; // slate-300
+          cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          cell.font = { bold: true };
+        } else {
+          cell.alignment = { vertical: 'middle', horizontal: colNumber === 2 ? 'left' : 'center', wrapText: true };
+        }
+      }
+    });
+  };
+
+  // Render Stairs
+  if (stairs && stairs.length > 0) {
+    worksheet.getRow(currentRow).getCell(2).value = 'STAIR SUB-ASSEMBLIES';
+    worksheet.getRow(currentRow).getCell(2).font = { bold: true };
+    currentRow++;
+
+    const sHeader = worksheet.getRow(currentRow);
+    sHeader.values = [, 'Ref', 'Category', 'Stair Type', 'Tread Setup', 'Mounting', 'Finish', 'Width', 'Run', 'Rise', 'Height', 'Risers', 'Angle', 'Top Ext (N/S, F/S)', 'Bot Ext (N/S, F/S)', 'Connection', 'Stringer Specs', 'Wt(lbs)'];
+    applyTableStyle(sHeader, true);
+    currentRow++;
+
+    stairs.forEach((s, idx) => {
+      const sRow = worksheet.getRow(currentRow);
+      let runStr = s.run;
+      if (typeof s.run === 'object' && s.run.value) runStr = s.run.value;
+      let riseStr = s.rise;
+      if (typeof s.rise === 'object' && s.rise.value) riseStr = s.rise.value;
+      let widthStr = s.stairWidth || s.width;
+      if (typeof widthStr === 'object' && widthStr.value) widthStr = widthStr.value;
+      let hghtStr = s.totalHeight;
+      if (typeof hghtStr === 'object' && hghtStr.value) hghtStr = hghtStr.value;
+
+      const extNT = typeof s.nsStringerTop === 'object' ? s.nsStringerTop.value : s.nsStringerTop;
+      const extFT = typeof s.fsStringerTop === 'object' ? s.fsStringerTop.value : s.fsStringerTop;
+      const extNB = typeof s.nsStringerBot === 'object' ? s.nsStringerBot.value : s.nsStringerBot;
+      const extFB = typeof s.fsStringerBot === 'object' ? s.fsStringerBot.value : s.fsStringerBot;
+      const angleStr = s.angle ? parseFloat(s.angle).toFixed(2) : '0';
+
+      sRow.values = [, 
+        s.id ? `Stair ${idx + 1}` : 'Stair',
+        s.stairCategory || 'Commercial',
+        s.stairType || '-',
+        s.gratingType || '-',
+        s.mountingType || '-',
+        s.finish || '-',
+        `${widthStr || 0}'`,
+        `${runStr || 0}"`,
+        `${riseStr || 0}"`,
+        `${hghtStr || 0}'`,
+        s.numRisers || 0,
+        `${angleStr}°`,
+        `${extNT||0}', ${extFT||0}'`,
+        `${extNB||0}', ${extFB||0}'`,
+        s.nsStringerConnBot || 'Welded',
+        `${s.stringerType || 'Rolled'} | ${s.steelGrade || 'A36'} | ${s.stringerSize || '-'}`,
+        (s.totalWeight || s.systemCalc?.totalWeight || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      ];
+      applyTableStyle(sRow, false);
+      currentRow++;
+    });
+    currentRow += 2;
+  }
+
+  // Extract all rails and landings
+  const allRails = [];
+  const allPlatforms = [];
+  if (stairs && stairs.length > 0) {
+    stairs.forEach(s => {
+      if (s.rails) allRails.push(...s.rails);
+      if (s.landings) allPlatforms.push(...s.landings);
+    });
+  }
+
+  if (allRails.length > 0) {
+    worksheet.getRow(currentRow).getCell(2).value = 'RAILING SUB-ASSEMBLIES';
+    worksheet.getRow(currentRow).getCell(2).font = { bold: true };
+    currentRow++;
+
+    const rHeader = worksheet.getRow(currentRow);
+    rHeader.values = [, 'Type', 'Length', 'Steel Grade', 'Actual Spacing', 'Int Rails', 'Post Qty', 'Bracket Qty', 'Toe Plate Req\'d', 'Mounting', 'Finish', 'Wt(lbs)'];
+    applyTableStyle(rHeader, true);
+    currentRow++;
+
+    allRails.forEach(r => {
+      const rRow = worksheet.getRow(currentRow);
+      let lenStr = r.railLength || r.length;
+      if (typeof lenStr === 'object' && lenStr.value) lenStr = lenStr.value;
+      
+      const actualSpacing = r.systemCalc?.actualSpacing 
+        ? Number(r.systemCalc.actualSpacing).toFixed(3) 
+        : (typeof r.postSpacing === 'object' ? r.postSpacing.value : r.postSpacing);
+      
+      const postQty = r.systemCalc?.posts || r.postQty || '-';
+      const bracketQty = r.systemCalc?.bracketQty || r.bracketQty || '-';
+
+      rRow.values = [,
+        r.railType || r.typeCode || 'Railing',
+        `${lenStr || 0}'`,
+        r.steelGrade || 'A53',
+        actualSpacing || 0,
+        r.intermediateRails || '-',
+        postQty,
+        bracketQty,
+        r.toeplateRequired || 'No',
+        r.mountingType || '-',
+        r.finish || '-',
+        (r.totalWeight || r.systemCalc?.totalWeight || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      ];
+      applyTableStyle(rRow, false);
+      currentRow++;
+    });
+    currentRow += 2;
+  }
+
+  if (allPlatforms.length > 0) {
+    worksheet.getRow(currentRow).getCell(2).value = 'PLATFORM SUB-ASSEMBLIES';
+    worksheet.getRow(currentRow).getCell(2).font = { bold: true };
+    currentRow++;
+
+    const pHeader = worksheet.getRow(currentRow);
+    pHeader.values = [, 'Type', 'Length (ft)', 'Width (ft)', 'Finish'];
+    applyTableStyle(pHeader, true);
+    currentRow++;
+
+    allPlatforms.forEach(p => {
+      const pRow = worksheet.getRow(currentRow);
+      let lenStr = p.platformLength || p.length;
+      if (typeof lenStr === 'object' && lenStr.value) lenStr = lenStr.value;
+      let wStr = p.platformWidth || p.width;
+      if (typeof wStr === 'object' && wStr.value) wStr = wStr.value;
+
+      pRow.values = [,
+        p.platformType || p.type || 'Platform',
+        lenStr || 0,
+        wStr || 0,
+        p.finish || '-'
+      ];
+      applyTableStyle(pRow, false);
+      currentRow++;
+    });
+  }
+
+  // Auto-fit new columns properly so text doesn't overflow
+  [10, 11, 12, 13, 14, 15, 16, 17, 18].forEach(colIndex => {
+    const col = worksheet.getColumn(colIndex);
+    if (!col.width || col.width < 14) {
+      col.width = 14; 
+    }
+  });
 
   // Download File
   const buffer = await workbook.xlsx.writeBuffer();

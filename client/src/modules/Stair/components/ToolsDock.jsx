@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   FileCode2, Megaphone, Clock,
   MessageSquare, Sun, Moon, Monitor, X, Download, PlusSquare, Image as ImageIcon,
-  Trash2, RotateCcw, Calculator
+  Trash2, RotateCcw, Calculator, UploadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEstimation } from '../../../contexts/EstimationContext';
@@ -14,9 +14,115 @@ export default function ToolsDock() {
     addNote, selectedEstimation, activeContext, setActiveContext,
     trashNotes, fetchTrashNotes, restoreNote, permanentlyDeleteNote, notes
   } = useEstimation();
-  const [activePopover, setActivePopover] = useState(null); // 'notes', 'appearance', 'attachments', 'trash'
+  const [activePopover, setActivePopover] = useState(null);
+  const dockRef = useRef(null);
+
+  // Close any open popover when clicking outside the dock
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (activePopover && dockRef.current && !dockRef.current.contains(e.target)) {
+        setActivePopover(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activePopover]);
   const [showCalc, setShowCalc] = useState(false); // Jobber Calculator modal
-  const [themeMode, setThemeMode] = useState('light'); // 'light', 'dark', 'system'
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('themeMode') || 'light');
+  const [accentColor, setAccentColor] = useState(() => localStorage.getItem('accentColor') || '#10a37f');
+  const [localAttachments, setLocalAttachments] = useState({ images: [], documents: [] });
+
+  const ACCENT_COLORS = [
+    { id: 'teal',    color: '#10a37f', hover: '#0e8f6e', light: 'rgba(16,163,127,0.12)' },
+    { id: 'blue',    color: '#3B82F6', hover: '#2563EB', light: 'rgba(59,130,246,0.12)'  },
+    { id: 'indigo',  color: '#6366F1', hover: '#4F46E5', light: 'rgba(99,102,241,0.12)'  },
+    { id: 'violet',  color: '#8B5CF6', hover: '#7C3AED', light: 'rgba(139,92,246,0.12)'  },
+    { id: 'pink',    color: '#EC4899', hover: '#DB2777', light: 'rgba(236,72,153,0.12)'   },
+    { id: 'red',     color: '#EF4444', hover: '#DC2626', light: 'rgba(239,68,68,0.12)'    },
+    { id: 'orange',  color: '#F97316', hover: '#EA580C', light: 'rgba(249,115,22,0.12)'  },
+    { id: 'amber',   color: '#F59E0B', hover: '#D97706', light: 'rgba(245,158,11,0.12)'  },
+    { id: 'lime',    color: '#84CC16', hover: '#65A30D', light: 'rgba(132,204,22,0.12)'  },
+    { id: 'cyan',    color: '#06B6D4', hover: '#0891B2', light: 'rgba(6,182,212,0.12)'   },
+  ];
+
+  // Apply accent color to CSS variables whenever it changes
+  React.useEffect(() => {
+    localStorage.setItem('accentColor', accentColor);
+    const found = ACCENT_COLORS.find(a => a.color === accentColor) || ACCENT_COLORS[0];
+    const root = document.documentElement;
+    root.style.setProperty('--gpt-accent', found.color);
+    root.style.setProperty('--gpt-accent-hover', found.hover);
+    root.style.setProperty('--gpt-accent-light', found.light);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accentColor]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024, dm = 2, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const processDropFiles = (files) => {
+    files.forEach(file => {
+      const isImg = file.type.startsWith('image/');
+      const obj = { 
+        id: Math.random().toString(36).substr(2, 9), 
+        name: file.name, 
+        url: URL.createObjectURL(file),
+        size: formatFileSize(file.size),
+        type: file.type
+      };
+      if (isImg) setLocalAttachments(p => ({ ...p, images: [...p.images, obj] }));
+      else setLocalAttachments(p => ({ ...p, documents: [...p.documents, obj] }));
+    });
+  };
+
+  const removeAttachment = (type, id) => {
+    setLocalAttachments(p => ({
+      ...p,
+      [type]: p[type].filter(f => f.id !== id)
+    }));
+  };
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processDropFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  // Effect to apply body class based on theme preference
+  React.useEffect(() => {
+    localStorage.setItem('themeMode', themeMode);
+    
+    const applyTheme = () => {
+      const isDark = themeMode === 'dark' || (themeMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (!isDark) {
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
+      } else {
+        document.body.classList.remove('light-mode');
+        document.body.classList.add('dark-mode');
+      }
+    };
+
+    applyTheme();
+
+    // Listen for system changes if system mode is active
+    let mediaQuery;
+    if (themeMode === 'system') {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', applyTheme);
+    }
+    return () => {
+      if (mediaQuery) mediaQuery.removeEventListener('change', applyTheme);
+    };
+  }, [themeMode]);
 
   const handleAddNote = async () => {
     if (!selectedEstimation?.id) return;
@@ -54,7 +160,7 @@ export default function ToolsDock() {
 
   return (
     <>
-      <div className="tdk-root">
+      <div className="tdk-root" ref={dockRef}>
         
         {/* Top Group */}
         <div className="tdk-group">
@@ -89,12 +195,8 @@ export default function ToolsDock() {
             </button>
             
             {activeContext.type !== 'global' && (
-              <div 
-                className="tdk-context-chip"
-                onClick={() => setActiveContext({ type: 'global', id: null, label: 'Global' })}
-                title="Click to reset to Global"
-              >
-                {activeContext.label} ✕
+              <div className="tdk-context-chip">
+                {activeContext.label}
               </div>
             )}
           </div>
@@ -192,7 +294,7 @@ export default function ToolsDock() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 5 }}
                 >
-                  <div className="tdk-menu-panel">
+                  <div className="tdk-menu-panel" style={{ minWidth: '220px' }}>
                     <div className="tdk-menu-header">Appearance</div>
                     <button className={`tdk-menu-item ${themeMode === 'system' ? 'active' : ''}`} onClick={() => setThemeMode('system')}>
                       <Monitor size={14} /> Use system settings
@@ -204,6 +306,31 @@ export default function ToolsDock() {
                     <button className={`tdk-menu-item ${themeMode === 'dark' ? 'active' : ''}`} onClick={() => setThemeMode('dark')}>
                       <Moon size={14} /> Night mode
                     </button>
+                    <div className="tdk-menu-divider" />
+                    <div style={{ padding: '6px 10px 4px', fontSize: '10px', fontWeight: 700, color: 'var(--gpt-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Theme Color</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '6px 10px 10px' }}>
+                      {ACCENT_COLORS.map(({ id, color }) => (
+                        <button
+                          key={id}
+                          onClick={() => setAccentColor(color)}
+                          title={id.charAt(0).toUpperCase() + id.slice(1)}
+                          style={{
+                            width: '22px', height: '22px', borderRadius: '50%',
+                            background: color, border: 'none', cursor: 'pointer',
+                            outline: accentColor === color ? `2px solid ${color}` : '2px solid transparent',
+                            outlineOffset: '2px',
+                            transform: accentColor === color ? 'scale(1.2)' : 'scale(1)',
+                            transition: 'transform 0.15s, outline 0.15s',
+                            position: 'relative',
+                            boxShadow: accentColor === color ? `0 0 8px ${color}60` : 'none',
+                          }}
+                        >
+                          {accentColor === color && (
+                            <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 800 }}>✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -233,36 +360,90 @@ export default function ToolsDock() {
                 <h2>My Attachments</h2>
                 <button className="tdk-btn-close-modal" onClick={() => setActivePopover(null)}><X size={18} /></button>
               </div>
-              <div className="tdk-modal-body">
+              <div className="tdk-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                <h3 className="tdk-sec-title">Images</h3>
-                <div className="tdk-grid-images">
-                  {[1,2].map(i => (
-                    <div className="tdk-image-card" key={i}>
-                      <div className="tdk-img-ph"><ImageIcon size={24} opacity={0.3} /></div>
-                      <div className="tdk-img-lbl">Screenshot 2026-03...</div>
-                    </div>
-                  ))}
+                {/* Drag and Drop Zone */}
+                <div 
+                  className="tdk-dropzone"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  style={{
+                    border: `2px dashed ${isDragging ? 'var(--gpt-accent)' : 'var(--gpt-sidebar-border)'}`,
+                    backgroundColor: isDragging ? 'rgba(56, 189, 248, 0.05)' : 'var(--gpt-surface)',
+                    borderRadius: '12px',
+                    padding: '36px 20px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    position: 'relative'
+                  }}
+                >
+                  <UploadCloud size={32} color={isDragging ? 'var(--gpt-accent)' : 'var(--gpt-sidebar-muted)'} style={{ marginBottom: '4px' }} />
+                  <div style={{ fontSize: '14px', color: 'var(--gpt-text-primary)' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--gpt-accent)' }}>Click to upload</span> or drag and drop
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--gpt-sidebar-muted)' }}>SVG, PNG, JPG, PDF or Excel (max. 25MB)</div>
+                  
+                  <input type="file" multiple style={{ display: 'none' }} id="file-drop-input" onChange={(e) => {
+                    if (e.target.files.length > 0) processDropFiles(Array.from(e.target.files));
+                    e.target.value = null; // reset to allow same file retry
+                  }} />
+                  <label htmlFor="file-drop-input" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, cursor: 'pointer' }}></label>
+                </div>
+                
+                <div className="tdk-attachments-content">
+                  <h3 className="tdk-sec-title" style={{ marginBottom: '12px' }}>Images ({localAttachments.images.length})</h3>
+                  <div className="tdk-grid-images">
+                    {localAttachments.images.length > 0 ? localAttachments.images.map((img) => (
+                      <div className="tdk-image-card" key={img.id} title={img.name} style={{ position: 'relative', overflow: 'visible' }}>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); removeAttachment('images', img.id); }}
+                          style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                          title="Remove image"
+                        ><X size={12} /></button>
+                        <div className="tdk-img-ph" style={{ backgroundImage: `url(${img.url})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 1, border: 'none' }}></div>
+                        <div className="tdk-img-lbl">
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{img.name}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--gpt-sidebar-muted)' }}>{img.size}</div>
+                        </div>
+                      </div>
+                    )) : <div style={{ fontSize: '13px', color: 'var(--gpt-sidebar-muted)', padding: '10px 0' }}>No image files uploaded yet.</div>}
+                  </div>
                 </div>
 
-                <div className="tdk-sec-header">
-                  <h3 className="tdk-sec-title">Documents</h3>
-                  <span className="tdk-link">Show all</span>
-                </div>
-                
-                <div className="tdk-grid-docs">
-                  {['Misc est fron end.pdf', 'MiscMetalsEstimate...', 'Misc est fron end.pdf', 'Updated Report.pdf', 'CalTIMS_QA_Test...', 'Lancaster Archery - ...', 'Misc Worksheet re...'].map((txt, i) => {
-                     // Colors from Screenshot 4
-                     const colors = ['#e06346', '#4caf50', '#e06346', '#e06346', '#e06346', '#fdd835', '#4caf50'];
-                     return (
-                      <div className="tdk-doc-card" key={i}>
-                        <div className="tdk-doc-cover" style={{ background: colors[i] || '#e06346' }}>
-                          <FileCode2 size={28} color="rgba(255,255,255,0.9)" />
+                <div className="tdk-attachments-content">
+                  <div className="tdk-sec-header" style={{ marginBottom: '12px' }}>
+                    <h3 className="tdk-sec-title">Documents ({localAttachments.documents.length})</h3>
+                    {localAttachments.documents.length > 0 && <span className="tdk-link">Show all</span>}
+                  </div>
+                  
+                  <div className="tdk-grid-docs">
+                    {localAttachments.documents.length > 0 ? localAttachments.documents.map((doc, i) => {
+                       const colors = ['#e06346', '#4caf50', '#fdd835', '#00bcd4', '#9c27b0'];
+                       return (
+                        <div className="tdk-doc-card" key={doc.id} title={doc.name} style={{ position: 'relative', overflow: 'visible' }}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); removeAttachment('documents', doc.id); }}
+                            style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                            title="Remove document"
+                          ><X size={12} /></button>
+                          <div className="tdk-doc-cover" style={{ background: colors[i % colors.length] }}>
+                            <FileCode2 size={28} color="rgba(255,255,255,0.9)" />
+                          </div>
+                          <div className="tdk-doc-lbl">
+                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--gpt-sidebar-muted)' }}>{doc.size}</div>
+                          </div>
                         </div>
-                        <div className="tdk-doc-lbl">{txt}</div>
-                      </div>
-                     )
-                  })}
+                       )
+                    }) : <div style={{ fontSize: '13px', color: 'var(--gpt-sidebar-muted)', padding: '10px 0' }}>No document files uploaded yet.</div>}
+                  </div>
                 </div>
 
               </div>

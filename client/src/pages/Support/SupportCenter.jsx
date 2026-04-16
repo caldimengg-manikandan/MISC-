@@ -137,7 +137,7 @@ export default function SupportCenter() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'SFE_Master_Fabrication_Template.xlsx';
+      a.download = 'Master_Fabrication_Template.xlsx';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -148,7 +148,7 @@ export default function SupportCenter() {
   };
 
   const openSupportMail = () => {
-    window.location.href = "mailto:support@steelestimation.com?subject=SFE%20Technical%20Assistance%20Request&body=Hi%20Engineering%20Team,%0A%0AI%20need%20help%20with%20the%20following%20calculation:%0A%0A[Describe%20Issue%20Here]";
+    window.location.href = "mailto:support@steelestimation.com?subject=Technical%20Assistance%20Request&body=Hi%20Engineering%20Team,%0A%0AI%20need%20help%20with%20the%20following%20calculation:%0A%0A[Describe%20Issue%20Here]";
   };
 
   return (
@@ -175,7 +175,7 @@ export default function SupportCenter() {
           icon={Download}
           color="bg-emerald-50 text-emerald-600"
           title="Excel Templates"
-          description="Download the latest SFE Master Fabrication Excel sheets to verify your estimations offline."
+          description="Download the latest Master Fabrication Excel sheets to verify your estimations offline."
           linkText="View Templates"
           onClick={handleDownloadTemplate}
         />

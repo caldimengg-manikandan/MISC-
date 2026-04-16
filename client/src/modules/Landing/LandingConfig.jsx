@@ -282,7 +282,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
         </div>
       </div>
 
-      {/* ── Real-time Preview Engine Results (EXCEL SFE ALIGNED) ─────────────────────── */}
+      {/* ── Real-time Preview Engine Results (EXCEL MISC ALIGNED) ─────────────────────── */}
       {data?.systemCalc && form.platformType && form.platformType !== '' && (
         <div className="mt-6">
           <EstimationPreviewCard 
@@ -306,7 +306,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
       />
 
 
-      <style jsx>{`
+      <style>{`
         .quick-edit-btn {
           margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
           border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 

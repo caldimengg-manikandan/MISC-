@@ -180,4 +180,49 @@
 }
 .el-row-delete:active { transform: scale(0.96); }
 
+/* ─── Multi-selection ────────────────────────────────────────────── */
+.el-selection-btn {
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: var(--gpt-text-muted); display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; transition: all 0.1s;
+}
+.el-selection-btn:hover { background: var(--gpt-border); color: var(--gpt-text-primary); }
+
+.el-table-row.selected td { background: rgba(16,163,127,0.04) !important; }
+.el-table-row.selected td:first-child { border-left: 2px solid var(--gpt-accent); }
+
+.el-grid-selection {
+  position: absolute; top: 12px; left: 12px; z-index: 10;
+  color: var(--gpt-text-muted); cursor: pointer; opacity: 0;
+  transition: all 0.15s;
+}
+.el-grid-card:hover .el-grid-selection, 
+.el-grid-selection.active { opacity: 1; color: var(--gpt-accent); }
+.el-grid-card.selected { border-color: var(--gpt-accent); background: rgba(16,163,127,0.02); }
+
+/* ─── Bulk Action Bar ────────────────────────────────────────────── */
+.el-bulk-bar {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: white; padding: 12px 24px;
+  border-radius: 14px; display: flex; align-items: center; gap: 32px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 9000;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.el-bulk-info { display: flex; align-items: center; gap: 8px; }
+.el-bulk-count {
+  background: var(--gpt-accent); color: white; min-width: 22px; height: 22px;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+}
+.el-bulk-text { font-size: 13px; font-weight: 600; color: #cbd5e1; }
+.el-bulk-actions { display: flex; align-items: center; gap: 12px; }
+.el-bulk-btn {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.el-bulk-btn.cancel { background: transparent; color: #94a3b8; }
+.el-bulk-btn.cancel:hover { color: white; background: rgba(255,255,255,0.05); }
+.el-bulk-btn.delete { background: #ef4444; color: white; }
+.el-bulk-btn.delete:hover { background: #dc2626; transform: translateY(-1px); }
+
 @keyframes spin { to { transform: rotate(360deg); } }

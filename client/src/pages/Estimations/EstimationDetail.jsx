@@ -1,9 +1,10 @@
 // src/pages/Estimations/EstimationDetail.jsx
 // GPT-style Project Detail — complete redesign
 // All handlers (handleSave, onStatusAction, fetchEstimationDetail) unchanged.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEstimation } from '../../contexts/EstimationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import {
   CheckCircle2, Play, UserPlus, Send, Save, ArrowUpRight,
@@ -16,6 +17,8 @@ import axios from 'axios';
 import API_BASE_URL from '../../config/api';
 import SearchableSelect from '../../components/common/SearchableSelect';
 import QuickAddCustomerModal from '../../components/project/QuickAddCustomerModal';
+import WorkflowActionBar from '../../components/workflow/WorkflowActionBar';
+import WorkflowStatusBadge from '../../components/workflow/WorkflowStatusBadge';
 import './EstimationDetail.css';
 
 /* ─── Lifecycle stages ──────────────────────────────────────────── */
@@ -49,8 +52,16 @@ const initialData = {
 export default function EstimationDetail() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const { fetchEstimationDetail, updateEstimationStatus, saveEstimationData, createEstimation, loading } = useEstimation();
-  const [form, setForm] = useState(initialData);
+  
+  const [form, setForm] = useState(() => ({
+    ...initialData,
+    // By default for new projects, instantly show the logged-in user as the assigned engineer
+    assigned_engineer_name: user?.full_name || user?.email || '',
+    assigned_engineer_id: user?.id || null
+  }));
+  
   const [saved, setSaved] = useState(false);
   const [goingToEstimation, setGoingToEstimation] = useState(false);
   const [customers, setCustomers] = useState([]);
@@ -62,26 +73,35 @@ export default function EstimationDetail() {
 
   useEffect(() => {
     if (projectId) {
-      fetchEstimationDetail(projectId).then(data => {
-        if (data) {
-          // Merge with initialData to guarantee all fields exist with safe defaults
-          setForm({ 
-            ...initialData, 
-            ...data,
-            aiscCertified: data.aiscCertified || 'Y',
-            units: data.units || 'Imperial',
-          });
-        }
+      loadProject(projectId);
+    } else {
+      // Reset form to completely empty state when navigating to "New Estimation" from an existing one
+      setForm({
+        ...initialData,
+        assigned_engineer_name: user?.full_name || user?.email || '',
+        assigned_engineer_id: user?.id || null
       });
     }
     fetchCustomers();
-  }, [projectId]);
+  }, [projectId, user]);
+
+  const loadProject = useCallback(async (id) => {
+    const data = await fetchEstimationDetail(id);
+    if (data) {
+      setForm({
+        ...initialData,
+        ...data,
+        aiscCertified: data.aiscCertified || 'Y',
+        units: data.units || 'Imperial',
+      });
+    }
+  }, [fetchEstimationDetail]);
 
   const fetchCustomers = async () => {
     setCustomersLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_BASE_URL}/customers?status=active`, {
+      const token = localStorage.getItem('steel_token');
+      const res = await axios.get(`${API_BASE_URL}/api/customers?status=active`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -94,14 +114,7 @@ export default function EstimationDetail() {
     }
   };
 
-  // Listen for global Save from the header button
-  useEffect(() => {
-    const onGlobalSave = () => handleSave();
-    window.addEventListener('app:save', onGlobalSave);
-    return () => window.removeEventListener('app:save', onGlobalSave);
-  });
-
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Basic validation
     if (!form.projectName?.trim()) {
       toast.error('Project Name is required.');
@@ -131,7 +144,14 @@ export default function EstimationDetail() {
       toast.error(err?.response?.data?.message || 'Save failed. Please try again.', { id: toastId });
       return null; // Return null to signal failure
     }
-  };
+  }, [form, projectId, createEstimation, saveEstimationData, navigate]);
+
+  // Listen for global Save from the header button
+  useEffect(() => {
+    const onGlobalSave = () => handleSave();
+    window.addEventListener('app:save', onGlobalSave);
+    return () => window.removeEventListener('app:save', onGlobalSave);
+  }, [handleSave]);
 
   // ── Go to Estimation — auto-save first if needed ────────────────
   const goToEstimation = async () => {
@@ -235,12 +255,17 @@ export default function EstimationDetail() {
           </div>
           <h1 className="ed-page-title">{form.projectName || 'New Estimation'}</h1>
           <div className="ed-page-meta">
-            <span
-              className="ed-status-badge"
-              style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}
-            >
-              {st.label}
-            </span>
+            {/* Workflow status badge — uses workflow_status field from API */}
+            {form.workflow_status ? (
+              <WorkflowStatusBadge status={form.workflow_status} />
+            ) : (
+              <span
+                className="ed-status-badge"
+                style={{ color: st.color, background: st.bg, borderColor: `${st.color}25` }}
+              >
+                {st.label}
+              </span>
+            )}
             {projectId && (
               <span className="ed-project-id">#{projectId.toString().slice(-6).toUpperCase()}</span>
             )}
@@ -253,9 +278,6 @@ export default function EstimationDetail() {
           </div>
         </div>
         <div className="ed-header-actions">
-          <button className="ed-btn ed-btn-outline" id="btn-save" onClick={handleSave}>
-            <Save size={14} /> {saved ? 'Saved ✓' : 'Save'}
-          </button>
         </div>
       </div>
 
@@ -280,43 +302,12 @@ export default function EstimationDetail() {
         })}
       </div>
 
-      {/* ══ WORKFLOW ACTIONS ══════════════════════════════════════ */}
-      <div className="ed-actions-strip">
-        <span className="ed-actions-label">Workflow Actions</span>
-        <div className="ed-actions-btns">
-          <button
-            className="ed-action-btn"
-            id="btn-assign"
-            onClick={() => onStatusAction('assign')}
-            disabled={form.status !== 'NEW' && form.status !== 'OVERDUE'}
-          >
-            <UserPlus size={14} /> Assign Engineer
-          </button>
-          <button
-            className="ed-action-btn"
-            id="btn-start"
-            onClick={() => onStatusAction('start')}
-            disabled={form.status !== 'ASSIGNED'}
-          >
-            <Play size={14} /> Start
-          </button>
-          <button
-            className="ed-action-btn"
-            id="btn-review"
-            onClick={() => onStatusAction('review')}
-            disabled={form.status !== 'IN_PROGRESS'}
-          >
-            <CheckCircle2 size={14} /> Send for Review
-          </button>
-          <button
-            className="ed-action-btn ed-action-submit"
-            id="btn-submit"
-            onClick={() => onStatusAction('submit')}
-            disabled={form.status !== 'REVIEW'}
-          >
-            <Send size={14} /> Submit
-          </button>
-        </div>
+      {/* ══ WORKFLOW ACTION BAR ═══════════════════════════════════ */}
+      <div className="ed-workflow-bar">
+        <WorkflowActionBar
+          project={form}
+          onStatusChange={projectId ? () => loadProject(projectId) : undefined}
+        />
       </div>
 
       {/* ══ BODY GRID ════════════════════════════════════════════ */}
@@ -332,9 +323,6 @@ export default function EstimationDetail() {
           >
             <div className="ed-card-header">
               <span className="ed-card-title">Project Details</span>
-              <button className="ed-save-chip" onClick={handleSave} id="btn-save-chip">
-                <Save size={12} /> {saved ? 'Saved ✓' : 'Save Changes'}
-              </button>
             </div>
             <div className="ed-card-body">
               {/* CORE INFO */}
@@ -409,8 +397,8 @@ export default function EstimationDetail() {
                   <input className="ed-input" value={form.vendorName || ''} onChange={e => set('vendorName', e.target.value)} placeholder="Vendor Co." />
                 </div>
                 <div className="ed-field">
-                  <label className="ed-label">Assigned Engineer</label>
-                  <input className="ed-input ed-input-disabled" value={form.engineerId || 'Unassigned'} disabled />
+                  <label className="ed-label">Assigned Engineer (Name or Email)</label>
+                  <input className="ed-input" value={form.assigned_engineer_name || form.assigned_engineer_email || form.assignedEngineer || form.engineerId || ''} onChange={e => set('assigned_engineer_name', e.target.value)} placeholder="Engineer Name" />
                 </div>
               </div>
 
@@ -481,7 +469,7 @@ export default function EstimationDetail() {
                 <div className="ed-cta-sub">
                   {goingToEstimation
                     ? 'Saving project details before entering…'
-                    : 'Configure stairs, railings, landings, and run the SFE engine'}
+                    : 'Configure stairs, railings, landings, and run the estimation engine'}
                 </div>
               </div>
             </div>

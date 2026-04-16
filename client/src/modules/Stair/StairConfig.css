@@ -31,6 +31,7 @@
 
 /* ─── Form Sections ──────────────────────────────────────────────── */
 .form-section {
+  position: relative !important;
   background: var(--sf-surface) !important;
   border: 1px solid var(--sf-border) !important;
   border-radius: var(--sf-radius) !important;
@@ -38,6 +39,18 @@
   margin-bottom: 14px !important;
   box-shadow: none !important;
 }
+
+/* Decreasing z-index stack to ensure dropdown menus from upper sections overlap lower sections */
+.form-section:nth-of-type(1) { z-index: 20 !important; }
+.form-section:nth-of-type(2) { z-index: 19 !important; }
+.form-section:nth-of-type(3) { z-index: 18 !important; }
+.form-section:nth-of-type(4) { z-index: 17 !important; }
+.form-section:nth-of-type(5) { z-index: 16 !important; }
+.form-section:nth-of-type(6) { z-index: 15 !important; }
+.form-section:nth-of-type(7) { z-index: 14 !important; }
+.form-section:nth-of-type(8) { z-index: 13 !important; }
+.form-section:nth-of-type(9) { z-index: 12 !important; }
+.form-section:nth-of-type(10) { z-index: 11 !important; }
 
 .form-section-title {
   font-family: 'DM Sans', sans-serif !important;
@@ -246,7 +259,7 @@ button.form-input-unit:hover {
   border-radius: 12px !important;
   box-shadow: none !important;
   margin-bottom: 12px !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   transition: border-color var(--sf-transition), box-shadow var(--sf-transition) !important;
 }
 
@@ -640,4 +653,83 @@ button.form-input-unit:hover {
 @media (max-width: 860px) {
   .stair-page .sc-rail { display: none; }
   .stair-page .sc-canvas { padding: 16px; }
+}
+
+/* ─── Rates Bar Component ────────────────────────────────────────── */
+.rates-bar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 16px 24px !important;
+  font-family: 'DM Sans', sans-serif !important;
+  min-height: 80px !important;
+  gap: 24px !important;
+  overflow: hidden !important;
+}
+
+.rates-bar-title {
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  border-right: 1.5px solid #e2e8f0 !important;
+  padding-right: 24px !important;
+  margin-right: 8px !important;
+}
+
+.rates-bar-pills {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px 32px !important;
+}
+
+.rate-pill {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+.rate-pill-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  margin-bottom: 4px !important;
+}
+
+.rate-pill-value {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #2563eb !important;
+  font-family: 'Geist Mono', monospace !important;
+  line-height: 1 !important;
+}
+
+.rates-edit-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #3b82f6 !important;
+  text-decoration: none !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid transparent !important;
+}
+
+.rates-edit-link:hover {
+  background: #eff6ff !important;
+  border-color: #dbeafe !important;
 }

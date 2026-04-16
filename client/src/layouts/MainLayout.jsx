@@ -6,15 +6,16 @@ import { useEstimation } from '../contexts/EstimationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, FolderOpen, ChevronRight, BarChart3,
-  LogOut, PanelLeftOpen, PanelLeftClose, PenLine, Search,
+  PanelLeftOpen, PanelLeftClose, PenLine, Search,
   Box, Database, ArrowUpDown, ChevronDown, Settings,
-  MoreHorizontal, HelpCircle, Share2, Save, Pin, DollarSign,
-  Zap, Users
+  HelpCircle, Share2, Save, Pin, DollarSign,
+  Zap, Users, Printer, FileSpreadsheet
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
 import ToolsDock from '../modules/Stair/components/ToolsDock';
 import StickyNote from '../modules/Stair/components/StickyNote';
+import NotificationBell from '../components/notifications/NotificationBell';
 import toast from 'react-hot-toast';
 
 // ── Navigation definition ─────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ const NAV_ITEMS = [
     id: 'estimate',
     label: 'New Estimation',
     icon: <PenLine size={16} />,
-    path: null,
+    path: '/project-info',
     children: [
       { id: 'stair-railings', label: 'Stair & Railings', icon: <Box size={13} />, path: '/estimate/stair-railings' },
       { id: 'railings', label: 'Railings', icon: <Database size={13} />, path: '/estimate/railings' },
@@ -49,16 +50,18 @@ const NAV_ITEMS = [
     icon: <BarChart3 size={16} />,
     path: '/reports',
   },
+
   {
     id: 'settings',
     label: 'Config & Settings',
     icon: <Settings size={16} />,
     path: null,
+    adminOnly: false, // filtered per-child below
     children: [
-      { id: 'pricing', label: 'Pricing Rates', icon: <DollarSign size={13} />, path: '/settings/pricing' },
-      { id: 'customers', label: 'Customer Master', icon: <Users size={13} />, path: '/settings/customers' },
-      { id: 'system', label: 'System Admin', icon: <Database size={13} />, path: '/settings/system' },
-      { id: 'personalization', label: 'Personalization', icon: <Zap size={13} />, path: '/settings/personalization' },
+      { id: 'pricing', label: 'Pricing Rates', icon: <DollarSign size={13} />, path: '/settings/pricing', adminOnly: true },
+      { id: 'customers', label: 'Customer Master', icon: <Users size={13} />, path: '/settings/customers', adminOnly: true },
+      { id: 'system', label: 'System Admin', icon: <Database size={13} />, path: '/settings/system', adminOnly: true },
+      { id: 'personalization', label: 'Personalization', icon: <Zap size={13} />, path: '/settings/personalization', adminOnly: false },
     ]
   },
 ];
@@ -155,6 +158,229 @@ export default function MainLayout({ children }) {
   const [estimateOpen, setEstimateOpen] = useState(
     location.pathname.startsWith('/estimate')
   );
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exporting, setExporting]   = useState(false);
+
+  const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const getToken = () => localStorage.getItem('steel_token');
+
+  const currentProjectId = selectedEstimation?.id;
+
+  const handleExcelExport = async () => {
+    if (!currentProjectId) { toast.error('No project loaded — open a project first.'); return; }
+    setExportMenuOpen(false);
+    setExporting(true);
+    const t = toast.loading('Generating BOM Excel…');
+    try {
+      const resp = await fetch(`${API}/api/reports/${currentProjectId}/bom-excel`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `BOM_${currentProjectId}_${Date.now()}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('BOM Excel downloaded!', { id: t });
+    } catch (e) {
+      toast.error('Export failed: ' + e.message, { id: t });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePrintPDF = async () => {
+    if (!currentProjectId) { toast.error('No project loaded — open a project first.'); return; }
+    setExportMenuOpen(false);
+    const t = toast.loading('Preparing print preview…');
+    try {
+      const resp = await fetch(`${API}/api/reports/${currentProjectId}/live`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message);
+      openPrintWindow(data);
+      toast.success('Print preview ready!', { id: t });
+    } catch (e) {
+      toast.error('Print failed: ' + e.message, { id: t });
+    }
+  };
+
+  const openPrintWindow = (data) => {
+    const { project, rates, summary, stairs, rails, platforms } = data;
+    const f = (v) => (typeof v === 'number' && v !== 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v) : (v ?? '—'));
+    const n = (v, d = 2) => (typeof v === 'number' ? v.toFixed(d) : '—');
+    const tableRow = (cells, isHeader = false) => {
+      const tag = isHeader ? 'th' : 'td';
+      return `<tr>${cells.map(c => `<${tag} style="padding:4px 8px;border:1px solid #d1d5db;font-size:9px;white-space:nowrap">${c ?? '—'}</${tag}>`).join('')}</tr>`;
+    };
+    const stairRows = (stairs || []).map(st => tableRow([
+      st.label, st.stairType, st.width, st.risers, st.connection, st.stringerSize,
+      n(st.stringerLFTotal), n(st.panAreaSqFt), n(st.stringerLbs), n(st.scrapLbs),
+      f(st.steelCost), f(st.pansCost), f(st.finishCost), f(st.scrapCost),
+      f(st.porRokCost), f(st.anchorBoltsCost), n(st.shopHrsTotal,3), n(st.fieldHrsTotal,3),
+      f(st.shopLaborCost), f(st.fieldLaborCost), f(st.subTotalWithoutTax), f(st.taxAmount),
+      `<strong>${f(st.total)}</strong>`, f(st.pricePerRiser)
+    ])).join('');
+    const railRows = (rails || []).map(r => tableRow([
+      r.index, r.label, r.stairRef, r.mountingType, n(r.length), r.postQty,
+      f(r.steelCost), f(r.scrapCost), f(r.finishCost), f(r.porRokCost), f(r.anchorBoltsCost),
+      n(r.shopHrsTotal,3), n(r.fieldHrsTotal,3), f(r.shopLaborCost), f(r.fieldLaborCost),
+      f(r.subTotalWithoutTax), f(r.taxAmount), `<strong>${f(r.total)}</strong>`
+    ])).join('');
+    const platRows = (platforms || []).map(p => tableRow([
+      p.index, p.label, p.stairRef, n(p.area), p.finish,
+      f(p.steelCost), f(p.finishCost), f(p.mountingCost),
+      n(p.shopHrsTotal,3), n(p.fieldHrsTotal,3), f(p.shopLaborCost), f(p.fieldLaborCost),
+      f(p.subTotalWithoutTax), f(p.taxAmount), `<strong>${f(p.total)}</strong>`
+    ])).join('');
+
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Estimate — ${project?.projectNumber || 'Report'}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Calibri', 'Segoe UI', sans-serif; font-size: 10px; color: #111; background: #fff; padding: 20px 24px; }
+  h1 { font-size: 18px; color: #1a1a2e; margin-bottom: 4px; }
+  h2 { font-size: 11px; font-weight: 700; color: #10a37f; margin: 18px 0 6px;
+       border-bottom: 1.5px solid #10a37f; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  /* Project hero */
+  .hero { display: flex; justify-content: space-between; align-items: flex-start; margin: 8px 0 16px;
+          padding-bottom: 12px; border-bottom: 2px solid #1a1a2e; }
+  .hero-left .pname { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+  .hero-left .pnum  { font-family: monospace; color: #10a37f; font-size: 11px; margin-top: 2px; }
+  .hero-left .pcust { color: #64748b; font-size: 10px; margin-top: 3px; }
+  .hero-right { text-align: right; font-size: 9px; color: #64748b; line-height: 1.8; }
+  /* Meta grid */
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; margin-bottom: 4px; }
+  .meta-row { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid #f1f5f9; }
+  .ml { color: #64748b; font-size: 9px; width: 130px; flex-shrink: 0; }
+  .mv { font-size: 9px; font-weight: 600; color: #1e293b; }
+  /* Rate pills */
+  .rate-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; }
+  .rate-pill { background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 5px; padding: 5px 8px; }
+  .rate-label { font-size: 8px; color: #64748b; }
+  .rate-val   { font-weight: 700; font-size: 10px; color: #065f46; }
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
+  th { background: #10a37f; color: #fff; font-size: 8.5px; font-weight: 700;
+       padding: 5px 8px; text-align: left; white-space: nowrap; }
+  td { font-size: 8.5px; padding: 4px 8px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .grand td { background: #ecfdf5 !important; font-weight: 700; color: #065f46; }
+  /* Print */
+  @media print {
+    @page { margin: 12mm 15mm; }
+    body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2 { break-after: avoid; page-break-after: avoid; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; break-inside: auto; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    .page-section { 
+      display: inline-block; 
+      width: 100%;
+      break-inside: avoid-page !important; 
+      page-break-inside: avoid !important;
+      margin-bottom: 30px; 
+      position: relative;
+    }
+  }
+  /* Print button (screen-only) */
+  .print-btn {
+    position: fixed; top: 16px; right: 16px;
+    background: #10a37f; color: white; border: none; border-radius: 8px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(16,163,127,0.3); z-index: 999;
+  }
+  .print-btn:hover { background: #0e8f6e; }
+  @media print { .print-btn { display: none !important; } }
+</style>
+</head><body>
+<button class="print-btn" onclick="window.print()">&#128438; Print / Save PDF</button>
+<h1>MISC Engineering — Structural Estimate</h1>
+<div class="hero">
+  <div class="hero-left">
+    <div class="pname">${project?.projectName || '—'}</div>
+    <div class="pnum">${project?.projectNumber || '—'}</div>
+    <div class="pcust">${project?.customerName || '—'}</div>
+  </div>
+  <div class="hero-right">
+    <div><strong>Generated:</strong> ${new Date().toLocaleDateString()}</div>
+    <div><strong>AISC:</strong> ${project?.aiscCertified || '—'}</div>
+    <div><strong>Units:</strong> ${project?.units || 'Imperial'}</div>
+    <div><strong>Engineer:</strong> ${project?.assignedEngineer || '—'}</div>
+  </div>
+</div>
+<div class="page-section">
+  <h2>1 — Project Header</h2>
+  <div class="meta-grid">
+    ${[['Project Number', project?.projectNumber], ['Location', project?.projectLocation],
+       ['Customer', project?.customerName],       ['Architect', project?.architect],
+       ['EOR', project?.eor],                      ['GC', project?.gcName],
+       ['Detailer', project?.detailer],            ['Vendor', project?.vendorName],
+       ['Enquiry Date', project?.enquiryDate ? new Date(project.enquiryDate).toLocaleDateString() : '—'],
+       ['Submission Deadline', project?.submissionDeadline ? new Date(project.submissionDeadline).toLocaleDateString() : '—']]
+      .map(([l,v]) => `<div class="meta-row"><span class="ml">${l}</span><span class="mv">${v || '—'}</span></div>`).join('')}
+  </div>
+</div>
+<div class="page-section">
+  <h2>2 — Rates Snapshot</h2>
+  <div class="rate-grid">
+    ${[['Steel $/lb','$'+n(rates?.steelPerLb,4)], ['Shop $/hr','$'+n(rates?.shopPerHr,2)],
+       ['Field $/hr','$'+n(rates?.fieldPerHr,2)], ['Galvanize $/lb','$'+n(rates?.galvanizePerLb,4)],
+       ['Powder Coat $/lb','$'+n(rates?.powderCoatPerLb,4)], ['Scrap %',n(rates?.scrapPct,1)+'%'],
+       ['Tax %',n(rates?.taxPct,2)+'%'], ['Anchor Bolt','$'+n(rates?.anchorBoltRate,4)],
+       ['Embedded Rate','$'+n(rates?.embeddedRate,2)], ['Anchored Rate','$'+n(rates?.anchoredRate,2)]]
+      .map(([l,v]) => `<div class="rate-pill"><div class="rate-label">${l}</div><div class="rate-val">${v}</div></div>`).join('')}
+  </div>
+</div>
+<div class="page-section">
+  <h2>3 — Project Summary</h2>
+  <table><thead>${tableRow(['Line Item','Stair','Rail','Platform','Total'],true)}</thead><tbody>
+  ${[['Steel lbs (base)', n(summary?.stairSteelLbs,0), n(summary?.railSteelLbs,0), n(summary?.platSteelLbs,0), n(summary?.stairSteelLbs + summary?.railSteelLbs + summary?.platSteelLbs,0)],
+     ['Scrap lbs', '—', '—', '—', n(summary?.totalScrapLbs,0)],
+     ['Steel Cost', '—', '—', '—', f(summary?.baseSteelCost)],
+     ['Scrap Cost', '—', '—', '—', f(summary?.scrapCost)],
+     ['Pans / Grating cost', f(summary?.pansCost + summary?.gratingCost), '—', '—', f(summary?.pansCost + summary?.gratingCost)],
+     ['Finish Cost', '—', '—', '—', f(summary?.finishCost)],
+     ['POR ROK', '—', '—', '—', f(summary?.porRokCost)],
+     ['Anchor Bolts', '—', '—', '—', f(summary?.anchorBoltsCost)],
+     ['Shop Labor', '—', '—', '—', f(summary?.shopLaborCost)],
+     ['Field Labor', '—', '—', '—', f(summary?.fieldLaborCost)],
+     ['Module sub-total', f(summary?.stairTotal), f(summary?.railTotal), f(summary?.platTotal), f((summary?.stairTotal||0)+(summary?.railTotal||0)+(summary?.platTotal||0))],
+     ['Sub-total w/o Tax', '—', '—', '—', f(summary?.subtotalWithoutTax)],
+     ['Tax', '—', '—', '—', f(summary?.taxAmount)],
+     ['GRAND TOTAL', '—', '—', '—', f(summary?.grandTotal)],
+     ['Total Risers', summary?.totalRisers, '—', '—', summary?.totalRisers],
+     ['Price / Riser', '—', '—', '—', f(summary?.pricePerRiser)]]
+    .map((r, i) => i === 13
+      ? `<tr class="grand">${r.map(c => `<td>${c ?? '—'}</td>`).join('')}</tr>`
+      : tableRow(r)
+    ).join('')}
+  </tbody></table>
+</div>
+${stairs?.length ? `<h2>4 — Stair Detail</h2>
+<table><thead>${tableRow(['Stair','Type','Width','Risers','Connection','Stringer','Str.LF','Pan sqft','Steel lbs','Scrap lbs','Steel $','Pans $','Finish $','Scrap $','POR ROK','Anchor $','Shop Hrs','Field Hrs','Shop Labor $','Field Labor $','w/o Tax','Tax','Total','$/Riser'],true)}</thead><tbody>${stairRows}</tbody></table>` : ''}
+${rails?.length ? `<h2>5 — Rail Detail</h2>
+<table><thead>${tableRow(['#','Rail Type','Stair','Mounting','Length ft','Posts','Steel $','Scrap $','Finish $','POR ROK','Anchor $','Shop Hrs','Field Hrs','Shop Labor $','Field Labor $','w/o Tax','Tax','Total'],true)}</thead><tbody>${railRows}</tbody></table>` : ''}
+${platforms?.length ? `<h2>6 — Platform Detail</h2>
+<table><thead>${tableRow(['#','Type','Stair','Area sqft','Finish','Steel $','Finish $','Mounting $','Shop Hrs','Field Hrs','Shop Labor $','Field Labor $','w/o Tax','Tax','Total'],true)}</thead><tbody>${platRows}</tbody></table>` : ''}
+</body></html>`;
+
+    // Use Blob URL — opens as a real tab (never popup-blocked) and prints only its own content
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const tab  = window.open(url, '_blank');
+    // Safety: if browser blocks even this, fall back to a data URI
+    if (!tab) {
+      const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+      window.open(dataUrl, '_blank');
+    }
+    // Revoke after a delay so the tab has time to load it
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+
+
 
   const activePath = location.pathname;
 
@@ -243,7 +469,7 @@ export default function MainLayout({ children }) {
         <div className="sidebar-quick-actions">
           <button
             className="sidebar-quick-btn"
-            onClick={() => navigate('/estimate/stair-railings')}
+            onClick={() => navigate('/project-info')}
           >
             <PenLine size={15} />
             New Estimation
@@ -270,7 +496,10 @@ export default function MainLayout({ children }) {
                 <div key={item.id}>
                   <button
                     className={`sidebar-item ${isChildActive ? 'active' : ''}`}
-                    onClick={() => setEstimateOpen(o => !o)}
+                    onClick={() => {
+                      setEstimateOpen(o => !o);
+                      if (item.path) navigate(item.path);
+                    }}
                   >
                     <span className="sidebar-item-icon">{item.icon}</span>
                     <span className="sidebar-item-label">{item.label}</span>
@@ -282,7 +511,7 @@ export default function MainLayout({ children }) {
                   <AnimatePresence>
                     {estimateOpen && (
                       <SubMenu
-                        items={item.children}
+                        items={item.children.filter(c => !c.adminOnly || user?.role === 'admin')}
                         activePath={activePath}
                         onNavigate={navigate}
                       />
@@ -392,16 +621,84 @@ export default function MainLayout({ children }) {
             <button className="header-btn header-btn-outline" title="Help">
               <HelpCircle size={15} /> Help
             </button>
-            <button className="header-btn header-btn-outline" title="Export">
-              <Share2 size={15} /> Export
-            </button>
-            <button
-              className="header-btn header-btn-primary"
-              title="Save"
-              onClick={() => window.dispatchEvent(new CustomEvent('app:save'))}
-            >
-              <Save size={15} /> Save
-            </button>
+
+            {/* ── Export Dropdown ───────────────────────────────────────────── */}
+            <div style={{ position: 'relative' }}>
+              <button
+                className={`header-btn header-btn-outline ${!currentProjectId ? '' : ''}`}
+                title={currentProjectId ? 'Export project' : 'Open a project to export'}
+                onClick={() => setExportMenuOpen(o => !o)}
+                id="header-export-btn"
+              >
+                <Share2 size={15} /> Export
+                <ChevronDown size={11} style={{ marginLeft: 2, opacity: 0.6, transform: exportMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              </button>
+              <AnimatePresence>
+                {exportMenuOpen && (
+                  <>
+                    {/* click-away */}
+                    <div style={{ position:'fixed',inset:0,zIndex:9998 }} onClick={() => setExportMenuOpen(false)} />
+                    <motion.div
+                      initial={{ opacity:0, y:-6, scale:0.97 }}
+                      animate={{ opacity:1, y:0, scale:1 }}
+                      exit={{ opacity:0, y:-4, scale:0.97 }}
+                      transition={{ duration:0.13 }}
+                      style={{
+                        position:'absolute', top:'calc(100% + 6px)', right:0,
+                        background:'var(--gpt-surface)', border:'1px solid var(--gpt-border)',
+                        borderRadius:10, boxShadow:'0 8px 30px rgba(0,0,0,0.16)',
+                        minWidth:200, zIndex:9999, overflow:'hidden', padding:'4px 0'
+                      }}
+                    >
+                      {!currentProjectId && (
+                        <div style={{ padding:'10px 14px', fontSize:11, color:'var(--gpt-text-muted)', fontStyle:'italic' }}>
+                          No project loaded
+                        </div>
+                      )}
+                      <button
+                        id="header-export-print"
+                        disabled={!currentProjectId}
+                        onClick={handlePrintPDF}
+                        style={{
+                          display:'flex', alignItems:'center', gap:9,
+                          width:'100%', padding:'9px 14px', background:'transparent',
+                          border:'none', cursor: currentProjectId ? 'pointer':'not-allowed',
+                          fontSize:13, color: currentProjectId ? 'var(--gpt-text-primary)':'var(--gpt-text-muted)',
+                          fontFamily:'inherit', transition:'background 0.12s'
+                        }}
+                        onMouseEnter={e => { if(currentProjectId) e.currentTarget.style.background='var(--gpt-body-bg)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background='transparent'; }}
+                      >
+                        <Printer size={14} style={{ color:'#6366f1', flexShrink:0 }} />
+                        Print PDF Report
+                      </button>
+                      <button
+                        id="header-export-excel"
+                        disabled={!currentProjectId || exporting}
+                        onClick={handleExcelExport}
+                        style={{
+                          display:'flex', alignItems:'center', gap:9,
+                          width:'100%', padding:'9px 14px', background:'transparent',
+                          border:'none', cursor: currentProjectId ? 'pointer':'not-allowed',
+                          fontSize:13, color: currentProjectId ? 'var(--gpt-text-primary)':'var(--gpt-text-muted)',
+                          fontFamily:'inherit', transition:'background 0.12s'
+                        }}
+                        onMouseEnter={e => { if(currentProjectId) e.currentTarget.style.background='var(--gpt-body-bg)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background='transparent'; }}
+                      >
+                        <FileSpreadsheet size={14} style={{ color:'#10a37f', flexShrink:0 }} />
+                        {exporting ? 'Generating…' : 'BOM Excel (4 sheets)'}
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+
+
+            {/* Notification Bell */}
+            <NotificationBell />
           </div>
         </header>
 
@@ -446,6 +743,7 @@ function buildCrumbs(path) {
     '/settings/system': ['Settings', 'System Admin'],
     '/settings/personalization': ['Settings', 'Personalization'],
     '/reports': ['Reports'],
+
   };
   return map[path] || ['MISC Pro'];
 }

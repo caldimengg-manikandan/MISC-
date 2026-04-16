@@ -69,7 +69,7 @@ const SearchableSelect = ({
   };
 
   return (
-    <div className={`ss-wrapper ${className}`} ref={wrapperRef}>
+    <div className={`ss-wrapper ${className}`} ref={wrapperRef} style={{ zIndex: isOpen ? 100 : 1 }}>
       <div 
         className={`ss-trigger ${isOpen ? 'ss-trigger-open' : ''} ${selectedItem ? 'ss-has-value' : ''}`}
         onClick={handleToggle}

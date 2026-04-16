@@ -78,7 +78,7 @@ class EstimationRepository {
     async updateData(id, data) {
         const { 
             modules, totalWeight, totalCost, 
-            projectName, customer_name, dueDate, projectNumber, projectLocation,
+            projectName, customer_name, customer_id, customerId, dueDate, projectNumber, projectLocation,
             architect, eor, gcName, detailer, vendorName, aiscCertified, units,
             isPinned, isArchived
         } = data;
@@ -98,8 +98,8 @@ class EstimationRepository {
         addField('totalWeight',    totalWeight);
         addField('totalCost',      totalCost);
         addField('projectName',    projectName);
-        addField('customer_name',  customer_name);
-        addField('customer_id',    customer_id);
+        addField('customer_name',  customer_name || data.customerName);
+        addField('customer_id',    customer_id || customerId);
         addField('dueDate',        dueDate);
         addField('projectNumber',  projectNumber);
         addField('projectLocation',projectLocation);
@@ -121,8 +121,27 @@ class EstimationRepository {
     }
 
     async delete(id) {
+        await db.query(`DELETE FROM project_notes WHERE projectId = ?`, [id]);
         await db.query(`DELETE FROM estimation_activity_logs WHERE estimationId = ?`, [id]);
         return await db.query(`DELETE FROM projects WHERE id = ?`, [id]);
+    }
+
+    async bulkDelete(ids) {
+        if (!ids || ids.length === 0) return;
+        const placeholders = ids.map(() => '?').join(',');
+        
+        try {
+            // Delete related items first to avoid foreign key constraints
+            await db.query(`DELETE FROM project_notes WHERE projectId IN (${placeholders})`, ids);
+            await db.query(`DELETE FROM estimation_activity_logs WHERE estimationId IN (${placeholders})`, ids);
+            
+            // Delete the projects
+            const [result] = await db.query(`DELETE FROM projects WHERE id IN (${placeholders})`, ids);
+            return result;
+        } catch (err) {
+            console.error('Repository bulkDelete failed:', err);
+            throw err;
+        }
     }
 
     async duplicate(sourceId, userId) {

@@ -3,16 +3,18 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import StairFlight from './StairFlight';
 import LandingConfig from '../Landing/LandingConfig';
 import RailConfig from '../Rail/RailConfig';
+import KickPlateConfig from '../KickPlate/KickPlateConfig';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin } from 'lucide-react';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils.js';
 import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
 import PricingOverridesModal from './PricingOverridesModal';
-import SFEEstimateReport from './SFEEstimateReport';
+import EstimateReport from './ProjectEstimateReport';
 import API_BASE_URL from '../../config/api';
 import toast from 'react-hot-toast';
 import './StairConfig.css';
 import { useEstimation } from '../../contexts/EstimationContext';
+import configManager from '../../services/configManager';
 
 let uid = 100; // Start from 100 to avoid collision with DB-restored IDs
 const makeId = () => uid++;
@@ -22,6 +24,7 @@ const RAIL_TYPES = [
   { key: 'wallRail', label: 'Wall Rail', badge: 'WALL', icon: '🔘' },
   { key: 'grabRail', label: 'Grab Rail', badge: 'GRAB', icon: '✊' },
   { key: 'caneRail', label: 'Cane Rail', badge: 'CANE', icon: '🦯' },
+  { key: 'kickPlate', label: 'Kick Plate', badge: 'KICK', icon: '📐' },
 ];
 
 // Helper: restore numeric IDs from saved data, ensuring all fields required by the UI are present
@@ -96,6 +99,7 @@ const restoreStairs = (savedStairs) => {
           railLength:     toObj(rawRailLen, 'FT'),
           postSpacing:    toObj(r.postSpacing, 'FT'),
           toeplateLength: toObj(r.toeplateLength, 'FT'),
+          widthIn:        r.type === 'kickPlate' ? (r.widthIn ?? 4) : undefined,
         };
       }),
       selectionSource: s.selectionSource || (s.stringerSize ? 'manual' : 'auto'),
@@ -106,12 +110,13 @@ const restoreStairs = (savedStairs) => {
 
 
 // ── Collapsible Wrapper ─────────────────────────────────────────────────────
-function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true, headerClass = "", onFocus, className = "" }) {
+function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDuplicate, children, defaultOpen = true, headerClass = "", onFocus, className = "", id }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <motion.div 
       layout
+      id={id}
       className={`collapsible-section ${className}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -153,7 +158,7 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
+            style={{ overflow: 'visible' }}
           >
             <div className="collapsible-body">
               {children}
@@ -162,8 +167,8 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
         )}
       </AnimatePresence>
 
-      <style jsx global>{`
-        :root {
+      <style>{`
+        .blueprint-theme {
           --bg-main: #F8FAFC;
           --bg-card: #FFFFFF;
           --text-main: #1E293B;
@@ -176,7 +181,7 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
           --color-primary-200: #A7F3D0;
           --color-primary-300: #6EE7B7;
           --color-primary-400: #34D399;
-          --color-primary-500: #10B981; /* Success Emerald */
+          --color-primary-500: #10B981;
           --color-primary-600: #059669;
           --color-primary-700: #047857;
           --color-primary-800: #065F46;
@@ -223,7 +228,6 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
           background-color: var(--bg-main);
           color: var(--text-main);
           font-family: 'Inter', system-ui, sans-serif;
-          padding-bottom: 80px; /* Room for floating bar */
         }
 
         .form-section {
@@ -359,7 +363,7 @@ function CollapsibleSection({ badge, subBadge, title, subtitle, onDelete, onDupl
           background: var(--bg-card);
           border: 1px solid var(--border-blueprint);
           border-radius: 12px;
-          overflow: hidden;
+          overflow: visible;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
           position: relative;
@@ -673,6 +677,7 @@ function StairItem({
 
   return (
     <CollapsibleSection
+      id={`stair-${stair.id}`}
       badge="STAIR"
       subBadge="FLIGHT 1"
       title={stair.label}
@@ -695,6 +700,7 @@ function StairItem({
         {flights.map(fl => (
           <CollapsibleSection
             key={fl.id}
+            id={`flight-${fl.id}`}
             badge="FLIGHT"
             title={fl.label}
             subtitle="Stair flight geometry"
@@ -730,6 +736,7 @@ function StairItem({
         {landings.map(l => (
           <CollapsibleSection
             key={l.id}
+            id={`landing-${l.id}`}
             badge="LANDING"
             title={l.label}
             subtitle="Platform dimensions and type"
@@ -767,6 +774,7 @@ function StairItem({
             return (
               <CollapsibleSection
                 key={r.id}
+                id={`rail-${r.id}`}
                 badge={meta.badge}
                 title={r.label}
                 subtitle={`${meta.label} configuration`}
@@ -777,12 +785,20 @@ function StairItem({
                 onFocus={() => handleFocus('rail', r.id, r.label)}
                 className={activeId === r.id ? 'active' : ''}
               >
-                <RailConfig
-                  type={r.type}
-                  data={r}
-                  onChange={(changes) => onUpdateSubItem('rail', r.id, changes)}
-                  onFocus={() => handleFocus('rail', r.id, r.label)}
-                />
+                {r.type === 'kickPlate' ? (
+                  <KickPlateConfig
+                    data={r}
+                    onChange={(changes) => onUpdateSubItem('rail', r.id, changes)}
+                    onFocus={() => handleFocus('rail', r.id, r.label)}
+                  />
+                ) : (
+                  <RailConfig
+                    type={r.type}
+                    data={r}
+                    onChange={(changes) => onUpdateSubItem('rail', r.id, changes)}
+                    onFocus={() => handleFocus('rail', r.id, r.label)}
+                  />
+                )}
               </CollapsibleSection>
             );
           })}
@@ -846,6 +862,14 @@ export default function StairEstimation() {
     return new Promise((resolve) => {
       setConfirmModal({ isOpen: true, title, message, resolve });
     });
+  };
+
+  const jumpTo = (stairId, targetId) => {
+    setActiveId(stairId);
+    setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   const { fetchNotes, notes, setSelectedEstimation } = useEstimation();
@@ -978,7 +1002,11 @@ export default function StairEstimation() {
       const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ stairs: stairsToSave })
+        body: JSON.stringify({ 
+          stairs: stairsToSave,
+          customerName: projectData.customerName,
+          customerId: projectData.customerId
+        })
       });
 
       const data = await res.json();
@@ -997,6 +1025,13 @@ export default function StairEstimation() {
       setSaving(false);
     }
   }, [projectData.projectId]);
+
+  // Global Save implementation
+  useEffect(() => {
+    const onGlobalSave = () => saveChanges();
+    window.addEventListener('app:save', onGlobalSave);
+    return () => window.removeEventListener('app:save', onGlobalSave);
+  }, [saveChanges]);
 
   // ── Calculate Estimation via backend ─────────────────────────────────────
   const calculateEstimation = useCallback(async () => {
@@ -1072,7 +1107,7 @@ export default function StairEstimation() {
             railLength:        rLen, // backend reads either railLength or length
             maxSpacing:        toFeetFull(r.postSpacing),
             postSpacing:       toFeetFull(r.postSpacing),
-            mountingType:      r.mountingType || 'anchored',
+            mountingType:      r.mountingType || '',
             finish:            r.finish || 'Primer',
             intermediateRails: parseInt(r.intermediateRails) || 0,
             toeplateRequired:  r.toeplateRequired || 'No',
@@ -1097,7 +1132,7 @@ export default function StairEstimation() {
             width:        lWid,
             quantity:     1,
             finish:       l.finish || stair.finish || 'Primer',
-            mountingType: l.mountingType || stair.mountingType || 'anchored',
+            mountingType: l.mountingType || stair.mountingType || '',
           });
         });
 
@@ -1128,7 +1163,7 @@ export default function StairEstimation() {
             nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
             fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
             finish:            stair.finish || 'Primer',
-            mountingType:      stair.mountingType || 'anchored',
+            mountingType:      stair.mountingType || '',
             flights:           stair.flights || [],
           });
         }
@@ -1233,7 +1268,7 @@ export default function StairEstimation() {
             nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
             fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
             finish: stair.finish || 'Primer',
-            mountingType: stair.mountingType || 'anchored',
+            mountingType: stair.mountingType || '',
             flights: stair.flights || []
           });
         }
@@ -1252,7 +1287,7 @@ export default function StairEstimation() {
               width: lWid,
               quantity: 1,
               finish: l.finish || stair.finish || 'Primer',
-              mountingType: l.mountingType || stair.mountingType || 'anchored'
+              mountingType: l.mountingType || stair.mountingType || ''
             });
           }
         });
@@ -1260,10 +1295,11 @@ export default function StairEstimation() {
         // Rails
         (stair.rails || []).forEach(r => {
           const rLen = toFeet(r.railLength);
-          const rType = r.railType || r.rail_type_id;
+          const rType = r.railType || r.rail_type_id || (r.type === 'kickPlate' ? 'Kick Plate' : '');
 
           const getTypeCode = (t) => {
             const s = (t || '').toLowerCase();
+            if (s.includes('kick')) return 'KICK_PLATE';
             if (s.includes('cane')) return 'CANE_RAIL';
             if (s.includes('grab')) return 'GRAB_RAIL';
             if (s.includes('handrail') || s.includes('hand railing')) return 'GRAB_RAIL';
@@ -1286,13 +1322,14 @@ export default function StairEstimation() {
               typeCode: getTypeCode(rType),
               length: rLen,
               maxSpacing: toFeet(r.postSpacing),
-              mountingType: r.mountingType || 'anchored',
+              mountingType: r.mountingType || '',
               finish: r.finish || 'Primer',
               intermediateRails: parseInt(r.intermediateRails) || 0,
               toeplateRequired: r.toeplateRequired || 'No', // Keep as string "Yes"/"No" to match state expectations
               toeWidth: toFeet(r.toeWidth),
               isLvlAtBot: r.isLvlAtBot || false,
-              isLvlAtTop: r.isLvlAtTop || false
+              isLvlAtTop: r.isLvlAtTop || false,
+              widthIn: r.type === 'kickPlate' ? (r.width || r.widthIn || 4) : undefined
             });
           }
         });
@@ -1346,7 +1383,8 @@ export default function StairEstimation() {
               slope: stairCalc.slope, // From Tekla engine
               angle: stairCalc.slope, // Match Tekla slope
               risers: stairCalc.risers,
-              numRisers: stairCalc.risers // Sync both naming conventions
+              numRisers: stairCalc.risers, // Sync both naming conventions
+              systemCalc: stairCalc.systemCalc
             });
           }
 
@@ -1373,11 +1411,12 @@ export default function StairEstimation() {
             });
           }
 
-          // 3. Map Rail results
           if (updatedStair.rails) {
             updatedStair.rails = updatedStair.rails.map(r => {
               const rLen = toFeet(r.railLength);
-              if (rLen && (r.railType || r.rail_type_id)) {
+              const rType = r.railType || r.rail_type_id || (r.type === 'kickPlate' ? 'Kick Plate' : '');
+              
+              if (rLen && rType) {
                 const rCalcRaw = result.breakdown?.rails?.[railIdx++] || {};
                 // 🔄 PERSISTENCE FIX: Strip backend geometry fields that would overwrite user inputs
                 // rCalc returns {length, maxSpacing} plain numbers — must NOT replace {railLength, postSpacing}
@@ -1388,7 +1427,7 @@ export default function StairEstimation() {
                   systemCalc: rCalc.systemCalc || {}
                 };
               }
-              return r;
+              return { ...r, totalCost: 0, systemCalc: null };
             });
           }
 
@@ -1719,18 +1758,23 @@ export default function StairEstimation() {
 
   // Summary stats
   const totalStairs = stairs.length;
-  const totalGuardRails = stairs.reduce(
-    (sum, s) => sum + (s.rails?.filter(r => r.type === 'guardRail').length || 0),
-    0
-  );
-  const totalLandings = stairs.reduce(
-    (sum, s) => sum + (s.landings?.length || 0),
-    0
-  );
-  const totalRails = stairs.reduce(
-    (sum, s) => sum + (s.rails?.length || 0),
-    0
-  );
+  const getRailCount = (type) => stairs.reduce((sum, s) => sum + (s.rails?.filter(r => r.type === type).length || 0), 0);
+  
+  const counts = {
+    stairs:   totalStairs,
+    landings: stairs.reduce((sum, s) => sum + (s.landings?.length || 0), 0),
+    guard:    getRailCount('guardRail'),
+    wall:     getRailCount('wallRail'),
+    grab:     getRailCount('grabRail'),
+    cane:     getRailCount('caneRail'),
+    kick:     getRailCount('kickPlate')
+  };
+
+  const totalRisers = stairs.reduce((sum, s) => {
+    let r = s.systemCalc?.riseQty || 0;
+    (s.flights || []).forEach(f => r += (f.systemCalc?.riseQty || 0));
+    return sum + r;
+  }, 0);
 
   // Use estimation result for weight/cost if available
   const estimatedSteelWeight = estimationResult?.summary?.totalSteelWeight ?? estimationResult?.sfeSummary?.totalSteelWeight ?? stairs.reduce((sum, s) => {
@@ -1749,8 +1793,12 @@ export default function StairEstimation() {
 
   if (showReport) {
     return (
-      <SFEEstimateReport 
-        data={reportData} 
+      <EstimateReport 
+        data={{ 
+          ...reportData, 
+          projectData,
+          rawStairs: stairs 
+        }} 
         onBack={() => setShowReport(false)} 
       />
     );
@@ -1819,28 +1867,34 @@ export default function StairEstimation() {
       margin-bottom: 10px;
     }
     .sc-quick-add-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 8px;
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px !important;
+    }
+    .sc-quick-stack {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
     }
     .sc-quick-add-grid:last-child {
-      margin-bottom: 0;
+      margin-bottom: 0 !important;
     }
     .sc-quick-add-btn {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 10.5px;
-      font-weight: 600;
-      padding: 6px 10px;
-      background: var(--sf-bg);
-      border: 1px solid var(--sf-border);
-      border-radius: 6px;
-      color: var(--sf-text);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 10.5px !important;
+      font-weight: 600 !important;
+      padding: 6px 10px !important;
+      background: var(--sf-bg) !important;
+      border: 1px solid var(--sf-border) !important;
+      border-radius: 6px !important;
+      color: var(--sf-text) !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      transition: all 0.2s ease !important;
+      width: 100% !important;
     }
     .sc-quick-add-btn:hover {
       background: var(--sf-surface);
@@ -1900,88 +1954,176 @@ export default function StairEstimation() {
     .sc-nav-tag {
       margin-right: 28px; /* Make room for the copy icon */
     }
-    .sc-overall-undo:hover {
-      background: #0d9268;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px var(--sf-accent-dim);
+    .sc-sidebar-rates-pill {
+      width: 100%;
+      background: transparent !important;
+      border: none !important;
+      padding: 12px 0 !important;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      color: #71717a;
+      transition: all 0.2s;
     }
-
+    .sc-sidebar-rates-pill:hover { background: rgba(0,0,0,0.02) !important; }
+    .sc-rates-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .sc-dot-sep {
+      display: none;
+    }
+    .sc-sidebar-rates-pill b {
+      color: #111827;
+      margin-left: 2px;
+    }
+    
+    /* Metrics List */
+    .sc-metrics-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 0 4px;
+    }
+    .sc-metric-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #4b5563;
+    }
+    .sc-metric-val {
+      color: #111827;
+      font-weight: 800;
+    }
+    .sc-metric-total .sc-metric-val {
+      color: #10a37f;
+      font-size: 15px;
+    }
+    
+    /* Cost Breakdown Styles */
+    .sc-cost-breakdown {
+      margin: 2px 0 8px 32px;
+      padding: 6px 12px;
+      border-left: 1.5px solid var(--sf-border);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .sc-breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 9.5px;
+      color: var(--sf-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      width: 100%;
+      padding: 2px 4px;
+      cursor: pointer;
+      text-align: left;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .sc-breakdown-item:hover {
+      background: rgba(16, 163, 127, 0.05);
+      color: #10a37f;
+    }
+    .bc-branch {
+      color: var(--sf-border);
+      margin-right: 6px;
+      font-family: monospace;
+    }
+    .bc-val {
+      color: var(--sf-text);
+      font-weight: 700;
+      font-family: 'Geist Mono', monospace;
+    }
+    
+    /* KPI and Sidebar Rates */
+    .sc-kpi-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .sc-kpi-card.sc-kpi-outline {
+      background: transparent;
+      border: 1px solid var(--sf-border);
+      box-shadow: none;
+    }
+    .sc-sidebar-rates-pill {
+      width: 100%;
+      background: var(--sf-bg);
+      border: 1px solid var(--sf-border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      color: var(--sf-muted);
+      transition: all 0.2s;
+    }
+    .sc-sidebar-rates-pill:hover {
+      border-color: var(--sf-accent);
+      background: white;
+    }
+    .sc-rates-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9.5px;
+    }
+    .sc-dot-sep {
+      opacity: 0.3;
+      font-weight: 900;
+    }
+    .sc-sidebar-rates-pill b {
+      color: var(--sf-text);
+    }
+    
     .sc-header-meta {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 12px;
       margin-top: 8px;
     }
-    .sc-meta-chip {
-      padding: 4px 10px;
-      border-radius: 6px;
+    .sc-meta-dot {
+      color: #CBD5E1;
+      font-weight: 900;
+    }
+    .sc-header-rates {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      color: #64748B;
+    }
+    .sc-rate-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      border: 1px solid transparent;
-      transition: all 0.2s ease;
     }
-    .sc-meta-chip.chip-project {
-      background: rgba(30, 64, 175, 0.05);
-      border-color: rgba(30, 64, 175, 0.1);
+    .sc-rate-item b {
+      color: #0F172A;
+      font-weight: 700;
+      font-family: 'Geist Mono', monospace;
     }
-    .sc-meta-chip.chip-project .sc-meta-label { color: #1e40af; }
-    
-    .sc-meta-chip.chip-ref {
-      background: rgba(71, 85, 105, 0.05);
-      border-color: rgba(71, 85, 105, 0.1);
-    }
-    .sc-meta-chip.chip-ref .sc-meta-label { color: #475569; }
-
-    .sc-meta-chip.chip-customer {
-      background: rgba(16, 163, 127, 0.05);
-      border-color: rgba(16, 163, 127, 0.1);
-    }
-    .sc-meta-chip.chip-customer .sc-meta-label { color: #10a37f; }
-
-    .sc-meta-val {
-      color: var(--sf-text);
-      font-weight: 600;
-    }
-    .sc-meta-divider {
-      width: 1px;
-      height: 12px;
-      background: var(--sf-border);
-    }
-    .sc-rail-save-btn {
-      background: #f8fafc !important;
-      border: 1px solid #e2e8f0 !important;
-      color: #64748b !important;
-      margin-top: 8px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      position: relative;
-    }
-    .sc-rail-save-btn:hover {
-      background: #ffffff !important;
-      border-color: var(--sf-accent) !important;
-      color: var(--sf-accent) !important;
-    }
-    .sc-dirty-dot {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 6px;
-      height: 6px;
-      background: #10a37f;
-      border-radius: 50%;
-      box-shadow: 0 0 0 2px rgba(16,163,127,0.2);
-    }
-    .sc-dirty-ping {
-       animation: sc-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-    }
-    @keyframes sc-ping {
-      75%, 100% {
-        transform: scale(2);
-        opacity: 0;
-      }
+    .sc-rate-dot {
+      color: #CBD5E1;
+      font-weight: 900;
     }
 
     /* Classic Confirm Modal Styling */
@@ -1993,6 +2135,7 @@ export default function StairEstimation() {
       overflow: hidden;
       box-shadow: 0 10px 50px rgba(0,0,0,0.12);
       border: 1px solid #e5e7eb;
+      margin: auto;
     }
     .sc-confirm-header {
       padding: 24px 28px 12px;
@@ -2022,7 +2165,7 @@ export default function StairEstimation() {
     .sc-confirm-body {
       padding: 4px 28px 24px;
       font-size: 14px;
-      color: #4b5563;
+      color: #71717a;
       line-height: 1.55;
     }
     .sc-confirm-actions {
@@ -2096,60 +2239,54 @@ export default function StairEstimation() {
           </div>
         )}
 
-        {/* Mini stat summary */}
+        {/* Summary Stats Grid (3x2) */}
         <div className="sc-rail-section">
-          <div className="sc-rail-heading">Summary</div>
+          <div className="sc-rail-heading">Project Summary</div>
           <div className="sc-stat-grid-2">
             <div className="sc-mini-stat">
-              <div className="sc-mini-stat-val">{totalStairs}</div>
+              <div className="sc-mini-stat-val">{counts.stairs}</div>
               <div className="sc-mini-stat-label">Stairs</div>
             </div>
             <div className="sc-mini-stat">
-              <div className="sc-mini-stat-val">{totalGuardRails}</div>
-              <div className="sc-mini-stat-label">Guard Rails</div>
-            </div>
-            <div className="sc-mini-stat">
-              <div className="sc-mini-stat-val">{totalLandings}</div>
+              <div className="sc-mini-stat-val">{counts.landings}</div>
               <div className="sc-mini-stat-label">Landings</div>
             </div>
             <div className="sc-mini-stat">
-              <div className="sc-mini-stat-val">{totalRails}</div>
-              <div className="sc-mini-stat-label">Rails</div>
+              <div className="sc-mini-stat-val">{counts.guard}</div>
+              <div className="sc-mini-stat-label">Guard</div>
+            </div>
+            <div className="sc-mini-stat">
+              <div className="sc-mini-stat-val">{counts.wall}</div>
+              <div className="sc-mini-stat-label">Wall</div>
+            </div>
+            <div className="sc-mini-stat">
+              <div className="sc-mini-stat-val">{counts.grab}</div>
+              <div className="sc-mini-stat-label">Grab</div>
+            </div>
+            <div className="sc-mini-stat">
+              <div className="sc-mini-stat-val">{counts.cane}</div>
+              <div className="sc-mini-stat-label">Cane</div>
             </div>
           </div>
           
-          <AnimatePresence>
-            {overallHistory && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                className="sc-overall-undo"
-                onClick={undoLastOverallAction}
-                style={{ width: '100%', marginBottom: '12px' }}
-              >
-                <span>↩ UNDO DELETE ({overallHistory.type.toUpperCase()})</span>
-              </motion.button>
-            )}
-          </AnimatePresence>
-          <div className="sc-kpi-card">
-            <Scale size={14} color="var(--gpt-text-muted)" />
-            <div>
-              <div className="sc-kpi-label">Steel Weight</div>
-              <div className="sc-kpi-value">
-                {estimatedSteelWeight > 0 ? `${estimatedSteelWeight.toFixed(1)} lb` : '—'}
-              </div>
+          <div className="sc-metrics-list">
+            <div className="sc-metric-item">
+              <span>Steel weight</span>
+              <span className="sc-metric-val">{estimatedSteelWeight > 0 ? `${estimatedSteelWeight.toFixed(1)} lb` : '—'}</span>
             </div>
-          </div>
-          <div className="sc-kpi-card sc-kpi-accent">
-            <DollarSign size={14} color="var(--gpt-accent)" />
-            <div>
-              <div className="sc-kpi-label">Est. Cost</div>
-              <div className="sc-kpi-value sc-kpi-accent-val">
-                {estimatedCost > 0
-                  ? `$${estimatedCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                  : '$0'}
-              </div>
+            <div className="sc-metric-item sc-metric-total">
+              <span>Est. cost</span>
+              <span className="sc-metric-val">${Math.round(estimatedCost).toLocaleString()}</span>
+            </div>
+            <div className="sc-metric-item">
+              <span>Total risers</span>
+              <span className="sc-metric-val">{totalRisers || '—'}</span>
+            </div>
+            <div className="sc-metric-item">
+              <span>Price / riser</span>
+              <span className="sc-metric-val">
+                {totalRisers > 0 ? `$${Math.round(estimatedCost / totalRisers)}` : '—'}
+              </span>
             </div>
           </div>
         </div>
@@ -2158,38 +2295,51 @@ export default function StairEstimation() {
 
         {/* Stair navigation */}
         <div className="sc-rail-section">
-          <div className="sc-rail-heading">Stairs</div>
+          <div className="sc-rail-heading">Assemblies</div>
           {stairs.map(stair => {
-            // Aggregate the total cost of the complete assembly (Stair + Rails + Landings)
             const assemblyTotal = (stair.totalCost || 0) + 
                                   (stair.rails || []).reduce((sum, r) => sum + (r.totalCost || 0), 0) + 
                                   (stair.landings || []).reduce((sum, l) => sum + (l.totalCost || 0), 0);
             
             return (
               <div key={stair.id} className="sc-stair-nav-wrapper">
-                <button
-                  className={`sc-stair-nav ${activeId === stair.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setActiveId(stair.id);
-                    document.getElementById(`stair-${stair.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                >
-                  <span className="sc-nav-bullet" />
-                  <span className="sc-nav-name">{stair.label}</span>
-                  {assemblyTotal > 0 && (
-                    <span className="sc-nav-tag">${Math.round(assemblyTotal).toLocaleString()}</span>
-                  )}
-                  <button 
-                    className="sc-stair-copy-btn" 
-                    title="Duplicate Entire Stair"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      duplicateStair(stair.id);
+                <div className={`sc-stair-nav-group ${activeId === stair.id ? 'active' : ''}`}>
+                  <button
+                    className="sc-stair-nav"
+                    onClick={() => {
+                      setActiveId(stair.id);
+                      document.getElementById(`stair-${stair.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
                   >
+                    <span className="sc-nav-bullet" />
+                    <span className="sc-nav-name">{stair.label}</span>
+                    {assemblyTotal > 0 && <span className="sc-nav-tag">${Math.round(assemblyTotal).toLocaleString()}</span>}
+                  </button>
+                  <button className="sc-stair-copy-btn" onClick={() => duplicateStair(stair.id)} title="Duplicate Stair">
                     <Copy size={12} />
                   </button>
-                </button>
+                </div>
+
+                {/* Micro Cost Breakdown */}
+                {activeId === stair.id && assemblyTotal > 0 && (
+                  <div className="sc-cost-breakdown">
+                    {stair.totalCost > 0 && (
+                      <button className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `stair-${stair.id}`)}>
+                        Stringers & pans <span className="bc-val">${Math.round(stair.totalCost).toLocaleString()}</span>
+                      </button>
+                    )}
+                    {(stair.landings || []).map((l, i) => (
+                      <button key={l.id} className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `landing-${l.id}`)}>
+                        {l.label} <span className="bc-val">${Math.round(l.totalCost || 0).toLocaleString()}</span>
+                      </button>
+                    ))}
+                    {(stair.rails || []).map((r, i) => (
+                      <button key={r.id} className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `rail-${r.id}`)}>
+                        {r.label} <span className="bc-val">${Math.round(r.totalCost || 0).toLocaleString()}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               
               <AnimatePresence>
                 {activeId === stair.id && (
@@ -2201,30 +2351,28 @@ export default function StairEstimation() {
                     style={{ overflow: 'hidden' }}
                   >
                     <div className="sc-quick-add-panel">
-                      <div className="sc-quick-add-heading">Quick Add Components</div>
-                      <div className="sc-quick-add-grid">
+                      <div className="sc-quick-add-heading">QUICK ADD</div>
+                      
+                      {/* Section 1: Major Elements (Full Width) */}
+                      <div className="sc-quick-stack">
                         <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'flight')}>+ Flight</button>
                         <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'landing')}>+ Landing</button>
                       </div>
-                      
-                      {(stair.history.lastDeleted?.type === 'flight' || stair.history.lastDeleted?.type === 'landing' || stair.history.lastDeleted?.type === 'rail') && (
-                        <div className="sc-quick-add-grid">
-                          <button 
-                            className="sc-quick-add-btn" 
-                            style={{ color: 'var(--sf-accent)', borderColor: 'var(--sf-accent)', width: '100%', justifyContent: 'center' }}
-                            onClick={() => undoDeleteSubItem(stair.id, stair.history.lastDeleted.type)}
-                          >
-                            ↩ Undo Delete {stair.history.lastDeleted.type}
-                          </button>
-                        </div>
-                      )}
 
-                      <div className="sc-quick-add-grid">
-                        {RAIL_TYPES.map(rt => (
-                          <button key={rt.key} className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: rt.key })}>
-                            {rt.icon} {rt.badge}
-                          </button>
-                        ))}
+                      {/* Section 2: Primary Rails (2-Columns) */}
+                      <div className="sc-quick-add-grid" style={{ marginTop: '8px' }}>
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: 'guardRail' })}>Guard</button>
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: 'wallRail' })}>Wall</button>
+                      </div>
+
+                      {/* Section 3: Specialized (Variable columns) */}
+                      <div className="sc-quick-stack" style={{ marginTop: '8px' }}>
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: 'grabRail' })}>Grab</button>
+                      </div>
+
+                      <div className="sc-quick-add-grid" style={{ marginTop: '8px' }}>
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: 'caneRail' })}>Cane</button>
+                        <button className="sc-quick-add-btn" onClick={() => addSubItem(stair.id, 'rail', { type: 'kickPlate' })}>Kick plate</button>
                       </div>
                     </div>
                   </motion.div>
@@ -2238,29 +2386,22 @@ export default function StairEstimation() {
           </button>
         </div>
 
-        <div className="sc-rail-divider" />
 
         {/* Quick actions */}
         <div className="sc-rail-section">
-          <button
-            className="sc-rail-action-btn"
-            id="btn-calculate-rail"
-            onClick={calculateEstimation}
-            disabled={calculating}
-          >
-            {calculating ? '⏳ Calculating…' : '⚡ Run Estimation'}
+                        <button className="sc-rail-action-btn" onClick={calculateEstimation} disabled={calculating}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+              <span style={{ fontSize: '14px' }}>⚡</span>
+              <span>{calculating ? 'Calculating…' : 'Run estimation'}</span>
+            </div>
           </button>
-          <button
-            className="sc-rail-action-btn sc-rail-save-btn"
-            onClick={saveChanges}
-            disabled={saving}
-          >
-            {saving ? '⏳ Saving…' : '📂 Save Assembly'}
-            {isDirty && <div className="sc-dirty-dot" />}
+          <button className="sc-rail-action-btn sc-rail-save-btn" onClick={saveChanges} disabled={saving} style={{ background: '#ffffff', border: '1px solid #d1d5db', color: '#111827' }}>
+            {saving ? '⏳ Saving…' : 'Save assembly'}
           </button>
+          {!saving && <div style={{ textAlign: 'center', fontSize: '11px', color: '#9a3412', fontWeight: '800', marginTop: '6px' }}>{isDirty ? 'Unsaved changes' : 'Saved'}</div>}
           {estimationResult && (
             <button className="sc-rail-action-btn sc-rail-outline" onClick={() => setShowReport(true)}>
-              <FileText size={13} /> SFE Report
+              <FileText size={13} /> Generate Report
             </button>
           )}
         </div>
@@ -2275,17 +2416,26 @@ export default function StairEstimation() {
             <h1 className="sc-page-title">Stair &amp; Railings — Estimation</h1>
             <div className="sc-header-meta">
               <div className="sc-meta-chip chip-project">
-                <span className="sc-meta-label">Project</span>
-                <span className="sc-meta-val">{projectData.projectName || 'New Estimation'}</span>
+                <span className="sc-meta-label" style={{ fontWeight: '600', color: '#64748B' }}>Project:</span>
+                <span className="sc-meta-val" style={{ marginLeft: '6px', fontWeight: '700', color: '#0F172A' }}>{projectData.projectName || 'New Estimation'}</span>
               </div>
+              <div className="sc-meta-dot">·</div>
               <div className="sc-meta-chip chip-ref">
-                <span className="sc-meta-label">Ref</span>
-                <span className="sc-meta-val">#{projectData.projectNumber || 'DRAFT'}</span>
+                <span className="sc-meta-label" style={{ fontWeight: '600', color: '#64748B' }}>Ref:</span>
+                <span className="sc-meta-val" style={{ marginLeft: '6px', fontWeight: '700', color: '#0F172A' }}>#{projectData.projectNumber || 'DRAFT'}</span>
               </div>
-              <div className="sc-meta-chip chip-customer">
-                <span className="sc-meta-label">Customer</span>
-                <span className="sc-meta-val">{projectData.customerName || 'None'}</span>
-              </div>
+            </div>
+
+            <div className="sc-header-rates">
+              <div className="sc-rate-item">Steel <b>${configManager.get('steel_price_per_lb')}/lb</b></div>
+              <div className="sc-rate-dot">·</div>
+              <div className="sc-rate-item">Shop <b>${configManager.get('shop_hourly_rate')}/hr</b></div>
+              <div className="sc-rate-dot">·</div>
+              <div className="sc-rate-item">Field <b>${configManager.get('field_hourly_rate')}/hr</b></div>
+              <div className="sc-rate-dot">·</div>
+              <div className="sc-rate-item">Scrap <b>{configManager.get('scrap_factor_pct')}%</b></div>
+              <div className="sc-rate-dot">·</div>
+              <div className="sc-rate-item">Tax <b>{(configManager.get('tax_rate') * 100).toFixed(1)}%</b></div>
             </div>
           </div>
           <div className="sc-header-actions">
@@ -2295,13 +2445,20 @@ export default function StairEstimation() {
             </button>
             <button
               className="header-btn header-btn-outline"
-              onClick={() => generateFabricationExcel(projectData, stairsRef.current, estimationResult)}
+              onClick={() => {
+                if (!projectData.projectId) {
+                  toast.error("Please save the project first before exporting BOM");
+                  return;
+                }
+                const token = localStorage.getItem('steel_token');
+                window.location.href = `${API_BASE_URL}/api/reports/${projectData.projectId}/bom-excel?token=${token}`;
+              }}
             >
               <Table size={14} /> Excel BOM
             </button>
             {estimationResult && (
               <button className="header-btn header-btn-outline" onClick={() => setShowReport(true)}>
-                <FileText size={14} /> SFE Report
+                <FileText size={14} /> Generate Report
               </button>
             )}
             <button 
@@ -2330,7 +2487,7 @@ export default function StairEstimation() {
             <div className="sc-summary-header">
               <div>
                 <h3 className="sc-summary-title">Calculation Summary</h3>
-                <p className="sc-summary-sub">SFE Fabrication Engine</p>
+                <p className="sc-summary-sub">MISC Engineering Platform</p>
               </div>
               <span className="sc-verified-badge">Verified for Fabrication</span>
             </div>

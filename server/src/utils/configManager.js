@@ -50,28 +50,28 @@ class ConfigManager {
       if (this.configs['grating_factor_mcnichols'] === undefined) this.configs['grating_factor_mcnichols'] = 1.00;
       if (this.configs['grating_factor_prefab'] === undefined) this.configs['grating_factor_prefab'] = 1.00;
 
-      // ── MIGRATION: Correct stale finish rates from pre-SFE-parity sessions ──
-      // Old `galvanize_rate` used to be a % markup (e.g. 0.10). The SFE-correct value is $/lb = 0.75.
+      // ── MIGRATION: Correct stale finish rates from pre-benchmark-parity sessions ──
+      // Old `galvanize_rate` used to be a % markup (e.g. 0.10). The benchmark-correct value is $/lb = 0.75.
       // If the stored value is unreasonably low (< 0.50), it is treated as stale and corrected.
-      const SFE_GALV_MIN  = 0.50;   // Anything below this is considered a legacy % value, not $/lb
-      const SFE_GALV_DEFAULT  = 0.7500;
-      const SFE_PC_DEFAULT    = 1.7587;
+      const STD_GALV_MIN  = 0.50;   // Anything below this is considered a legacy % value, not $/lb
+      const STD_GALV_DEFAULT  = 0.7500;
+      const STD_PC_DEFAULT    = 1.7587;
 
-      if (!this.configs['galvanize_rate'] || this.configs['galvanize_rate'] < SFE_GALV_MIN) {
-        console.warn(`⚠️  Migrating stale galvanize_rate (${this.configs['galvanize_rate']}) → ${SFE_GALV_DEFAULT}`);
-        this.configs['galvanize_rate'] = SFE_GALV_DEFAULT;
+      if (!this.configs['galvanize_rate'] || this.configs['galvanize_rate'] < STD_GALV_MIN) {
+        console.warn(`⚠️  Migrating stale galvanize_rate (${this.configs['galvanize_rate']}) → ${STD_GALV_DEFAULT}`);
+        this.configs['galvanize_rate'] = STD_GALV_DEFAULT;
         // Persist correction to DB so it survives restarts
         await db.query(
           'IF EXISTS (SELECT 1 FROM system_config WHERE config_key = ?) UPDATE system_config SET config_value = ? WHERE config_key = ? ELSE INSERT INTO system_config (config_key, config_value) VALUES (?, ?)',
-          ['galvanize_rate', SFE_GALV_DEFAULT.toString(), 'galvanize_rate', 'galvanize_rate', SFE_GALV_DEFAULT.toString()]
+          ['galvanize_rate', STD_GALV_DEFAULT.toString(), 'galvanize_rate', 'galvanize_rate', STD_GALV_DEFAULT.toString()]
         );
       }
       if (!this.configs['powder_coat_rate'] || this.configs['powder_coat_rate'] < 1.00) {
-        console.warn(`⚠️  Migrating stale powder_coat_rate (${this.configs['powder_coat_rate']}) → ${SFE_PC_DEFAULT}`);
-        this.configs['powder_coat_rate'] = SFE_PC_DEFAULT;
+        console.warn(`⚠️  Migrating stale powder_coat_rate (${this.configs['powder_coat_rate']}) → ${STD_PC_DEFAULT}`);
+        this.configs['powder_coat_rate'] = STD_PC_DEFAULT;
         await db.query(
           'IF EXISTS (SELECT 1 FROM system_config WHERE config_key = ?) UPDATE system_config SET config_value = ? WHERE config_key = ? ELSE INSERT INTO system_config (config_key, config_value) VALUES (?, ?)',
-          ['powder_coat_rate', SFE_PC_DEFAULT.toString(), 'powder_coat_rate', 'powder_coat_rate', SFE_PC_DEFAULT.toString()]
+          ['powder_coat_rate', STD_PC_DEFAULT.toString(), 'powder_coat_rate', 'powder_coat_rate', STD_PC_DEFAULT.toString()]
         );
       }
 

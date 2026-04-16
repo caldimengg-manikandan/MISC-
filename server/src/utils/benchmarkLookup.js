@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-class ExcelLookup {
+class BenchmarkLookup {
   constructor() {
     this.data = null;
     this.filePath = path.join(__dirname, '../../../Misc Worksheet  reworked KDF 11-12-25.json');
@@ -12,9 +12,9 @@ class ExcelLookup {
     try {
       const rawData = fs.readFileSync(this.filePath, 'utf8');
       this.data = JSON.parse(rawData);
-      console.log('✅ Excel Lookup Data Loaded Successfully');
+      console.log('✅ Benchmark Lookup Data Loaded Successfully');
     } catch (error) {
-      console.error('❌ Failed to load Excel Lookup Data:', error);
+      console.error('❌ Failed to load Benchmark Lookup Data:', error);
       this.data = {};
     }
   }
@@ -56,4 +56,4 @@ class ExcelLookup {
   }
 }
 
-module.exports = new ExcelLookup();
+module.exports = new BenchmarkLookup();

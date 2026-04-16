@@ -60,6 +60,16 @@ const RAIL_CONFIG = {
     lbsPerFt: 2.72,
     shopMH: 0.32,
     fieldMH: 0.28
+  },
+  KICK_PLATE: {
+    label: 'Kick Plate',
+    maxSpacing: 0,
+    hasPosts: false,
+    hasBrackets: false,
+    totalRails: 1,
+    lbsPerFt: 3.40,
+    shopMH: 0.125,
+    fieldMH: 0.050
   }
 };
 
@@ -106,6 +116,8 @@ function getTypeCode(verboseType) {
     if (typeStr.includes('bolted')) return 'WALL_RAIL';
     return 'GRAB_RAIL';
   }
+
+  if (typeStr.includes('kick') || typeStr.includes('toe')) return 'KICK_PLATE';
 
   return 'GUARD_2_LINE'; // Fallback
 }

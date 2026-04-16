@@ -175,16 +175,18 @@
 }
 
 .ss-option-selected {
-  background: var(--color-secondary-100, #DBEAFE) !important;
+  background: var(--color-primary-50, #ECFDF5) !important;
+  border-left: 3px solid var(--color-primary-500, #10B981) !important;
 }
 
 .ss-option-selected .ss-opt-label {
-  color: var(--color-secondary-700, #1D4ED8);
+  color: var(--color-primary-700, #047857) !important;
+  font-weight: 700 !important;
 }
 
 .ss-check {
   font-size: 14px;
-  color: var(--color-secondary-600, #2563EB);
+  color: var(--color-primary-500, #10B981);
   font-weight: 700;
 }
 

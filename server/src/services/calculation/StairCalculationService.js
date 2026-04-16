@@ -1,12 +1,12 @@
 const { RAIL_CONFIG, getTypeCode } = require('../../config/railConfig');
-const excelLookup = require('../../utils/excelLookup');
+const benchmarkLookup = require('../../utils/benchmarkLookup');
 const configManager = require('../../utils/configManager');
 const validator = require('../../utils/validator');
 const db = require('../../config/mssql');
 const { calculateStairGeometry, parseToFeet } = require('./stairGeometry.service');
 
-// 📊 SFE MASTER BENCHMARK TABLE (Excel Truth Source)
-// 📊 SFE GALVANIZED LABOR BENCHMARKS (Additional MH/LF)
+// 📊 MASTER BENCHMARK TABLE (Excel Truth Source)
+// 📊 GALVANIZED LABOR BENCHMARKS (Additional MH/LF)
 const GALVANIZED_LABOR_MASTER = {
   // Standard Handrails & Pipe Guardrails
   '1-Line Handrailing on Guardrail - 1 1/4" SCH 40 pipe': { shop: 0.25, field: 0.25 },
@@ -91,7 +91,7 @@ const GALVANIZED_LABOR_MASTER = {
   'Std. 5\'-0" wide > 19\'-0" span grating tread stairs': { shop: 0.150, field: 0.100 },
 };
 
-const SFE_RAIL_MASTER = {
+const RAIL_MASTER_DATA = {
   '1-Line Handrailing on Guardrail - 1 1/4" SCH 40 pipe': { lbs: 2.750, shop: 0.300, field: 0.280 },
   '1-Line Handrailing on Guardrail - 1 1/2" SCH 40 pipe': { lbs: 3.200, shop: 0.320, field: 0.280 },
   '1-Line Hand Railing wall bolted - 1 1/4" SCH 40 pipe': { lbs: 2.280, shop: 0.250, field: 0.250 },
@@ -132,7 +132,7 @@ const SFE_RAIL_MASTER = {
   '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2" SCH 40 RAILS': { lbs: 9.070, shop: 0.925, field: 0.400 },
   'Optional Kick Plate 4\'x4\'': { lbs: 3.400, shop: 0.125, field: 0.050 },
 
-  // 🏗️ SFE EXACT LABEL MATCHES (Simplified for PARITY)
+  // 🏗️ EXACT LABEL MATCHES (Simplified for PARITY)
   'Wall Rail': { lbs: 2.280, shop: 0.250, field: 0.250 },
   'Grab Rail': { lbs: 2.750, shop: 0.300, field: 0.280 },
   'Guard Rail': { lbs: 6.840, shop: 0.500, field: 0.350 }
@@ -181,11 +181,15 @@ class StairCalculationService {
 
     const takeoff = {
       rails: (rails || []).map(r => {
-        const lengthFt = parseFloat(r.railLength || r.length) || 0;
+        const lengthFt = parseToFeet(r.railLength || r.length) || 0;
 
         // 🏗️ CONFIG RESOLUTION
-        const typeCode = getTypeCode(r.railType);
+        const typeCode = getTypeCode(r.railType || r.type);
         const config = RAIL_CONFIG[typeCode] || RAIL_CONFIG.GUARD_2_LINE;
+
+        // 📐 KICK PLATE SPECIALIZED INPUTS
+        const widthRaw = r.width?.value ?? r.width ?? r.widthIn ?? 4;
+        const widthIn = typeCode === 'KICK_PLATE' ? parseFloat(widthRaw) : null;
 
         // 📏 POST SPACING (Respect User Input or Config Default)
         const rawSpacing = r.postSpacing?.value ?? r.postSpacing ?? r.maxSpacing ?? r.maxPostSpacing;
@@ -199,28 +203,39 @@ class StairCalculationService {
         }
         if (!maxSpacing || isNaN(maxSpacing)) maxSpacing = config.maxSpacing || 4;
 
-        // 📏 POST DISTRIBUTION (Excel INT Logic)
-        // 🔄 EXCEL PARITY: Excel uses INT(length/spacing) = Math.floor
-        // e.g., 18/4 = 4 posts, 21/4 = 5 posts
+        // 🔒 HARD CAP: Maximum allowable post spacing is 4 ft per code.
+        // If the user enters a value > 4 ft, it is silently clamped to 4 ft.
+        const MAX_ALLOWED_SPACING_FT = 4;
+        if (maxSpacing > MAX_ALLOWED_SPACING_FT) {
+          console.warn(`[RAIL ENGINE] ⚠️ Post spacing ${maxSpacing} ft exceeds 4 ft max — clamped to 4 ft.`);
+          maxSpacing = MAX_ALLOWED_SPACING_FT;
+        }
+
+        // 📏 POST DISTRIBUTION
+        // 🔄 FIX: Use Math.ceil (not Math.floor) so that actual spacing NEVER exceeds maxSpacing.
+        // Math.floor reduces post count, causing actual spacing > max (e.g. 18ft/4 = 4 posts → 4.5 ft actual ❌).
+        // Math.ceil always adds one more post if needed (e.g. 18ft/4 = 5 posts → 3.6 ft actual ✓).
         let postQty = 0;
         if (config.hasPosts && lengthFt > 0) {
-          postQty = Math.floor(lengthFt / maxSpacing);
+          const numSpans = Math.ceil(lengthFt / maxSpacing);
+          postQty = numSpans + 1;
           postQty = Math.max(postQty, 2);
         }
 
-        const actualSpacing = (config.hasPosts && postQty > 0)
-          ? (lengthFt / postQty)
+        const actualSpacing = (config.hasPosts && postQty > 1)
+          ? (lengthFt / (postQty - 1))
           : 0;
 
         // 📏 BRACKET DISTRIBUTION (Wall/Grab Logic)
         let bracketQty = 0;
         if (config.hasBrackets && maxSpacing > 0) {
-          bracketQty = Math.floor(lengthFt / maxSpacing);
+          const numSpans = Math.ceil(lengthFt / maxSpacing);
+          bracketQty = numSpans + 1;
           bracketQty = Math.max(bracketQty, 2);
         }
 
-        const bracketSpacing = (config.hasBrackets && bracketQty > 0)
-          ? (lengthFt / bracketQty)
+        const bracketSpacing = (config.hasBrackets && bracketQty > 1)
+          ? (lengthFt / (bracketQty - 1))
           : 0;
 
         // Unified Spacing for UI (prioritizes posts, then brackets)
@@ -267,7 +282,8 @@ class StairCalculationService {
           toeWidthFt,
           toePlateRequired: isToeplateRequired,
           hasPosts: config.hasPosts,
-          hasBrackets: config.hasBrackets
+          hasBrackets: config.hasBrackets,
+          widthIn: widthIn // Pass to estimate phase
         };
       }),
 
@@ -405,7 +421,7 @@ class StairCalculationService {
           shopMHPerFt = dbBenchmarks[0].shopLaborMhLf;
           fieldMHPerFt = dbBenchmarks[0].fieldLaborMhLf;
         } else {
-          const masterEntry = SFE_RAIL_MASTER[typeLabel];
+          const masterEntry = RAIL_MASTER_DATA[typeLabel];
           if (masterEntry) {
             lbsPerFt = masterEntry.lbs;
             shopMHPerFt = masterEntry.shop;
@@ -413,17 +429,42 @@ class StairCalculationService {
           } else {
             const normalizeString = (s) => (s || '').toUpperCase().replace(/["']/g, '').replace(/\./g, '').replace(/\s+/g, ' ').trim();
             const targetNorm = normalizeString(typeLabel);
-            const foundKey = Object.keys(SFE_RAIL_MASTER).find(k => normalizeString(k) === targetNorm);
+            const foundKey = Object.keys(RAIL_MASTER_DATA).find(k => normalizeString(k) === targetNorm);
             if (foundKey) {
-              lbsPerFt = SFE_RAIL_MASTER[foundKey].lbs;
-              shopMHPerFt = SFE_RAIL_MASTER[foundKey].shop;
-              fieldMHPerFt = SFE_RAIL_MASTER[foundKey].field;
+              lbsPerFt = RAIL_MASTER_DATA[foundKey].lbs;
+              shopMHPerFt = RAIL_MASTER_DATA[foundKey].shop;
+              fieldMHPerFt = RAIL_MASTER_DATA[foundKey].field;
             } else {
               const lookupSheet = 'Table Data';
-              lbsPerFt = excelLookup.lookup(lookupSheet, rail.railType, 'Column3', null);
-              shopMHPerFt = excelLookup.lookup(lookupSheet, rail.railType, 'Column4', null);
-              fieldMHPerFt = excelLookup.lookup(lookupSheet, rail.railType, 'Column5', null);
+              lbsPerFt = benchmarkLookup.lookup(lookupSheet, rail.railType, 'Column3', null);
+              shopMHPerFt = benchmarkLookup.lookup(lookupSheet, rail.railType, 'Column4', null);
+              fieldMHPerFt = benchmarkLookup.lookup(lookupSheet, rail.railType, 'Column5', null);
             }
+          }
+        }
+
+        // ── Intermediate Rail Adjustment (Guard Rail only) ──────────────────
+        // Spec: steelLbsLf already includes standard int rails (lines-1).
+        // If user overrides, adjust proportionally. Field labor stays unchanged.
+        // Do NOT apply to WALL_RAIL, GRAB_RAIL, CANE_RAIL, KICK_PLATE.
+        let intRailDelta = 0;
+        const isGuardType = rail.typeCode && rail.typeCode.startsWith('GUARD_');
+        if (isGuardType && lbsPerFt !== null && lbsPerFt !== 0) {
+          const config_ = RAIL_CONFIG[rail.typeCode] || RAIL_CONFIG.GUARD_2_LINE;
+          const lines = config_.totalRails || 2;
+          const standardIntRails = lines - 1; 
+          const userIntRails = (rail.intermediateRails !== undefined && rail.intermediateRails !== null && rail.intermediateRails !== '')
+            ? parseInt(rail.intermediateRails)
+            : standardIntRails;
+          intRailDelta = userIntRails - standardIntRails;
+
+          if (intRailDelta !== 0) {
+            const baseLbs = parseFloat(lbsPerFt);
+            const weightPerLine = baseLbs / lines;
+            lbsPerFt = baseLbs + (intRailDelta * weightPerLine);
+            shopMHPerFt = parseFloat(shopMHPerFt) + (intRailDelta * 0.05);
+            // fieldMHPerFt stays unchanged per spec
+            console.log(`[RAIL ENGINE] 🔧 Int rail adj: delta=${intRailDelta}, lbs/ft ${baseLbs} → ${lbsPerFt}, shopMH adj: +${intRailDelta * 0.05}`);
           }
         }
 
@@ -432,7 +473,18 @@ class StairCalculationService {
         let shopHours = 0;
         let fieldHours = 0;
 
-        if (lbsPerFt !== null && lbsPerFt !== 0) {
+        // 📏 KICK PLATE SPECIALIZED CALCULATION
+        if (rail.typeCode === 'KICK_PLATE') {
+          const widthIn = rail.widthIn || 4;
+          lbsPerFt = (widthIn / 4.0) * 3.400;
+          shopMHPerFt = 0.125;
+          fieldMHPerFt = 0.050;
+          
+          baseWeight = lengthFt * lbsPerFt;
+          shopHours = lengthFt * shopMHPerFt;
+          fieldHours = lengthFt * fieldMHPerFt;
+          finalWeight = baseWeight * scrapMultiplier;
+        } else if (lbsPerFt !== null && lbsPerFt !== 0) {
           lbsPerFt = parseFloat(lbsPerFt);
           shopMHPerFt = parseFloat(shopMHPerFt);
           fieldMHPerFt = parseFloat(fieldMHPerFt);
@@ -466,19 +518,31 @@ class StairCalculationService {
           const finishRate = isGalv ? getRate('galvanize_charge', 0.75) : getRate('powder_coat_rate', 1.7587);
           finishTotalCost = baseWeight * finishRate;
           
-          if (isGalv) {
+          if (isGalv || isPowder) {
+            let finishShopRate = 0;
+            let finishFieldRate = 0;
+
             const [galvRows] = await db.query(
-              'SELECT shop_mh_per_lf, field_mh_per_lf FROM galvanized_labor WHERE category = ? AND label = ?',
-              ['guardRail_type', typeLabel]
+              'SELECT shop_mh_per_lf, field_mh_per_lf FROM galvanized_labor WHERE label = ? AND (category LIKE ? OR category LIKE ? OR category LIKE ? OR category LIKE ?)',
+              [typeLabel, 'guardRail_type', 'wallRail_type', 'grabRail_type', 'caneRail_type']
             );
             const galvRow = galvRows?.[0];
             
-            finishShopHrs = lengthFt * (galvRow?.shop_mh_per_lf ?? 0);
-            finishFieldHrs = lengthFt * (galvRow?.field_mh_per_lf ?? 0);
+            if (galvRow && galvRow.shop_mh_per_lf !== null && galvRow.shop_mh_per_lf !== undefined) {
+              finishShopRate = parseFloat(galvRow.shop_mh_per_lf);
+              finishFieldRate = parseFloat(galvRow.field_mh_per_lf);
+            } else {
+              const matched = matchLabor(typeLabel);
+              finishShopRate = matched.shop;
+              finishFieldRate = matched.field;
+            }
+            
+            finishShopHrs = lengthFt * finishShopRate;
+            finishFieldHrs = lengthFt * finishFieldRate;
           }
         }
 
-        // ── Canonical Flow Steps (SFE Parity Handoff) ──
+        // ── Canonical Flow Steps (Benchmark Parity Handoff) ──
         // 1. steelCost = steelLbsTotal × steel_price_per_lb
         const steelPriceBase = baseWeight * steelPrice;
 
@@ -495,15 +559,19 @@ class StairCalculationService {
         const embeddedRate = configManager.get('mounting_embedded_rate', 5.00);
         const anchoredRate = configManager.get('mounting_anchored_rate', 6.00);
 
-        const mType = (rail.config?.mountingType || rail.mountingType || '').toLowerCase();
+        const mTypeVal = rail.config?.mountingType || rail.mountingType || '';
+        const mType = (mTypeVal && typeof mTypeVal === 'string') ? mTypeVal.toLowerCase() : '';
         let porRokCost = 0;
-        let anchorBoltsCost = 0;
+        let anchorBoltsCost = baseWeight * anchorBoltRate;
 
-        if (mType.includes('embedded')) {
-          porRokCost = rail.postQty * embeddedRate;
-        } else if (mType.includes('anchored')) {
-          porRokCost = rail.postQty * anchoredRate;
-          anchorBoltsCost = baseWeight * anchorBoltRate;
+        // 🛡️ SECURITY RULE: No mounting costs for Kick Plates
+        const isValidMType = mType !== '' && mType !== '0' && !mType.includes('select');
+        if (rail.typeCode !== 'KICK_PLATE' && isValidMType) {
+          if (mType.includes('embedded')) {
+            porRokCost = rail.postQty * embeddedRate;
+          } else if (mType.includes('anchored')) {
+            porRokCost = rail.postQty * anchoredRate;
+          }
         }
 
         // 6. subTotalMaterial = steelCost + finishCost + porRokCost + anchorBoltsCost (NO scrap)
@@ -547,12 +615,15 @@ class StairCalculationService {
             fieldLaborPrice: this.roundExcel(fieldLaborCost, 2),
             shopTotalHrs: this.roundExcel(shopHours + finishShopHrs, 3),
             fieldTotalHrs: this.roundExcel(fieldHours + finishFieldHrs, 3),
+            galvShopTotalHrs: this.roundExcel(finishShopHrs, 3),
+            galvFieldTotalHrs: this.roundExcel(finishFieldHrs, 3),
             subTotalWithoutTax: this.roundExcel(subTotalWithoutTax, 2),
             taxTotal: this.roundExcel(taxTotal, 2),
             taxRatePct: taxRate * 100,
             posts: rail.postQty,
             bracketQty: rail.bracketQty,
-            actualSpacing: rail.actualSpacing
+            actualSpacing: rail.actualSpacing,
+            intRailDelta: intRailDelta
           }
         };
       })),
@@ -604,7 +675,7 @@ class StairCalculationService {
           }
         }
 
-        // ── Canonical Flow Steps (SFE Parity Handoff) ──
+        // ── Canonical Flow Steps (Benchmark Parity Handoff) ──
         // 1. steelCost = steelLbsTotal × steel_price_per_lb
         const steelPriceBase = baseWeight * steelPrice;
 
@@ -620,14 +691,16 @@ class StairCalculationService {
         const embeddedRate = configManager.get('mounting_embedded_rate', 5.00);
         const anchoredRate = configManager.get('mounting_anchored_rate', 6.00);
 
-        const mType = (p.config?.mountingType || p.mountingType || '').toLowerCase();
+        const mTypeVal = p.config?.mountingType || p.mountingType || '';
+        const mType = (mTypeVal && typeof mTypeVal === 'string') ? mTypeVal.toLowerCase() : '';
         let porRokCost = 0;
-        let anchorBoltsCost = 0;
+        let anchorBoltsCost = baseWeight * anchorBoltRate;
 
-        if (mType.includes('embedded')) {
-          porRokCost = baseWeight * embeddedRate;
-        } else if (mType.includes('anchored')) {
-          anchorBoltsCost = baseWeight * anchorBoltRate;
+        const isValidMType = mType !== '' && mType !== '0' && !mType.includes('select');
+        if (isValidMType) {
+          if (mType.includes('embedded')) {
+            porRokCost = baseWeight * embeddedRate;
+          }
         }
 
         // 6. subTotalMaterial = steelCost + finishCost + porRokCost + anchorBoltsCost (NO scrap)
@@ -672,6 +745,8 @@ class StairCalculationService {
             fieldLaborPrice: this.roundExcel(fieldLaborCost, 2),
             shopTotalHrs: this.roundExcel(shopHoursInternal + finishShopHrs, 3),
             fieldTotalHrs: this.roundExcel(fieldHoursInternal + finishFieldHrs, 3),
+            galvShopTotalHrs: this.roundExcel(finishShopHrs, 3),
+            galvFieldTotalHrs: this.roundExcel(finishFieldHrs, 3),
             subTotalWithoutTax: this.roundExcel(subTotalWithoutTax, 2),
             taxTotal: this.roundExcel(taxTotal, 2),
             taxRatePct: taxRate * 100
@@ -724,7 +799,7 @@ class StairCalculationService {
 
         if (stairTypeLabel.includes('PAN')) {
           strLbs = 10.600;
-          // 🔄 EXCEL PARITY MATCH: SFE calculates pan mass as (Width * 10 lbs/sqft) per riser.
+          // 🔄 EXCEL PARITY MATCH: Engine calculates pan mass as (Width * 10 lbs/sqft) per riser.
           panLbs = resolvedWidth * 10.0;
           baseRiserShopHrs = 1.350;
           baseRiserFieldHrs = 0.900;
@@ -825,7 +900,7 @@ class StairCalculationService {
           }
         }
 
-        // 🔄 EXCEL PARITY MATCH: SFE master standard recipes evaluate Stringer & Pan properties strictly on a PER RISER basis.
+        // 🔄 EXCEL PARITY MATCH: Master standard recipes evaluate Stringer & Pan properties strictly on a PER RISER basis.
         // Rule: Only identify as Recipe Mode if "Std." prefix is present. Avoid mass-threshold heuristics as they break heavy standard shapes.
         const isRecipeMode = (src || '').toLowerCase().includes('std.') || (src || '').toLowerCase().includes('std ');
 
@@ -847,7 +922,7 @@ class StairCalculationService {
 
         const panTotalWeight = risers * panLbs;
 
-        // 🔄 EXCEL PARITY MATCH: SFE master standard recipes isolate Stringer from Pans in pricing.
+        // 🔄 EXCEL PARITY MATCH: Master standard recipes isolate Stringer from Pans in pricing.
         // Pan material is priced at a specific unit rate (typically $1.00/lb) while stringers use raw steel rate ($0.75/lb).
         let panPriceTotal = (stairTypeLabel.includes('PAN') || isRecipeMode) ? (panTotalWeight * panRate) : (panTotalWeight * steelPrice);
 
@@ -855,7 +930,7 @@ class StairCalculationService {
         const totalSteelWithScrap = stringerBaseWeight * scrapMultiplier;
 
         // 🔄 EXCEL PARITY MATCH: GRATING PRICING
-        // Evaluated based on Stair Width tiers matching SFE matrix (Scaling up to $80.15 for 5FT).
+        // Evaluated based on Stair Width tiers matching benchmark matrix (Scaling up to $80.15 for 5FT).
         let gratingTotalCost = 0;
         if (stairTypeLabel.includes('GRATING') || (s.config && s.config.stairGrating === true)) {
           const w = s.widthFt || 5;
@@ -892,7 +967,7 @@ class StairCalculationService {
         let galvFieldHrs = 0;
 
         if (isGalv || isPowder) {
-          // 🔄 EXCEL MATCH: Default finish rates configured to SFE Pricing (Galvanize: $0.75, Powder Coat: $1.7587). Pulled safely via getRate hierarchy.
+          // 🔄 EXCEL MATCH: Default finish rates configured to Standard Pricing (Galvanize: $0.75, Powder Coat: $1.7587). Pulled safely via getRate hierarchy.
           const finishRate = isGalv ? getRate('galvanize_charge', 0.7500) : getRate('powder_coat_rate', 1.7587);
           finishTotalCost = finishBaseLbs * finishRate;
 
@@ -927,7 +1002,7 @@ class StairCalculationService {
         shopHoursInternal += extraShopHours;
         fieldHoursInternal += extraFieldHours;
 
-        // ── Canonical Flow Steps (SFE Parity Handoff) ──
+        // ── Canonical Flow Steps (Benchmark Parity Handoff) ──
         // 1. steelCost = steelLbsTotal × steel_price_per_lb
         const steelPriceBase = stringerBaseWeight * steelPrice;
 
@@ -945,14 +1020,19 @@ class StairCalculationService {
         const embeddedRate = configManager.get('mounting_embedded_rate', 5.00);
         const anchoredRate = configManager.get('mounting_anchored_rate', 6.00);
 
-        const mType = (s.config?.mountingType || s.mountingType || '').toLowerCase();
+        const mTypeVal = s.config?.mountingType || s.mountingType || '';
+        const mType = (mTypeVal && typeof mTypeVal === 'string') ? mTypeVal.toLowerCase() : '';
         let porRokCost = 0;
-        let anchorBoltsCost = 0;
+        let anchorBoltsCost = stringerBaseWeight * anchorBoltRate;
 
-        if (mType.includes('embedded')) {
-          porRokCost = stringerBaseWeight * embeddedRate;
-        } else if (mType.includes('anchored')) {
-          anchorBoltsCost = stringerBaseWeight * anchorBoltRate;
+        const isValidMType = mType !== '' && mType !== '0' && !mType.includes('select');
+        if (isValidMType) {
+          const stairConnCount = 4; // 2 stringers × 2 ends
+          if (mType.includes('embedded')) {
+            porRokCost = stairConnCount * embeddedRate;
+          } else if (mType.includes('anchored')) {
+            porRokCost = stairConnCount * anchoredRate;
+          }
         }
 
         // 6. subTotalMaterial = steelCost + panCost + gratingCost + finishCost + porRokCost + anchorBoltsCost (NO scrap)
@@ -1000,6 +1080,9 @@ class StairCalculationService {
             taxTotal: this.roundExcel(taxTotal, 2),
             taxRatePct: taxRate * 100,
             pricePerRiser: this.roundExcel(totalCostPerStair / (risers || 1), 2),
+            stairPansTotalWeight: this.roundExcel(panTotalWeight, 3),
+            galvShopTotalHrs: this.roundExcel(galvShopHrs, 3),
+            galvFieldTotalHrs: this.roundExcel(galvFieldHrs, 3),
             angleHeight: s.heightFt,
             slope: geometry ? this.roundExcel(geometry.angle, 2) : (s.slope || 0),
             angle: geometry ? this.roundExcel(geometry.angle, 2) : (s.angle || 0),
@@ -1071,7 +1154,7 @@ class StairCalculationService {
     const rails = estimate.rails || [];
     rails.forEach((r, i) => {
       const s = r.systemCalc || r;
-      totalBaseSteelWeight += (s.baseSteelLbs || 0);
+      totalBaseSteelWeight += (s.totalSteel || 0);
       totalScrapLbs += (s.scrapLbs || 0);
       totalShopHours += (s.shopTotalHrs || 0);
       totalFieldHours += (s.fieldTotalHrs || 0);
@@ -1079,15 +1162,14 @@ class StairCalculationService {
       totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
 
       sumSteelBasePrice += (s.steelPriceBase || 0);
-      sumGalvanizePrice += (s.galvanizeTotalCost || 0);
+      sumGalvanizePrice += (s.finishTotalCost || 0);
       sumShopLaborPrice += (s.shopLaborPrice || 0);
       sumFieldLaborPrice += (s.fieldLaborPrice || 0);
       sumTaxTotal += (s.taxTotal || 0);
       sumSubtotalWithoutTax += (s.subTotalWithoutTax || 0);
 
-      const mType = (r.config?.mountingType || r.mountingType || '').toLowerCase();
-      if (mType.includes('embedded')) sumPorRok += (s.mountingCharge || 0);
-      else sumAnchorBolts += (s.mountingCharge || 0);
+      sumPorRok += (s.porRokCost || 0);
+      sumAnchorBolts += (s.anchorBoltsCost || 0);
 
       const railScrapOnly = (s.scrapLbs || 0) * steelPrice;
       sumScrapPrice += (s.scrapPriceOnly || railScrapOnly);
@@ -1097,7 +1179,7 @@ class StairCalculationService {
     const platforms = estimate.platforms || [];
     platforms.forEach((p, i) => {
       const s = p.systemCalc || p;
-      totalBaseSteelWeight += (s.baseSteelLbs || 0);
+      totalBaseSteelWeight += (s.totalSteel || 0);
       totalScrapLbs += (s.scrapLbs || 0);
       totalShopHours += (s.shopTotalHrs || 0);
       totalFieldHours += (s.fieldTotalHrs || 0);
@@ -1105,23 +1187,22 @@ class StairCalculationService {
       totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
 
       sumSteelBasePrice += (s.steelPriceBase || 0);
-      sumGalvanizePrice += (s.galvanizeTotalCost || 0);
+      sumGalvanizePrice += (s.finishTotalCost || 0);
       sumScrapPrice += (s.scrapPriceOnly || 0);
       sumShopLaborPrice += (s.shopLaborPrice || 0);
       sumFieldLaborPrice += (s.fieldLaborPrice || 0);
       sumTaxTotal += (s.taxTotal || 0);
       sumSubtotalWithoutTax += (s.subTotalWithoutTax || 0);
 
-      const mType = (p.config?.mountingType || p.mountingType || '').toLowerCase();
-      if (mType.includes('embedded')) sumPorRok += (s.mountingCharge || 0);
-      else sumAnchorBolts += (s.mountingCharge || 0);
+      sumPorRok += (s.porRokCost || 0);
+      sumAnchorBolts += (s.anchorBoltsCost || 0);
     });
 
     // ── STAIRS AGGREGATION ──
     const stairs = estimate.stairs || [];
     stairs.forEach((st, i) => {
       const s = st.systemCalc || st;
-      totalBaseSteelWeight += ((s.baseSteelLbs || 0) + (s.pansTotalSteelLbs || 0));
+      totalBaseSteelWeight += ((s.totalSteel || 0) + (s.stairPansTotalWeight || 0));
       totalScrapLbs += (s.scrapLbs || 0);
       totalShopHours += (s.shopTotalHrs || 0);
       totalFieldHours += (s.fieldTotalHrs || 0);
@@ -1132,16 +1213,15 @@ class StairCalculationService {
       sumSteelBasePrice += (s.steelPriceBase || 0);
       sumPansPrice += (s.stairPansTotalPrice || 0);
       sumGratingPrice += (s.gratingTotalCost || 0);
-      sumGalvanizePrice += (s.galvanizeTotalCost || 0);
+      sumGalvanizePrice += (s.finishTotalCost || 0);
       sumScrapPrice += (s.scrapPriceOnly || 0);
       sumShopLaborPrice += (s.shopLaborPrice || 0);
       sumFieldLaborPrice += (s.fieldLaborPrice || 0);
       sumTaxTotal += (s.taxTotal || 0);
       sumSubtotalWithoutTax += (s.subTotalWithoutTax || 0);
 
-      const mType = (st.config?.mountingType || st.mountingType || '').toLowerCase();
-      if (mType.includes('embedded')) sumPorRok += (s.mountingCharge || 0);
-      else sumAnchorBolts += (s.mountingCharge || 0);
+      sumPorRok += (s.porRokCost || 0);
+      sumAnchorBolts += (s.anchorBoltsCost || 0);
     });
 
     const subtotalWithoutTax = sumSubtotalWithoutTax;
@@ -1150,7 +1230,7 @@ class StairCalculationService {
 
     return {
       ...estimate,
-      sfeSummary: {
+      standardSummary: {
         totalSteelWeight: this.roundExcel(totalBaseSteelWeight + totalScrapLbs, 3),
         baseSteelWeight: this.roundExcel(totalBaseSteelWeight, 3),
         scrapWeight: this.roundExcel(totalScrapLbs, 3),
@@ -1181,47 +1261,48 @@ class StairCalculationService {
   }
 
   async calculateFull(input, debug = false) {
-    this.debug = debug;
-    this.resetTrace();
+    try {
+      this.debug = debug;
+      this.resetTrace();
 
-    // 🔄 Always force-reload config to flush stale cached values (e.g. old galvanize_rate)
-    await configManager.loadConfigs();
+      await configManager.loadConfigs();
 
-    // 🔍 AUDIT: Safe logging of incoming payload
-    console.log('--- [ENGINE PAYLOAD INCOMING] ---');
-    console.log('Project ID:', input?.project?.projectId || 'Unknown');
-    console.log('Stairs Count:', input?.stairs?.length || 0);
-    console.log('Rails Count:', input?.rails?.length || 0);
-    console.log('--- END PAYLOAD ---');
+      const sanitized = validator.sanitizeInput(input);
+      if (!sanitized) return { success: false, error: 'Sanitization failed' };
 
-    const sanitized = validator.sanitizeInput(input);
-    if (!sanitized) return null;
+      const normalized = validator.normalizeUnits(sanitized);
+      const takeoff = await this.calculateTakeoff(normalized);
+      if (!takeoff) throw new Error('Takeoff phase returned undefined');
 
-    const normalized = validator.normalizeUnits(sanitized);
-    const takeoff = await this.calculateTakeoff(normalized);
-    const estimate = await this.calculateEstimate(takeoff);
-    const final = await this.calculateFinal(estimate);
+      const estimate = await this.calculateEstimate(takeoff);
+      if (!estimate) throw new Error('Estimate phase returned undefined');
 
-    const response = {
-      success: true,
-      breakdown: {
-        rails: final.rails,
-        platforms: final.platforms,
-        stairs: final.stairs,
-        totals: {
-          totalSteelWeight: final.sfeSummary.totalSteelWeight
-        }
-      },
-      summary: final.sfeSummary
-    };
+      const final = await this.calculateFinal(estimate);
+      if (!final) throw new Error('Final aggregation returned undefined');
 
-    if (this.debug) {
-      this.logAudit(final);
+      const response = {
+        success: true,
+        breakdown: {
+          rails: final.rails || [],
+          platforms: final.platforms || [],
+          stairs: final.stairs || [],
+          totals: {
+            totalSteelWeight: final.standardSummary?.totalSteelWeight || 0
+          }
+        },
+        summary: final.standardSummary || {}
+      };
+
+      if (this.debug) {
+        this.logAudit(final);
+      }
+
+      Object.freeze(response);
+      return response;
+    } catch (e) {
+      console.error('[CRITICAL CALCULATE ERROR]', e);
+      return { success: false, error: e.message };
     }
-
-    // 🔒 ENGINE IMMUTABILITY RULE
-    Object.freeze(response);
-    return response;
   }
 
   logAudit(final) {

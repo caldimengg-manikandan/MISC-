@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Settings, Check, AlertTriangle } from 'lucide-react';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import EstimationPreviewCard from '../../components/common/EstimationPreviewCard';
 import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -61,9 +62,9 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint, dtTag, dtCla
   );
 };
 
-const ConnBlock = ({ label, propName, value, options, onChange }) => (
-  <div className="form-field" style={{ marginTop: '8px' }}>
-    <label className="form-label">{label}</label>
+const ConnBlock = ({ label, propName, value, options, onChange, style = {} }) => (
+  <div className="form-field" style={{ marginTop: '0px', ...style }}>
+    <label className="form-label" style={{ fontSize: '10px' }}>{label}</label>
     <div className="radio-group" style={{ display: 'flex', gap: '12px' }}>
       {options.map(c => {
         const val = (c.value || c);
@@ -140,13 +141,13 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     ]);
 
     setDropdowns({
-      stairTypes: st,
-      gratingTypes: gt.map(i => i.label),
-      stringerSizes: ss.map(i => i.label || i.value),
+      stairTypes: st.length > 0 ? st : DEFAULT_STAIR_TYPES,
+      gratingTypes: gt.length > 0 ? gt.map(i => i.label || i.value) : DEFAULT_GRATING_TYPES,
+      stringerSizes: ss.length > 0 ? ss.map(i => i.label || i.value) : DEFAULT_STRINGER_SIZES,
       stringerSizesData: ss,
-      finishes: fo.map(i => i.label),
-      connections: ct.map(i => i.label),
-      steelGrades: sg.length > 0 ? sg.map(i => i.label) : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
+      finishes: fo.length > 0 ? fo.map(i => i.label || i.value) : DEFAULT_FINISH_OPTIONS,
+      connections: ct.length > 0 ? ct.map(i => i.label || i.value) : DEFAULT_CONNECTION_TYPES,
+      steelGrades: sg.length > 0 ? sg.map(i => i.label || i.value) : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
     });
   }, []);
 
@@ -187,7 +188,7 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     fsStringerTop:   stair.fsStringerTop || { value: '', unit: 'FT' },
     fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
     finish:          stair.finish         || 'Primer',
-    mountingType:    stair.mountingType   || 'anchored',
+    mountingType:    stair.mountingType   || '',
     selectionSource: stair.selectionSource || (stair.stringerSize ? 'manual' : 'auto'),
 
     ...stair
@@ -344,9 +345,14 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                 </button>
               )}
             </label>
-            <select className="form-select data-type-string" id="stair-type" value={form.stairType} onChange={e => set('stairType', e.target.value)}>
-              {dropdowns.stairTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            <SearchableSelect 
+              options={dropdowns.stairTypes}
+              valueKey="value"
+              displayKey="label"
+              value={form.stairType}
+              onSelect={opt => set('stairType', opt?.value || '')}
+              placeholder="— Select Stair Type —"
+            />
           </div>
 
 
@@ -376,19 +382,68 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                   </button>
                 )}
               </label>
-              <select className="form-select data-type-string" value={form.gratingType} onChange={e => set('gratingType', e.target.value)}>
-                <option value="">— Select Grating Type —</option>
-                {dropdowns.gratingTypes.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <SearchableSelect 
+                options={dropdowns.gratingTypes.map(g => ({ value: g, label: g }))}
+                valueKey="value"
+                displayKey="label"
+                value={form.gratingType}
+                onSelect={opt => set('gratingType', opt?.value || '')}
+                placeholder="— Select Grating Type —"
+              />
             </div>
           )}
+
+          <div className="form-field">
+            <label className="form-label">
+              Finish Specification
+              {isAdmin && (
+                <button 
+                  onClick={(e) => openManage('finish_option', 'Finish Options', e)} 
+                  className="quick-edit-btn" 
+                  title="Manage Options"
+                >
+                  <Settings size={14} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect 
+              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.finish}
+              onSelect={opt => set('finish', opt?.value || '')}
+              placeholder="— Select Finish —"
+            />
+          </div>
+
+          <div className="form-field">
+            <label className="form-label">
+              Mounting Type
+              {isAdmin && (
+                <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
+                  <Settings size={14} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect 
+              options={[
+                { value: 'anchored', label: 'Anchored' },
+                { value: 'embedded', label: 'Embedded' }
+              ]}
+              valueKey="value"
+              displayKey="label"
+              value={form.mountingType}
+              onSelect={opt => set('mountingType', opt?.value || '')}
+              placeholder="— Select Mounting —"
+            />
+          </div>
         </div>
       </div>
 
       {/* ── Geometry ───────────────────────────────────────────────── */}
       <div className={`form-section ${isNonMetalStair ? 'section-faded' : ''}`}>
         <div className="form-section-title">Stair Geometry</div>
-        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
+        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(8, 1fr)', gap: '12px' }}>
           <UnitInput id="stair-width" label="Stair Width" value={form.stairWidth} onChange={v => set('stairWidth', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           <UnitInput id="stair-run"   label="Run"         value={form.run} onChange={v => set('run', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           <UnitInput id="stair-rise"  label="Rise"        value={form.rise} onChange={v => set('rise', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
@@ -435,30 +490,138 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             </div>
           </div>
 
-          <div className="form-field flex flex-col items-center justify-center p-2 border border-slate-200 rounded-lg bg-slate-50" style={{ gridColumn: 'span 2' }}>
-            <div className="text-[9px] font-bold text-slate-400 uppercase mb-2">Computed Geometry Profile</div>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              {form.angle ? (
-                <svg width="60" height="40" viewBox="0 0 60 40" style={{ transition: 'all 0.5s ease', marginTop: '-4px' }}>
-                  <path 
-                    d={`M 5 35 L 55 35 L 5 10 Z`} 
-                    fill="rgba(14, 165, 233, 0.1)" 
-                    stroke="var(--accent-blue)" 
-                    strokeWidth="2" 
-                    strokeLinejoin="round"
-                    style={{ transformOrigin: '5px 35px', transform: `rotate(${- (Number(form.systemCalc?.angle || 32) - 32)}deg)` }}
-                  />
-                  <text x="30" y="30" fontSize="6" fill="#64748B" textAnchor="middle">{Number(form.systemCalc?.angle || 0).toFixed(1)}°</text>
-                </svg>
-              ) : (
-                <div className="h-10 w-10 flex items-center justify-center text-slate-300">?</div>
+          <div className="form-field flex flex-col items-center justify-center p-3 border border-slate-200 rounded-xl bg-slate-50" style={{ gridColumn: 'span 2' }}>
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3">Computed Geometry Profile</div>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              {form.angle ? (() => {
+                const angle = Number(form.systemCalc?.angle || form.angle || 32);
+                const rad = angle * Math.PI / 180;
+                // Triangle corners: right-angle at bottom-left
+                const ox = 14, oy = 72;  // origin (bottom-left)
+                const bx = 86, by = 72;  // bottom-right
+                const tx = 14, ty = 72 - Math.round(72 * Math.tan(rad) / (1 + Math.tan(rad) * 0.6));
+                // Clamped top point
+                const topY = Math.max(10, 72 - Math.round((bx - ox) * Math.tan(rad)));
+                const topYFinal = Math.max(8, topY);
+                return (
+                  <svg width="110" height="86" viewBox="0 0 110 86" style={{ transition: 'all 0.4s ease', flexShrink: 0 }}>
+                    {/* Grid background - engineering paper */}
+                    <defs>
+                      <pattern id="eng-grid" width="8" height="8" patternUnits="userSpaceOnUse">
+                        <path d="M 8 0 L 0 0 0 8" fill="none" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5"/>
+                      </pattern>
+                    </defs>
+                    <rect x="0" y="0" width="110" height="86" fill="url(#eng-grid)" rx="4"/>
+
+                    {/* Triangle fill */}
+                    <polygon
+                      points={`${ox},${72} ${bx},${72} ${ox},${topYFinal}`}
+                      fill="rgba(59,130,246,0.07)"
+                      stroke="none"
+                    />
+
+                    {/* Stringer (hypotenuse) — bold accent */}
+                    <line x1={bx} y1={72} x2={ox} y2={topYFinal}
+                      stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
+
+                    {/* Height (vertical side) */}
+                    <line x1={ox} y1={72} x2={ox} y2={topYFinal}
+                      stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3,2"/>
+
+                    {/* Run (horizontal base) */}
+                    <line x1={ox} y1={72} x2={bx} y2={72}
+                      stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3,2"/>
+
+                    {/* Right-angle box at origin */}
+                    <path d={`M ${ox} ${72 - 7} L ${ox + 7} ${72 - 7} L ${ox + 7} ${72}`}
+                      fill="none" stroke="#64748B" strokeWidth="1" strokeLinecap="round"/>
+
+                    {/* Angle arc at bottom-right corner */}
+                    <path
+                      d={`M ${bx - 14} ${72} A 14 14 0 0 0 ${bx - 14 * Math.cos(rad)} ${72 - 14 * Math.sin(rad)}`}
+                      fill="rgba(59,130,246,0.12)" stroke="#3B82F6" strokeWidth="1" fillRule="evenodd"
+                    />
+
+                    {/* Angle label */}
+                    <text
+                      x={bx - 26}
+                      y={72 - 4}
+                      fontSize="7"
+                      fontWeight="700"
+                      fill="#3B82F6"
+                      fontFamily="'Geist Mono', monospace"
+                      textAnchor="middle"
+                    >
+                      {angle.toFixed(1)}°
+                    </text>
+
+                    {/* Side labels */}
+                    {/* Height label (left of vertical) */}
+                    <text x={ox - 3} y={(72 + topYFinal) / 2} fontSize="6" fill="#10B981" fontWeight="700"
+                      fontFamily="sans-serif" textAnchor="end" dominantBaseline="middle">H</text>
+                    {/* Run label (below horizontal) */}
+                    <text x={(ox + bx) / 2} y={80} fontSize="6" fill="#F59E0B" fontWeight="700"
+                      fontFamily="sans-serif" textAnchor="middle">R</text>
+                    {/* Stringer label (along hypotenuse) */}
+                    <text
+                      x={(ox + bx) / 2 + 4}
+                      y={(topYFinal + 72) / 2 - 6}
+                      fontSize="6"
+                      fill="#3B82F6"
+                      fontWeight="700"
+                      fontFamily="sans-serif"
+                      textAnchor="middle"
+                      transform={`rotate(${-angle}, ${(ox + bx) / 2 + 4}, ${(topYFinal + 72) / 2 - 6})`}
+                    >S</text>
+                  </svg>
+                );
+              })() : (
+                <div className="h-10 w-14 flex items-center justify-center text-slate-300 text-xs">—</div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px', color: '#64748B' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100px' }}><span>Height:</span> <strong style={{ color: '#0F172A' }}>{(totalHeightIn / 12).toFixed(2)} ft</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100px' }}><span>Run:</span> <strong style={{ color: '#0F172A' }}>{(totalRunIn / 12).toFixed(2)} ft</strong></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100px' }}><span>Stringer:</span> <strong style={{ color: '#0F172A' }}>{stringerLengthFt.toFixed(2)} ft</strong></div>
+
+              {/* Dimension values */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '10.5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: '#10B981', flexShrink: 0 }}/>
+                  <span style={{ color: 'var(--gpt-text-muted)', minWidth: '52px' }}>Height:</span>
+                  <strong style={{ color: 'var(--gpt-text-primary)', fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{(totalHeightIn / 12).toFixed(2)} ft</strong>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: '#F59E0B', flexShrink: 0 }}/>
+                  <span style={{ color: 'var(--gpt-text-muted)', minWidth: '52px' }}>Run:</span>
+                  <strong style={{ color: 'var(--gpt-text-primary)', fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{(totalRunIn / 12).toFixed(2)} ft</strong>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: '#3B82F6', flexShrink: 0 }}/>
+                  <span style={{ color: 'var(--gpt-text-muted)', minWidth: '52px' }}>Stringer:</span>
+                  <strong style={{ color: 'var(--gpt-text-primary)', fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{stringerLengthFt.toFixed(2)} ft</strong>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Extents moved from bottom stringer section to here per user request */}
+          <UnitInput id="ns-top" label="N/S Extent @Top" value={form.nsStringerTop} onChange={v => set('nsStringerTop', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          <UnitInput id="fs-top" label="F/S Extent @Top" value={form.fsStringerTop} onChange={v => set('fsStringerTop', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          <UnitInput id="ns-bot" label="N/S Extent @Bot" value={form.nsStringerBot} onChange={v => set('nsStringerBot', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          <UnitInput id="fs-bot" label="F/S Extent @Bot" value={form.fsStringerBot} onChange={v => set('fsStringerBot', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          
+          <div style={{ gridColumn: 'span 2' }}>
+            <ConnBlock 
+              label="Connection (All)" 
+              propName="shared-conn" 
+              value={form.nsStringerConnTop} 
+              options={dropdowns.connections} 
+              onChange={v => {
+                const updated = { 
+                  ...form, 
+                  nsStringerConnTop: v, fsStringerConnTop: v,
+                  nsStringerConnBot: v, fsStringerConnBot: v 
+                };
+                setForm(updated);
+                onChange(updated);
+              }} 
+            />
           </div>
         </div>
       </div>
@@ -520,9 +683,14 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                 </button>
               )}
             </label>
-            <select className="form-select data-type-string" value={form.steelGrade} onChange={e => set('steelGrade', e.target.value)}>
-              {dropdowns.steelGrades.map(sg => <option key={sg} value={sg}>{sg}</option>)}
-            </select>
+            <SearchableSelect 
+              options={dropdowns.steelGrades.map(s => ({ value: s, label: s }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.steelGrade}
+              onSelect={opt => set('steelGrade', opt?.value || '')}
+              placeholder="— Select Grade —"
+            />
           </div>
 
           {form.stringerType === 'Rolled' ? (
@@ -575,34 +743,27 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                 </div>
               )}
 
-              <select 
-                className="form-select" 
-                id="stringer-size" 
-                value={form.stringerSize} 
-                onChange={e => {
-                  const val = e.target.value;
+              <SearchableSelect 
+                options={dropdowns.stringerSizes.map(lbl => {
+                  const spec = stringerData.find(s => (s.label || s.value) === lbl);
+                  const isRec = lbl === recommendedStringerStr;
+                  return { 
+                    value: lbl, 
+                    label: `${lbl}${isRec ? ' ★ (REC)' : ''}`,
+                    isRec 
+                  };
+                })}
+                valueKey="value"
+                displayKey="label"
+                value={form.stringerSize}
+                onSelect={opt => {
+                  const val = opt?.value || '';
                   const updated = { ...form, stringerSize: val, selectionSource: 'manual' };
                   setForm(updated);
                   onChange(updated);
                 }}
-              >
-                <option value="">— Select from Profile Data Base —</option>
-                {stringerData.map(s => {
-                  const lbl = s.label || s.value;
-                  const score = scoredStringers.find(x => (x.label || x.value) === lbl)?.score || 0;
-                  const isRec = lbl === recommendedStringerStr;
-                  
-                  let textColor = '#A0AEC0'; // Score 0
-                  if (isRec) textColor = 'inherit'; // Score 2 (best match)
-                  else if (score === 1) textColor = '#888888'; // Score 1
-                  
-                  return (
-                    <option key={lbl} value={lbl} style={{ color: textColor }}>
-                      {lbl} {isRec ? ' ★ (REC)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
+                placeholder="— Select from Profile Data Base —"
+              />
             </div>
           ) : (
             <>
@@ -629,65 +790,13 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             </>
           )}
         </div>
-        
-        <div className="form-grid form-grid-8 gap-y-4">
-          <UnitInput id="ns-bot" label="N/S Extent @Bot" value={form.nsStringerBot} onChange={v => set('nsStringerBot', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <ConnBlock label="N/S Conn @Bot" propName="nsStringerConnBot" value={form.nsStringerConnBot} options={dropdowns.connections} onChange={v => set('nsStringerConnBot', v)} />
-          
-          <UnitInput id="fs-bot" label="F/S Extent @Bot" value={form.fsStringerBot} onChange={v => set('fsStringerBot', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <ConnBlock label="F/S Conn @Bot" propName="fsStringerConnBot" value={form.fsStringerConnBot} options={dropdowns.connections} onChange={v => set('fsStringerConnBot', v)} />
-          
-          <UnitInput id="ns-top" label="N/S Extent @Top"  value={form.nsStringerTop} onChange={v => set('nsStringerTop', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <ConnBlock label="N/S Conn @Top" propName="nsStringerConnTop" value={form.nsStringerConnTop} options={dropdowns.connections} onChange={v => set('nsStringerConnTop', v)} />
-          
-          <UnitInput id="fs-top" label="F/S Extent @Top"  value={form.fsStringerTop} onChange={v => set('fsStringerTop', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <ConnBlock label="F/S Conn @Top" propName="fsStringerConnTop" value={form.fsStringerConnTop} options={dropdowns.connections} onChange={v => set('fsStringerConnTop', v)} />
-        </div>
+
       </div>
 
 
-      {/* ── Finish ─────────────────────────────────────────────────── */}
-      <div className={`form-grid form-grid-4 ${form.stairType === 'non-metal' ? 'section-faded' : ''}`}>
-        <div className="form-field">
-          <label className="form-label">
-            Finish Specification
-            {isAdmin && (
-              <button 
-                onClick={(e) => openManage('finish_option', 'Finish Options', e)} 
-                className="quick-edit-btn" 
-                title="Manage Options"
-              >
-                <Settings size={14} />
-              </button>
-            )}
-          </label>
-          <select
-            className="form-select data-type-string"
-            id="stair-finish"
-            value={form.finish}
-            onChange={e => set('finish', e.target.value)}
-          >
-            {dropdowns.finishes.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </div>
-        <div className="form-field">
-          <label className="form-label">
-            Mounting Type
-            {isAdmin && (
-              <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
-                <Settings size={14} />
-              </button>
-            )}
-          </label>
-          <select className="form-select" value={form.mountingType} onChange={e => set('mountingType', e.target.value)}>
-             <option value="anchored">Anchored</option>
-             <option value="embedded">Embedded</option>
-             {/* Fetch dynamic ones from dropdowns if needed */}
-          </select>
-        </div>
-      </div>
 
-      {/* ── Real-time Preview Engine Results (EXCEL SFE ALIGNED) ─────────────────────── */}
+
+      {/* ── Real-time Preview Engine Results (EXCEL MISC ALIGNED) ─────────────────────── */}
       {form.systemCalc && (form.stringerType === 'Rolled' ? (form.stringerSize && form.stringerSize !== '') : (form.plateThk && form.plateWidth)) && (
         <div className={`mt-6 ${form.stairType === 'non-metal' ? 'section-faded' : ''}`}>
           <EstimationPreviewCard 
@@ -708,7 +817,7 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
         triggerRect={quickModal.rect}
       />
 
-      <style jsx>{`
+      <style>{`
         .quick-edit-btn {
           margin-left: 8px; background: hsla(var(--brand-h), var(--brand-s), 50%, 0.1); 
           border: 1px solid hsla(var(--brand-h), var(--brand-s), 50%, 0.2); 
@@ -748,41 +857,6 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
           color: var(--color-primary-900);
         }
       `}</style>
-      {/* ── Real-time Preview ── */}
-      {!form.systemCalc && (
-        <div style={{ marginTop: 24 }}>
-          <div className="summary-card card-glow-blue" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4,1fr)', 
-            gap: 12,
-            background: '#F8FAFC',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            padding: '16px',
-            borderTop: '3px solid #A78BFA'
-          }}>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Stringer LF</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(form.systemCalc?.stringerLF || 0).toFixed(2)} <span style={{ fontSize: '10px', opacity: 0.7 }}>ft</span></div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Total Steel</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(form.systemCalc?.totalWeight || 0).toFixed(2)} <span style={{ fontSize: '10px', opacity: 0.7 }}>lb</span></div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Pans Total Steel</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{Number(form.systemCalc?.pansTotalSteelLbs || 0).toFixed(1)} <span style={{ fontSize: '10px', opacity: 0.7 }}>lb</span></div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Labor Hrs</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>{(Number(form.systemCalc?.shopHours || 0) + Number(form.systemCalc?.fieldHours || 0)).toFixed(1)} <span style={{ fontSize: '10px', opacity: 0.7 }}>hrs</span></div>
-            </div>
-          </div>
-          <div style={{ marginTop: '8px', textAlign: 'right' }}>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 }

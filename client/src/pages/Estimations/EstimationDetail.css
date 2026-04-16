@@ -268,3 +268,6 @@
   .ed-form-grid { grid-template-columns: 1fr; }
   .ed-lifecycle { gap: 0; padding: 12px 16px; }
 }
+
+/* ─── Workflow Action Bar wrapper ────────────────────────────────── */
+.ed-workflow-bar { margin-top: -4px; }

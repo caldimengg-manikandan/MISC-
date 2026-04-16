@@ -3,7 +3,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import AppRoutes from './routes/AppRoutes';
-import Login3D from './components/auth/Login';
+import LoginPage from './components/ui/animated-sign-in';
+import LandingPage from './pages/Landing/LandingPage';
 
 import './styles/globals.css';
 
@@ -19,8 +20,10 @@ function App() {
       />
 
       <Routes>
-        {/* PUBLIC ROUTE (Handles its own layout if needed) */}
-        <Route path="/login" element={<Login3D />} />
+        {/* PUBLIC ROUTES — no auth required */}
+        <Route path="/" element={<Navigate to="/landing" replace />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         {/* PROTECTED ROUTES / APP FLOW */}
         <Route path="/*" element={<AppRoutes />} />
@@ -30,3 +33,4 @@ function App() {
 }
 
 export default App;
+

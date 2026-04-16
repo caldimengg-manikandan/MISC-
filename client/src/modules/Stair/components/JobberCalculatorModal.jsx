@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { motion, useDragControls } from "framer-motion";
-import CaldimCalculates from "./CaldimCalculates";
+import CaldimCalculates from "./GeometryCalculator";
 
 /**
  * JobberCalculatorModal
