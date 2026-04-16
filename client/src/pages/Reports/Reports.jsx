@@ -315,7 +315,7 @@ export default function Reports() {
   // Load project list on mount
   useEffect(() => {
     setLoadingProjects(true);
-    apiFetch('/api/reports/projects')
+    apiFetch('/reports/projects')
       .then(r => r.json())
       .then(d => {
         if (d.success) setProjects(d.projects || []);
@@ -331,7 +331,7 @@ export default function Reports() {
     setLoading(true);
     setError(null);
     setReportData(null);
-    apiFetch(`/api/reports/${id}/live`)
+    apiFetch(`/reports/${id}/live`)
       .then(r => r.json())
       .then(d => {
         if (d.success) setReportData(d);
@@ -352,7 +352,7 @@ export default function Reports() {
     if (!selectedId) return;
     setExporting(true);
     try {
-      const resp = await apiFetch(`/api/reports/${selectedId}/bom-excel`);
+      const resp = await apiFetch(`/reports/${selectedId}/bom-excel`);
       if (!resp.ok) throw new Error('Export failed');
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
