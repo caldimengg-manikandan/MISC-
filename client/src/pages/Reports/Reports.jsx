@@ -11,12 +11,14 @@ import {
 } from 'lucide-react';
 import './Reports.css';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_BASE_URL } from '../../config/api';
+
+const API_URL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
 
 const getToken = () => localStorage.getItem('steel_token');
 
 const apiFetch = (url, opts = {}) =>
-  fetch(`${API}${url}`, {
+  fetch(`${API_URL}${url}`, {
     ...opts,
     headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });

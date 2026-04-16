@@ -161,7 +161,8 @@ export default function MainLayout({ children }) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting]   = useState(false);
 
-  const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const { API_BASE_URL } = require('../config/api');
+  const API = API_BASE_URL;
   const getToken = () => localStorage.getItem('steel_token');
 
   const currentProjectId = selectedEstimation?.id;
