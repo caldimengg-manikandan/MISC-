@@ -2,9 +2,12 @@
 const db = require('../config/mssql');
 
 class CustomerRepository {
-    async findAll(filters = {}) {
-        let query = 'SELECT * FROM customers WHERE 1=1';
-        let params = [];
+    async findAll(filters = {}, companyId = null) {
+        // NULL company = no data access
+        if (companyId === null || companyId === undefined) return [];
+
+        let query = 'SELECT * FROM customers WHERE company_id = ?';
+        let params = [companyId];
 
         if (filters.status) {
             query += ' AND status = ?';
@@ -16,28 +19,29 @@ class CustomerRepository {
         return rows;
     }
 
-    async findById(id) {
-        const [rows] = await db.query('SELECT * FROM customers WHERE id = ?', [id]);
-        return rows[0];
+    async findById(id, companyId = null) {
+        if (companyId === null || companyId === undefined) return null;
+        const [rows] = await db.query('SELECT * FROM customers WHERE id = ? AND company_id = ?', [id, companyId]);
+        return rows[0] || null;
     }
 
     async create(data) {
         const { 
             companyName, contactPerson, email, phone, 
-            street, city, state, zip, notes, createdBy 
+            street, city, state, zip, notes, createdBy, companyId
         } = data;
         
         const [result] = await db.query(`
             INSERT INTO customers (
                 companyName, contactPerson, email, phone, 
                 street, city, state, zip, status, notes, 
-                createdBy, updatedBy, createdAt, updatedAt
+                company_id, createdBy, updatedBy, createdAt, updatedAt
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, GETDATE(), GETDATE())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, GETDATE(), GETDATE())
         `, [
             companyName, contactPerson, email, phone, 
-            street, city, state, zip, notes, createdBy, createdBy
+            street, city, state, zip, notes, companyId || null, createdBy, createdBy
         ]);
         
         return result[0].id;
@@ -46,7 +50,7 @@ class CustomerRepository {
     async update(id, data) {
         const { 
             companyName, contactPerson, email, phone, 
-            street, city, state, zip, status, notes, updatedBy 
+            street, city, state, zip, status, notes, updatedBy, companyId
         } = data;
 
         const sets = ['updatedAt = GETDATE()'];
@@ -71,23 +75,33 @@ class CustomerRepository {
         addField('notes', notes);
         addField('updatedBy', updatedBy);
 
+        let whereClause = 'id = ?';
         params.push(id);
-        const query = `UPDATE customers SET ${sets.join(', ')} WHERE id = ?`;
+        if (companyId !== null) {
+            whereClause += ' AND company_id = ?';
+            params.push(companyId);
+        }
+
+        const query = `UPDATE customers SET ${sets.join(', ')} WHERE ${whereClause}`;
         return await db.query(query, params);
     }
 
-    async updateStatus(id, status, updatedBy) {
-        return await db.query(
-            'UPDATE customers SET status = ?, updatedBy = ?, updatedAt = GETDATE() WHERE id = ?',
-            [status, updatedBy, id]
-        );
+    async updateStatus(id, status, updatedBy, companyId = null) {
+        let query = 'UPDATE customers SET status = ?, updatedBy = ?, updatedAt = GETDATE() WHERE id = ?';
+        let params = [status, updatedBy, id];
+        if (companyId !== null) {
+            query += ' AND company_id = ?';
+            params.push(companyId);
+        }
+        return await db.query(query, params);
     }
 
-    async search(searchTerm) {
-        const [rows] = await db.query(
-            "SELECT * FROM customers WHERE status = 'active' AND companyName LIKE ? ORDER BY companyName ASC",
-            [`%${searchTerm}%`]
-        );
+    async search(searchTerm, companyId = null) {
+        if (companyId === null || companyId === undefined) return [];
+        let query = "SELECT * FROM customers WHERE status = 'active' AND company_id = ? AND companyName LIKE ?";
+        let params = [companyId, `%${searchTerm}%`];
+        query += ' ORDER BY companyName ASC';
+        const [rows] = await db.query(query, params);
         return rows;
     }
 }

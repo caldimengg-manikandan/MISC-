@@ -2,23 +2,30 @@
 const db = require('../config/mssql');
 
 class EstimationRepository {
-    async getStats() {
-        const [rows] = await db.query(`
-            SELECT status, COUNT(*) as count 
-            FROM projects 
-            GROUP BY status
-        `);
+    async getStats(companyId = null) {
+        // NULL company = no access
+        if (companyId === null || companyId === undefined) {
+            return [];
+        }
+        const [rows] = await db.query(
+            'SELECT status, COUNT(*) as count FROM projects WHERE company_id = ? GROUP BY status',
+            [companyId]
+        );
         return rows;
     }
 
-    async findAll(filters = {}) {
+    async findAll(filters = {}, companyId = null) {
+        // NULL company = no access
+        if (companyId === null || companyId === undefined) {
+            return [];
+        }
         let query = `
             SELECT p.*, c.companyName as customer_name, c.contactPerson, c.email, c.phone
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
-            WHERE 1=1
+            WHERE p.company_id = ?
         `;
-        let params = [];
+        let params = [companyId];
 
         if (filters.status) {
             query += ' AND p.status = ?';
@@ -34,24 +41,28 @@ class EstimationRepository {
         return rows;
     }
 
-    async findById(id) {
+    async findById(id, companyId = null) {
+        // NULL company = no access
+        if (companyId === null || companyId === undefined) {
+            return null;
+        }
         const [rows] = await db.query(`
             SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
                    c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
-            WHERE p.id = ?
-        `, [id]);
-        return rows[0];
+            WHERE p.id = ? AND p.company_id = ?
+        `, [id, companyId]);
+        return rows[0] || null;
     }
 
     async create(data) {
-        const { projectName, customer_name, customer_id, dueDate, createdBy } = data;
+        const { projectName, customer_name, customer_id, dueDate, createdBy, companyId } = data;
         const [result] = await db.query(`
-            INSERT INTO projects (projectName, customer_name, customer_id, dueDate, status, userId, createdBy, created_at, updatedAt)
+            INSERT INTO projects (projectName, customer_name, customer_id, dueDate, status, userId, createdBy, company_id, created_at, updatedAt)
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, 'NEW', ?, ?, GETDATE(), GETDATE())
-        `, [projectName, customer_name, customer_id ? customer_id : null, dueDate ? dueDate : null, createdBy, createdBy]);
+            VALUES (?, ?, ?, ?, 'NEW', ?, ?, ?, GETDATE(), GETDATE())
+        `, [projectName, customer_name, customer_id ? customer_id : null, dueDate ? dueDate : null, createdBy, createdBy, companyId || null]);
         return result[0].id;
     }
 
@@ -167,11 +178,11 @@ class EstimationRepository {
         return result[0].id;
     }
 
-    async logActivity(estimationId, action, performedBy, notes = null) {
+    async logActivity(estimationId, action, performedBy, notes = null, companyId = null) {
         return await db.query(`
-            INSERT INTO estimation_activity_logs (estimationId, action, performedBy, notes)
-            VALUES (?, ?, ?, ?)
-        `, [estimationId, action, performedBy, notes]);
+            INSERT INTO estimation_activity_logs (estimationId, action, performedBy, notes, company_id)
+            VALUES (?, ?, ?, ?, ?)
+        `, [estimationId, action, performedBy, notes, companyId || null]);
     }
 }
 

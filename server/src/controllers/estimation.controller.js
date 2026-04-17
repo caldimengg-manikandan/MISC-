@@ -6,7 +6,7 @@ const { STATUS, STATUS_ACTIONS } = require('../constants/status.constants');
 class EstimationController {
     async getDashboardStats(req, res) {
         try {
-            const rows = await estimationRepository.getStats();
+            const rows = await estimationRepository.getStats(req.companyId);
             const stats = {
                 [STATUS.NEW]: 0,
                 [STATUS.ASSIGNED]: 0,
@@ -27,7 +27,7 @@ class EstimationController {
     async getList(req, res) {
         try {
             const { status, engineerId } = req.query;
-            const estimations = await estimationRepository.findAll({ status, engineerId });
+            const estimations = await estimationRepository.findAll({ status, engineerId }, req.companyId);
             const processed = estimations.map(e => ({
                 ...e,
                 status: statusService.updateStatus(e)
@@ -41,7 +41,7 @@ class EstimationController {
     async getDetail(req, res) {
         try {
             const { id } = req.params;
-            const estimation = await estimationRepository.findById(id);
+            const estimation = await estimationRepository.findById(id, req.companyId);
             if (!estimation) return res.status(404).json({ success: false, message: 'Not found' });
 
             if (estimation.modules && typeof estimation.modules === 'string') {
@@ -56,15 +56,14 @@ class EstimationController {
     async create(req, res) {
         try {
             const { projectName, customer_name, customer_id, dueDate } = req.body;
-            // First create the row to get the ID
             const id = await estimationRepository.create({ 
-                projectName, customer_name, customer_id, dueDate, createdBy: req.userId 
+                projectName, customer_name, customer_id, dueDate, 
+                createdBy: req.userId,
+                companyId: req.companyId
             });
             
-            // Now apply all the extra detailed fields (architect, vendor, etc.) via updateData
             await estimationRepository.updateData(id, req.body);
-            
-            await estimationRepository.logActivity(id, STATUS_ACTIONS.CREATE, req.userId);
+            await estimationRepository.logActivity(id, STATUS_ACTIONS.CREATE, req.userId, null, req.companyId);
             res.json({ success: true, id });
         } catch (err) {
             res.status(500).json({ success: false, message: err.message });
@@ -107,7 +106,7 @@ class EstimationController {
             }
 
             await estimationRepository.updateStatus(id, targetStatus, extraFields);
-            await estimationRepository.logActivity(id, logAction, req.userId, extraFields.engineerId ? `Assigned to: ${extraFields.engineerId}` : null);
+            await estimationRepository.logActivity(id, logAction, req.userId, extraFields.engineerId ? `Assigned to: ${extraFields.engineerId}` : null, req.companyId);
             
             res.json({ success: true });
         } catch (err) {

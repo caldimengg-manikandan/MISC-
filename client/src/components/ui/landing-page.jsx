@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils";
 
 // Content-focused anchor links — explain the platform and steel FAB
 const NAV_LINKS = [
+  { label: "Products",      href: "/products",   tooltip: "View all Caldim solutions" },
   { label: "Platform",      href: "#platform",   tooltip: "What MISC StairPro does" },
   { label: "How It Works",  href: "#how-it-works", tooltip: "Step-by-step estimation workflow" },
   { label: "Steel FAB 101", href: "#steel-fab",  tooltip: "Key structural steel facts" },
@@ -40,7 +41,7 @@ function LandingHeader({ scrolled }) {
     >
       {/* Logo / Brand */}
       <a
-        href="./landing"
+        href="/landing"
         style={{
           display: "flex",
           alignItems: "center",
@@ -94,7 +95,12 @@ function LandingHeader({ scrolled }) {
               if (link.href.startsWith("#")) {
                 e.preventDefault();
                 const target = document.querySelector(link.href);
-                if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+                if (target) {
+                  target.scrollIntoView({ behavior: "smooth", block: "center" });
+                } else {
+                  // If we're on another page, navigate to landing first
+                  window.location.href = "/landing" + link.href;
+                }
               }
             }}
             style={{
@@ -636,14 +642,14 @@ export default function GlobeScrollDemo() {
       align: "left",
       actions: [
         {
-          label: "Join the Forge",
+          label: "Explore Solutions",
           variant: "primary",
-          onClick: () => (window.location.href = "login?mode=signup"),
+          onClick: () => (window.location.href = "/products"),
         },
         {
           label: "Login",
           variant: "secondary",
-          onClick: () => (window.location.href = "login"),
+          onClick: () => (window.location.href = "/login"),
         },
       ],
     },

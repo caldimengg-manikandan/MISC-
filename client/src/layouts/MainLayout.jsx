@@ -398,10 +398,11 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
     // 1. If we have an ID in URL, sync it
     if (urlId) {
-      if (selectedEstimation?.id !== urlId) {
+      const urlIdNum = Number(urlId);
+      if (Number(selectedEstimation?.id) !== urlIdNum) {
         fetchNotes(urlId);
         // We don't have the full object yet, so we just set the ID
-        setSelectedEstimation(prev => (prev?.id === urlId ? prev : { id: urlId }));
+        setSelectedEstimation(prev => (Number(prev?.id) === urlIdNum ? prev : { id: urlIdNum }));
       }
     }
     // 2. Fallback to localStorage if we are in estimation module
@@ -411,9 +412,9 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
         try {
           const parsed = JSON.parse(savedInfo);
           if (parsed.id) {
-            if (selectedEstimation?.id !== parsed.id) {
+            if (Number(selectedEstimation?.id) !== Number(parsed.id)) {
               fetchNotes(parsed.id);
-              setSelectedEstimation({ id: parsed.id, ...parsed });
+              setSelectedEstimation({ id: Number(parsed.id), ...parsed });
             }
             return; // Found context
           }

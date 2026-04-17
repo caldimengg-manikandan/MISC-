@@ -280,8 +280,41 @@ const onDeadlineApproaching = async (project, daysLeft) => {
   }
 };
 
+/**
+ * Trigger 12: Signup OTP → notify User (email only)
+ */
+const sendSignupOTP = async (email, otp) => {
+  const subject = 'Verify your email';
+  const html = buildEmailHtml(
+    'Verify your email',
+    `Your OTP code is <h2 style="color:#10a37f;letter-spacing:5px;text-align:center">${otp}</h2><p>This code will expire in 5 minutes.</p>`
+  );
+  await sendEmail(email, subject, html);
+};
+
+/**
+ * Trigger 13: Welcome Email → notify User (email only)
+ */
+const sendWelcomeEmail = async (fullName, email) => {
+  const subject = 'Welcome to Calmisc 🎉';
+  const body = `
+    Dear ${fullName},<br/><br/>
+    We’re pleased to inform you that your account has been successfully created.<br/><br/>
+    Thank you for choosing Calmisc. We’re excited to have you on board and look forward to supporting your journey.<br/><br/>
+    If you have any questions or need assistance, feel free to reach out -> <a href="mailto:salesandsupport@caldimengg.com">salesandsupport@caldimengg.com</a>.<br/><br/>
+    Warm regards,<br/>
+    Caldim Team
+  `;
+  const html = buildEmailHtml('Welcome to Calmisc', body);
+  await sendEmail(email, subject, html);
+};
+
 module.exports = {
   createNotification,
+  sendEmail,
+  buildEmailHtml,
+  sendWelcomeEmail,
+  sendSignupOTP,
   onProjectCreated,
   onEngineerAssigned,
   onProjectStarted,

@@ -25,12 +25,12 @@ router.get('/:category', async (req, res) => {
     // so we must cast all numeric fields to actual numbers before sending to the client.
     const normalized = entries.map(e => ({
       ...e,
-      steelLbsLf:     e.steelLbsLf     != null ? parseFloat(e.steelLbsLf)     : null,
-      shopLaborMhLf:  e.shopLaborMhLf  != null ? parseFloat(e.shopLaborMhLf)  : null,
+      steelLbsLf: e.steelLbsLf != null ? parseFloat(e.steelLbsLf) : null,
+      shopLaborMhLf: e.shopLaborMhLf != null ? parseFloat(e.shopLaborMhLf) : null,
       fieldLaborMhLf: e.fieldLaborMhLf != null ? parseFloat(e.fieldLaborMhLf) : null,
-      widthMax:       e.widthMax       != null ? parseFloat(e.widthMax)        : null,
-      spanMin:        e.spanMin        != null ? parseFloat(e.spanMin)         : null,
-      spanMax:        e.spanMax        != null ? parseFloat(e.spanMax)         : null,
+      widthMax: e.widthMax != null ? parseFloat(e.widthMax) : null,
+      spanMin: e.spanMin != null ? parseFloat(e.spanMin) : null,
+      spanMax: e.spanMax != null ? parseFloat(e.spanMax) : null,
     }));
 
     res.json({ success: true, data: normalized });
@@ -58,7 +58,7 @@ router.get('/all/categories', auth, adminOnly, async (req, res) => {
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { category, label, value, description, order, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax } = req.body;
-    
+
     // Check if exists
     const [existing] = await db.query('SELECT id FROM dictionary WHERE category = ? AND value = ?', [category, value]);
     if (existing.length > 0) {
@@ -69,7 +69,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
       'INSERT INTO dictionary (category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null]
     );
-    
+
     const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [rows[0].id]);
     res.status(201).json({ success: true, data: newEntry[0] });
   } catch (err) {
@@ -82,18 +82,18 @@ router.post('/', auth, adminOnly, async (req, res) => {
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
     const { category, label, value, description, order, isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax } = req.body;
-    
+
     await db.query(
       'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ?, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ?',
       [
-        category, 
-        label, 
-        value, 
-        description || '', 
-        order || 0, 
-        isActive !== undefined ? (isActive ? 1 : 0) : 1, 
-        steelLbsLf || null, 
-        shopLaborMhLf || null, 
+        category,
+        label,
+        value,
+        description || '',
+        order || 0,
+        isActive !== undefined ? (isActive ? 1 : 0) : 1,
+        steelLbsLf || null,
+        shopLaborMhLf || null,
         fieldLaborMhLf || null,
         widthMax || null,
         spanMin || null,
@@ -101,10 +101,10 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
         req.params.id
       ]
     );
-    
+
     const [updated] = await db.query('SELECT * FROM dictionary WHERE id = ?', [req.params.id]);
     if (updated.length === 0) return res.status(404).json({ success: false, message: 'Entry not found' });
-    
+
     res.json({ success: true, data: updated[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -219,14 +219,14 @@ router.post('/seed/initial', auth, adminOnly, async (req, res) => {
     ];
 
     if (req.body.force) await db.query('DELETE FROM dictionary', []);
-    
+
     for (const item of initialData) {
       await db.query(
         'INSERT INTO dictionary (category, label, value, [order]) VALUES (?, ?, ?, ?)',
         item
       );
     }
-    
+
     const [finalCount] = await db.query('SELECT COUNT(*) as count FROM dictionary', []);
     res.json({ success: true, count: finalCount[0].count });
   } catch (err) {

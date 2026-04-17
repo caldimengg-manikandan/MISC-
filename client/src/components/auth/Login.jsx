@@ -297,7 +297,69 @@ const Login3D = () => {
     specialty: ''
   });
   const [daysRemaining, setDaysRemaining] = useState(30);
-  const { login, register, loading } = useAuth();
+  const { login, register, forgotPassword, verifyOTP, resetPassword, loading } = useAuth();
+
+  // Forgot Password State
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP, 3: Reset
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    const success = await forgotPassword(formData.email);
+    if (success) {
+      setForgotStep(2);
+      setResendTimer(300); // 5 minutes resend timer
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    const success = await verifyOTP(formData.email, otp);
+    if (success) {
+      setForgotStep(3);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      return toast.error('Passwords do not match');
+    }
+    const success = await resetPassword(formData.email, otp, newPassword);
+    if (success) {
+      setIsForgotPassword(false);
+      setForgotStep(1);
+      setOtp('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return;
+    setIsResending(true);
+    const success = await forgotPassword(formData.email);
+    if (success) {
+      setResendTimer(300);
+      toast.success('New code sent!');
+    }
+    setIsResending(false);
+  };
 
   // Stair specifications
   const stairSpecs = [
@@ -708,134 +770,274 @@ const Login3D = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                  placeholder={isOwnerLogin ? "owner@company.com" : "engineer@company.com"}
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
+            {isForgotPassword ? (
+              <div className="space-y-6">
+                <div className="flex items-center space-x-2 text-blue-400 mb-4 cursor-pointer hover:text-blue-300 transition-colors"
+                     onClick={() => { setIsForgotPassword(false); setForgotStep(1); }}>
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                  <span className="text-sm font-medium">Back to Login</span>
+                </div>
 
-              {!isLogin && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Company Name
-                    </label>
-                    <input
-                      type="text"
-                      required={!isLogin}
-                      className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                      placeholder={isOwnerLogin ? "Company LLC" : "Precision Stairs Inc."}
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    />
-                  </div>
-
-                  {!isOwnerLogin && (
+                {forgotStep === 1 && (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <p className="text-sm text-gray-400 mb-4">
+                      Enter your email address and we'll send you a 6-digit verification code to reset your password.
+                    </p>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Professional Specialty
-                      </label>
-                      <select
-                        className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                        value={formData.specialty}
-                        onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                      >
-                        <option value="">Select your specialty</option>
-                        <option value="commercial">Commercial Stairs</option>
-                        <option value="industrial">Industrial Stairs</option>
-                        <option value="architectural">Architectural Stairs</option>
-                        <option value="residential">Residential Stairs</option>
-                        <option value="structural">Structural Engineer</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {!isOwnerLogin && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Phone Number
+                        Email Address
                       </label>
                       <input
-                        type="tel"
+                        type="email"
+                        required
                         className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                        placeholder="+1 (555) 123-4567"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="your@email.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
                     </div>
-                  )}
-                </>
-              )}
+                    <motion.button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-3.5 bg-gradient-to-r from-blue-700 to-blue-600 text-white font-semibold text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center disabled:opacity-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {loading ? 'Sending Code...' : 'Send Verification Code'}
+                    </motion.button>
+                  </form>
+                )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
+                {forgotStep === 2 && (
+                  <form onSubmit={handleVerifyOTP} className="space-y-4">
+                    <p className="text-sm text-gray-400 mb-4">
+                      We've sent a 6-digit code to <span className="text-white font-medium">{formData.email}</span>. 
+                      Please enter it below.
+                    </p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full px-4 py-3 text-lg font-mono tracking-[1em] text-center bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                        placeholder="000000"
+                        maxLength="6"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                      />
+                    </div>
+                    
+                    <motion.button
+                      type="submit"
+                      disabled={loading || otp.length !== 6}
+                      className="w-full py-3.5 bg-gradient-to-r from-blue-700 to-blue-600 text-white font-semibold text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center disabled:opacity-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {loading ? 'Verifying...' : 'Verify Code'}
+                    </motion.button>
+
+                    <div className="pt-2 text-center">
+                      {resendTimer > 0 ? (
+                        <p className="text-xs text-gray-500">
+                          Resend code in <span className="text-blue-400 font-mono">
+                            {Math.floor(resendTimer / 60)}:{String(resendTimer % 60).padStart(2, '0')}
+                          </span>
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleResendOTP}
+                          disabled={isResending}
+                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium flex items-center justify-center mx-auto"
+                        >
+                          <Zap className={`w-3 h-3 mr-1 ${isResending ? 'animate-spin' : ''}`} />
+                          {isResending ? 'Sending...' : 'Resend Verification Code'}
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                )}
+
+                {forgotStep === 3 && (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <p className="text-sm text-gray-400 mb-4">
+                      Code verified! Now choose a strong new password for your account.
+                    </p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                        placeholder="••••••••"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                    <motion.button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-3.5 bg-gradient-to-r from-green-700 to-green-600 text-white font-semibold text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {loading ? 'Updating...' : 'Reset Password'}
+                    </motion.button>
+                  </form>
+                )}
               </div>
-
-              {isLogin && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="remember"
-                      className="w-4 h-4 text-blue-600 border-gray-600 rounded focus:ring-blue-500 bg-gray-800"
-                    />
-                    <label htmlFor="remember" className="ml-2 text-sm text-gray-400">
-                      Remember me
-                    </label>
-                  </div>
-                  <a href="#" className="text-sm text-blue-400 hover:text-blue-300">
-                    Forgot password?
-                  </a>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                    placeholder={isOwnerLogin ? "owner@company.com" : "engineer@company.com"}
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
                 </div>
-              )}
 
-              <motion.button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-3.5 text-white font-semibold text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center ${isOwnerLogin
-                  ? 'bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500'
-                  : 'bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500'
-                  } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                whileHover={!loading ? { scale: 1.02 } : {}}
-                whileTap={!loading ? { scale: 0.98 } : {}}
-              >
-                {loading ? (
+                {!isLogin && (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>
-                      {isLogin
-                        ? (isOwnerLogin ? 'Sign In as Owner' : 'Sign In')
-                        : (isOwnerLogin ? 'Create Owner Account' : 'Start Free Trial')
-                      }
-                    </span>
-                    <ChevronRight className="w-4 h-4 ml-2" />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        required={!isLogin}
+                        className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                        placeholder={isOwnerLogin ? "Company LLC" : "Precision Stairs Inc."}
+                        value={formData.company}
+                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      />
+                    </div>
+
+                    {!isOwnerLogin && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Professional Specialty
+                        </label>
+                        <select
+                          className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                          value={formData.specialty}
+                          onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+                        >
+                          <option value="">Select your specialty</option>
+                          <option value="commercial">Commercial Stairs</option>
+                          <option value="industrial">Industrial Stairs</option>
+                          <option value="architectural">Architectural Stairs</option>
+                          <option value="residential">Residential Stairs</option>
+                          <option value="structural">Structural Engineer</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {!isOwnerLogin && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                          placeholder="+1 (555) 123-4567"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
-              </motion.button>
-            </form>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    className="w-full px-4 py-3 text-sm bg-gray-800/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                </div>
+
+                {isLogin && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="remember"
+                        className="w-4 h-4 text-blue-600 border-gray-600 rounded focus:ring-blue-500 bg-gray-800"
+                      />
+                      <label htmlFor="remember" className="ml-2 text-sm text-gray-400">
+                        Remember me
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full py-3.5 text-white font-semibold text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center ${isOwnerLogin
+                    ? 'bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500'
+                    : 'bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500'
+                    } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  whileHover={!loading ? { scale: 1.02 } : {}}
+                  whileTap={!loading ? { scale: 0.98 } : {}}
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {isLogin
+                          ? (isOwnerLogin ? 'Sign In as Owner' : 'Sign In')
+                          : (isOwnerLogin ? 'Create Owner Account' : 'Start Free Trial')
+                        }
+                      </span>
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </motion.button>
+              </form>
+            )}
 
             {/* Footer */}
             <div className="mt-6 pt-4 border-t border-gray-700 text-center">

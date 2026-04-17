@@ -625,7 +625,7 @@ async function fetchLiveData(projectId, userId) {
   const allPlatforms = [];
   let totalRisers = 0;
 
-    (stair.stairs || project.stairs || []).forEach((stair, si) => {
+    (project.stairs || []).forEach((stair, si) => {
       // Stair-level systemCalc
       const sc = stair.systemCalc || {};
       allStairs.push({

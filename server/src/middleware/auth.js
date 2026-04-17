@@ -19,7 +19,7 @@ module.exports = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch user from MySQL
+    // Fetch user from DB to get latest info (including company_id)
     const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [decoded.userId]);
     const user = rows[0];
 
@@ -32,8 +32,8 @@ module.exports = async (req, res, next) => {
     req.user = userWithoutPassword;
     req.userId = user.id;
     req.userRole = user.role;
-
-    // console.log('AUTH USER:', req.user.email, req.user.role);
+    // companyId: prefer DB value (always latest), fall back to JWT
+    req.companyId = user.company_id || decoded.companyId || null;
 
     next();
   } catch (error) {
@@ -41,3 +41,4 @@ module.exports = async (req, res, next) => {
     res.status(401).json({ error: 'Invalid authentication token' });
   }
 };
+

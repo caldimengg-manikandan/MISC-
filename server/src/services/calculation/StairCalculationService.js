@@ -571,7 +571,9 @@ class StairCalculationService {
             // 🔄 EXCEL PARITY: If a specific POR ROK Anchor Rate is set, it overrides the generic anchored rate.
             // This allows the user to differentiate between standard anchors and high-strength POR ROK anchors.
             porRokCost = rail.postQty * (porRokRateOverride > 0 ? porRokRateOverride : anchoredRate);
-            trace[`stair_${rail.id}_mounting`] = `Anchored: ${rail.postQty} @ ${porRokRateOverride > 0 ? porRokRateOverride : anchoredRate}`;
+            this.addTrace(`rail_${rail.id}_mounting`, 'POR ROK Anchored',
+              { postQty: rail.postQty, rate: porRokRateOverride > 0 ? porRokRateOverride : anchoredRate },
+              { porRokCost });
           }
         }
 

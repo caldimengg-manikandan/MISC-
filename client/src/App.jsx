@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import AppRoutes from './routes/AppRoutes';
 import LoginPage from './components/ui/animated-sign-in';
 import LandingPage from './pages/Landing/LandingPage';
+import ProductsPage from './pages/Landing/ProductsPage';
 
 import './styles/globals.css';
 
@@ -23,6 +24,7 @@ function App() {
         {/* PUBLIC ROUTES — no auth required */}
         <Route path="/" element={<Navigate to="/landing" replace />} />
         <Route path="/landing" element={<LandingPage />} />
+        <Route path="/products" element={<ProductsPage />} />
         <Route path="/login" element={<LoginPage />} />
 
         {/* PROTECTED ROUTES / APP FLOW */}

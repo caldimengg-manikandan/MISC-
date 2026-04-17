@@ -3124,16 +3124,153 @@ textarea.form-input {
   margin-left: 4px;
 }
 
-.asl-dark .asl-signup-prompt a {
-  color: #818cf8;
-}
-
-.asl-light .asl-signup-prompt a {
-  color: #6366f1;
-}
-
 .asl-signup-prompt a:hover {
   text-decoration: underline;
+}
+
+/* ── Forgot Password Flow ── */
+.asl-step-desc {
+  font-size: 13px;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.asl-dark .asl-step-desc { color: rgba(255, 255, 255, 0.5); }
+.asl-light .asl-step-desc { color: #6e6e80; }
+
+.asl-back-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.asl-dark .asl-back-link { color: #818cf8; }
+.asl-light .asl-back-link { color: #6366f1; }
+
+.asl-back-link:hover {
+  transform: translateX(-4px);
+  opacity: 0.8;
+}
+
+.asl-otp-input {
+  text-align: center;
+  font-size: 24px !important;
+  letter-spacing: 0.4em;
+  font-weight: 700;
+  padding-left: 0.4em !important;
+}
+
+.asl-resend-container {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.asl-dark .asl-resend-container { color: rgba(255, 255, 255, 0.4); }
+.asl-light .asl-resend-container { color: #6e6e80; }
+
+.asl-resend-btn {
+  background: none;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.asl-dark .asl-resend-btn { color: #818cf8; }
+.asl-light .asl-resend-btn { color: #6366f1; }
+
+.asl-resend-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.asl-resend-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asl-forgot-password-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.asl-dark .asl-forgot-password-btn { color: #818cf8; }
+.asl-light .asl-forgot-password-btn { color: #6366f1; }
+
+.asl-forgot-password-btn:hover {
+  text-decoration: underline;
+}
+
+/* ── Signup Flow Enhancements ── */
+.asl-with-button {
+  display: flex !important;
+  align-items: center;
+}
+
+.asl-field-action-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+}
+
+.asl-dark .asl-field-action-btn {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.asl-light .asl-field-action-btn {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+}
+
+.asl-field-action-btn:hover:not(:disabled) {
+  background: #6366f1;
+  color: white;
+}
+
+.asl-field-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asl-verified-badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.asl-otp-input-small {
+  text-align: center;
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
 /* ===================== GLOBAL PRINT OVERRIDES ===================== */

@@ -2,7 +2,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 import API_BASE_URL from '../config/api';
+
+const API_URL = `${API_BASE_URL}/api`;
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -217,6 +220,113 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // FORGOT PASSWORD
+  const forgotPassword = async (email) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message);
+        return { success: true };
+      } else {
+        toast.error(data.error || 'Failed to send OTP');
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      toast.error('Network error');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // VERIFY OTP
+  const verifyOTP = async (email, otp) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/verify-reset-otp`, { email, otp });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        return { success: true };
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Verification failed');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // RESET PASSWORD
+  const resetPassword = async (email, otp, newPassword) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/reset-password`, { email, otp, newPassword });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        return { success: true };
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Reset failed');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendSignupOTP = async (email) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/send-otp`, { email });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        return { success: true };
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to send code');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifySignupOTP = async (email, otp) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/verify-otp`, { email, otp });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        return { success: true };
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Verification failed');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signup = async (userData) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/signup`, userData);
+      if (response.data.success) {
+        toast.success(response.data.message);
+        return { success: true };
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Signup failed');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const isOwner = () => user?.role === 'owner';
 
   return (
@@ -231,6 +341,12 @@ export const AuthProvider = ({ children }) => {
         checkAccess,
         checkTrialStatus,
         updateUser,
+        forgotPassword,
+        verifyOTP,
+        resetPassword,
+        sendSignupOTP,
+        verifySignupOTP,
+        signup,
         isOwner
       }}
     >
