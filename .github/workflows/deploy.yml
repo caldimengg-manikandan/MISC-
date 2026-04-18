@@ -16,13 +16,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: client/package-lock.json
 
       # ── Build React Frontend on GitHub Runner (faster, no VPS RAM pressure) ──
       - name: Install client dependencies
         working-directory: client
-        run: npm ci
+        run: npm install
 
       - name: Build React client for production
         working-directory: client
