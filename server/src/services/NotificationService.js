@@ -168,19 +168,26 @@ const onProjectStarted = async (projectId, estimatorUser) => {
 };
 
 /**
- * Trigger 4: Sent for review → notify Admins (in-app + email)
+ * Trigger 4: Sent for review → notify specific Reviewer (in-app + email)
  */
-const onSentForReview = async (projectId, revisionNumber) => {
+const onSentForReview = async (projectId, revisionNumber, reviewerEmail) => {
   const project = await getProject(projectId);
-  const admins = await getAdmins();
-  const message = `"${project.projectName}" is ready for your review (Rev #${revisionNumber})`;
-  for (const admin of admins) {
-    await createNotification(admin.id, projectId, 'sent_for_review', message);
-    await sendEmail(
-      admin.email,
-      `Review Ready: ${project.projectName} (Rev #${revisionNumber})`,
-      buildEmailHtml('Estimation Ready for Review', message, project.projectName, `${appUrl()}/estimations`)
-    );
+  
+  if (reviewerEmail) {
+    const [userRows] = await db.query('SELECT id, email, full_name FROM users WHERE email = ?', [reviewerEmail]);
+    const reviewer = userRows[0];
+    
+    if (reviewer) {
+      const message = `"${project.projectName}" is ready for your review (Rev #${revisionNumber})`;
+      await createNotification(reviewer.id, projectId, 'sent_for_review', message);
+      await sendEmail(
+        reviewer.email,
+        `Review Ready: ${project.projectName} (Rev #${revisionNumber})`,
+        buildEmailHtml('Estimation Ready for Review', message, project.projectName, `${appUrl()}/estimations`)
+      );
+    }
+  } else {
+    logger.warn('No reviewer_email provided to onSentForReview. Skipping notifications.');
   }
 };
 
@@ -192,11 +199,21 @@ const onPushedBack = async (projectId, adminComment) => {
   const estimator = await getAssignedEstimator(projectId);
   if (!estimator) return;
   const message = `"${project.projectName}" needs revision — ${adminComment}`;
+  
   await createNotification(estimator.id, projectId, 'pushed_back', message);
+  
+  const emailBody = `
+    <strong>Your estimation requires revision.</strong><br><br>
+    <strong>Reviewer notes:</strong><br>
+    <div style="padding:10px; border-left: 3px solid #f59e0b; background: #fffcf5; margin: 10px 0; color: #555;">
+      ${adminComment}
+    </div>
+  `;
+  
   await sendEmail(
     estimator.email,
     `Revision Required: ${project.projectName}`,
-    buildEmailHtml('Your Estimation Needs Revision', message, project.projectName, `${appUrl()}/estimations`)
+    buildEmailHtml('Your Estimation Needs Revision', emailBody, project.projectName, `${appUrl()}/estimations`)
   );
 };
 

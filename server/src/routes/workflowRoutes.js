@@ -65,8 +65,14 @@ router.patch('/:id/assign', async (req, res) => {
     if (!engRows[0]) return res.status(404).json({ success: false, message: 'Engineer user not found' });
 
     await db.query(
-      `UPDATE projects SET assigned_engineer_id = ?, workflow_status = 'assigned', updatedAt = GETDATE() WHERE id = ?`,
-      [assignedEngineerId, id]
+      `UPDATE projects 
+       SET assigned_engineer_id = ?, 
+           engineerId = ?, 
+           assignedEngineer = ?, 
+           workflow_status = 'assigned', 
+           updatedAt = GETDATE() 
+       WHERE id = ?`,
+      [assignedEngineerId, assignedEngineerId, engRows[0].email, id]
     );
 
     await logActivity(id, req.userId, 'assign_engineer', `Assigned to ${engRows[0].email}`, project.workflow_status, 'assigned');
@@ -136,14 +142,28 @@ router.patch('/:id/submit-review', async (req, res) => {
     }
 
     const newRevision = (project.revision_number || 0) + 1;
+    const { reviewer_id, reviewer_email } = req.body;
+
+    if (!reviewer_id) {
+       return res.status(400).json({ success: false, message: 'A specific reviewer must be selected.' });
+    }
 
     await db.query(
-      `UPDATE projects SET workflow_status = 'review', revision_number = ?, review_comment = NULL, updatedAt = GETDATE() WHERE id = ?`,
-      [newRevision, id]
+      `UPDATE projects SET 
+         workflow_status = 'review', 
+         revision_number = ?, 
+         review_comment = NULL, 
+         reviewer_id = ?, 
+         reviewer_email = ?, 
+         review_count = review_count + 1, 
+         updatedAt = GETDATE() 
+       WHERE id = ?`,
+      [newRevision, reviewer_id, reviewer_email, id]
     );
 
-    await logActivity(id, req.userId, 'submit_review', `Submitted for review (Rev #${newRevision})`, 'in_progress', 'review');
-    await notif.onSentForReview(id, newRevision);
+    // Provide the selected reviewer email to the notification service
+    await logActivity(id, req.userId, 'submit_review', `Submitted for review to ${reviewer_email} (Rev #${newRevision})`, 'in_progress', 'review');
+    await notif.onSentForReview(id, newRevision, reviewer_email);
 
     res.json({ success: true, message: `Sent for review (Rev #${newRevision}). Status → REVIEW.`, revision: newRevision });
   } catch (err) {
@@ -202,8 +222,13 @@ router.patch('/:id/pushback', requireAdmin, async (req, res) => {
     }
 
     await db.query(
-      `UPDATE projects SET workflow_status = 'in_progress', review_comment = ?, updatedAt = GETDATE() WHERE id = ?`,
-      [comment.trim(), id]
+      `UPDATE projects SET 
+         workflow_status = 'in_progress', 
+         review_comment = ?, 
+         push_back_reason = ?, 
+         updatedAt = GETDATE() 
+       WHERE id = ?`,
+      [comment.trim(), comment.trim(), id]
     );
 
     await logActivity(id, req.userId, 'pushback', comment.trim(), 'review', 'in_progress');
@@ -220,7 +245,10 @@ router.patch('/:id/pushback', requireAdmin, async (req, res) => {
 // POST /api/projects/:id/send-to-client
 // Admin only — send email to client with attached report, log activity
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/:id/send-to-client', requireAdmin, async (req, res) => {
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post('/:id/send-to-client', requireAdmin, upload.array('attachments'), async (req, res) => {
   try {
     const { id } = req.params;
     const { clientEmail, cc, customMessage, attachmentType } = req.body;
@@ -232,31 +260,58 @@ router.post('/:id/send-to-client', requireAdmin, async (req, res) => {
     const project = await getProject(id, null, true);
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
 
-    if (project.workflow_status !== 'submitted') {
-      return res.status(400).json({ success: false, message: 'Project must be SUBMITTED before sending to client.' });
+    if (project.workflow_status !== 'review' && project.workflow_status !== 'submitted') {
+      return res.status(400).json({ success: false, message: 'Project must be in REVIEW or already SUBMITTED to send to client.' });
     }
 
+    await db.query(
+      `UPDATE projects SET 
+         workflow_status = 'submitted', 
+         submittedAt = GETDATE(), 
+         sent_to_email = ?, 
+         sent_to_cc = ?, 
+         sent_at = GETDATE(), 
+         sent_by = ?, 
+         send_message = ?, 
+         attachment_type = ?, 
+         updatedAt = GETDATE() 
+       WHERE id = ?`,
+       [clientEmail, cc || null, req.userId, customMessage || null, attachmentType || 'PDF', id]
+    );
+
+    await logActivity(id, req.userId, 'approve_send', `Approved and sent report to ${clientEmail} (${attachmentType || 'PDF'})`, project.workflow_status, 'submitted');
+
     // Build client email
-    const notifService = require('../services/NotificationService');
-    const appUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const emailBody = customMessage
-      ? `${customMessage}<br><br>Please find the estimation report for <strong>${project.projectName}</strong> attached.`
-      : `Please find the estimation report for <strong>${project.projectName}</strong> attached.`;
+      ? `${customMessage}<br><br>Please find attached the miscellaneous metal estimation prepared for your project.`
+      : `Please find attached the miscellaneous metal estimation prepared for your project.`;
 
     const html = `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f9f9f9;border-radius:8px">
-        <div style="background:#0d0d0d;padding:20px;border-radius:8px 8px 0 0">
-          <h2 style="color:#10a37f;margin:0;font-size:18px">MISC Engineering Platform</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <h2 style="color: #10a37f; border-bottom: 2px solid #eee; padding-bottom: 10px;">Miscellaneous Metal Estimate</h2>
+        <p>Dear Caldim,</p>
+        <p>${emailBody}</p>
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h4 style="margin-top: 0;">Project Details</h4>
+          <ul style="list-style: none; padding-left: 0;">
+            <li><strong>Project:</strong> ${project.projectName}</li>
+            <li><strong>Number:</strong> ${project.projectNumber || 'N/A'}</li>
+            <li><strong>Location:</strong> ${project.projectLocation || 'N/A'}</li>
+          </ul>
         </div>
-        <div style="background:#ffffff;padding:24px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5">
-          <h3 style="color:#0d0d0d;margin-top:0">Estimation Report — ${project.projectName}</h3>
-          <p style="color:#444;line-height:1.6">${emailBody}</p>
-          <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
-          <p style="color:#999;font-size:12px">MISC Engineering Platform · Structural Steel Estimation</p>
-        </div>
+        <p>Please review the attached documents and do not hesitate to contact us with any questions or clarifications.</p>
+        <p>Best regards,<br/><strong>Caldim Engineering</strong></p>
       </div>`;
+    const mailAttachments = [];
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(f => {
+        mailAttachments.push({
+          filename: f.originalname,
+          content: f.buffer
+        });
+      });
+    }
 
-    // TODO: Attach PDF/BOM based on attachmentType when file generation is integrated
     const nodemailer = require('nodemailer');
     let emailSent = false;
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -271,7 +326,8 @@ router.post('/:id/send-to-client', requireAdmin, async (req, res) => {
         to: clientEmail,
         cc: cc || undefined,
         subject: `Estimation Report — ${project.projectName}`,
-        html
+        html,
+        attachments: mailAttachments
       });
       emailSent = true;
     } else {
@@ -279,16 +335,9 @@ router.post('/:id/send-to-client', requireAdmin, async (req, res) => {
       emailSent = true; // Stub succeeds for now
     }
 
-    // Update project record
-    await db.query(
-      `UPDATE projects SET sent_to_client_at = GETDATE(), sent_to_email = ?, updatedAt = GETDATE() WHERE id = ?`,
-      [clientEmail, id]
-    );
+    await notif.onReportSentToClient(id, clientEmail, { id: req.userId, email: req.userEmail });
 
-    await logActivity(id, req.userId, 'send_to_client', `Sent to ${clientEmail} (${attachmentType || 'PDF'})`, 'submitted', 'submitted');
-    await notif.onReportSentToClient(id, clientEmail, req.user);
-
-    res.json({ success: true, message: `Report sent to ${clientEmail}.`, emailSent });
+    res.json({ success: true, message: `Report approved and sent to ${clientEmail}.`, emailSent });
   } catch (err) {
     logger.error('workflowRoutes /send-to-client error', { err: err.message });
     res.status(500).json({ success: false, message: err.message });
@@ -367,6 +416,40 @@ router.post('/users/create', requireAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: 'User with this email already exists' });
     }
     res.status(500).json({ success: false, message: 'Server error creating engineer' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/projects/users/reviewers
+// Get list of admin users for the reviewer dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/users/reviewers', async (req, res) => {
+  try {
+    const { companyId } = req;
+    let query = `
+      SELECT id, email, full_name, role 
+      FROM users 
+      WHERE role = 'admin'
+    `;
+    let params = [];
+    if (companyId) {
+       query += ` AND company_id = ?`;
+       params.push(companyId);
+    }
+    
+    query += ` ORDER BY full_name`;
+    const [rows] = await db.query(query, params);
+    
+    // Fallback name generation
+    const users = rows.map(u => ({
+      ...u,
+      full_name: u.full_name || u.email.split('@')[0]
+    }));
+    
+    res.json({ success: true, users });
+  } catch (err) {
+    logger.error('workflowRoutes /users/reviewers error', { err: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

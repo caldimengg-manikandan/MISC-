@@ -14,14 +14,19 @@ import toast from 'react-hot-toast';
 import WorkflowStatusBadge from './WorkflowStatusBadge';
 import PushBackModal from './PushBackModal';
 import SendToClientModal from './SendToClientModal';
+import AddEngineerModal from './AddEngineerModal';
+import SendForReviewModal from './SendForReviewModal';
+import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
 
-export default function WorkflowActionBar({ project, onStatusChange }) {
+export default function WorkflowActionBar({ project, onStatusChange, onEngineerChange }) {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [users, setUsers] = useState([]);
   const [selectedEngineer, setSelectedEngineer] = useState(project?.assigned_engineer_id || user?.id || '');
   const [showPushBackModal, setShowPushBackModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showSendForReviewModal, setShowSendForReviewModal] = useState(false);
+  const [showAddEngineerModal, setShowAddEngineerModal] = useState(false);
 
   const token = localStorage.getItem('steel_token');
   const isAdmin = user?.role === 'admin';
@@ -79,20 +84,18 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
     } catch (e) { toast.error(e.message); }
   };
 
-  const handleSubmitReview = async () => {
+  const handleSubmitReview = async (payload) => {
     try {
-      const data = await call('submit-review');
+      const data = await call('submit-review', 'PATCH', payload);
       toast.success(data.message);
+      setShowSendForReviewModal(false);
       onStatusChange?.();
     } catch (e) { toast.error(e.message); }
   };
 
-  const handleApprove = async () => {
-    try {
-      const data = await call('approve');
-      toast.success(data.message);
-      onStatusChange?.();
-    } catch (e) { toast.error(e.message); }
+  const handleApprove = () => {
+    // Instead of directly submitting, prompt SendToClientModal
+    setShowSendModal(true);
   };
 
   const handlePushBack = async (comment) => {
@@ -106,30 +109,58 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
 
   const handleSendToClient = async (payload) => {
     try {
-      const data = await call('send-to-client', 'POST', payload);
+      setSaving(true);
+      const formData = new FormData();
+      formData.append('clientEmail', payload.clientEmail);
+      formData.append('cc', payload.cc);
+      formData.append('customMessage', payload.customMessage);
+      formData.append('attachmentType', payload.attachmentType);
+
+      // Hydrate state for generators
+      const parsedStairs = typeof project.stairs === 'string' ? JSON.parse(project.stairs) : project.stairs || [];
+      const parsedEst = typeof project.estimationResult === 'string' ? JSON.parse(project.estimationResult) : project.estimationResult || {};
+
+      if (payload.attachmentType === 'PDF' || payload.attachmentType === 'Both') {
+         const pdfBlob = generateProposalPDF(project, parsedStairs, true);
+         formData.append('attachments', pdfBlob, 'Estimation_Proposal.pdf');
+      }
+      if (payload.attachmentType === 'BOM' || payload.attachmentType === 'Both') {
+         const bomBlob = await generateFabricationExcel(project, parsedStairs, parsedEst, true);
+         formData.append('attachments', bomBlob, 'Estimation_BOM.xlsx');
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/projects/${project.id}/send-to-client`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }, // NO Content-Type allows boundary generation
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+
       toast.success(data.message);
       setShowSendModal(false);
       onStatusChange?.();
-    } catch (e) { toast.error(e.message); }
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleAddEngineer = async () => {
-    const email = window.prompt("Enter new engineer's email (e.g. josh@caldim.com):");
-    if (!email) return;
-    const name = window.prompt("Enter new engineer's full name:");
-    if (!name) return;
+  const handleAddEngineer = async ({ email, full_name }) => {
     try {
       setSaving(true);
       const res = await fetch(`${API_BASE_URL}/api/projects/users/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email, full_name: name })
+        body: JSON.stringify({ email, full_name })
       });
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
         setUsers([...users, data.user]);
         setSelectedEngineer(data.user.id);
+        setShowAddEngineerModal(false);
       } else {
         toast.error(data.message);
       }
@@ -143,8 +174,10 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
   // ── Render nothing for unknown states ─────────────────────────────────────
   const hasActions = 
     canAssign || // Creator or Admin always has actions if they fall into the conditions below
-    (!isAdmin && status === 'assigned') ||
-    (!isAdmin && status === 'in_progress');
+    status === 'assigned' ||
+    status === 'in_progress' ||
+    status === 'review' ||
+    status === 'submitted';
 
   return (
     <>
@@ -193,19 +226,26 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
                 <div className="relative">
                   <select
                     value={selectedEngineer}
-                    onChange={(e) => setSelectedEngineer(e.target.value)}
+                    onChange={(e) => {
+                      const newId = e.target.value;
+                      setSelectedEngineer(newId);
+                      if (onEngineerChange) {
+                        const selectedUser = users.find(u => u.id.toString() === newId.toString());
+                        if (selectedUser) onEngineerChange(selectedUser.email);
+                      }
+                    }}
                     className="pl-3 pr-8 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 appearance-none outline-none focus:border-[--gpt-accent] font-medium"
                   >
                     <option value="">Select Engineer...</option>
                     {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                      <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
                     ))}
                   </select>
                   <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
                 {isAdmin && (
                   <button
-                    onClick={handleAddEngineer}
+                    onClick={() => setShowAddEngineerModal(true)}
                     disabled={saving}
                     title="Add New Engineer"
                     className="flex items-center justify-center p-2 text-slate-400 hover:text-[--gpt-accent] hover:bg-slate-50 border border-transparent rounded-lg transition-all"
@@ -224,8 +264,8 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
               </div>
             )}
 
-            {/* Estimator: Start (ASSIGNED state) */}
-            {!isAdmin && status === 'assigned' && (
+            {/* Estimator or Admin: Start (ASSIGNED state) */}
+            {status === 'assigned' && (
               <button
                 onClick={handleStart}
                 disabled={saving}
@@ -236,10 +276,10 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
               </button>
             )}
 
-            {/* Estimator: Send for Review (IN PROGRESS) */}
-            {!isAdmin && status === 'in_progress' && (
+            {/* Estimator or Admin: Send for Review (IN PROGRESS) */}
+            {status === 'in_progress' && (
               <button
-                onClick={handleSubmitReview}
+                onClick={() => setShowSendForReviewModal(true)}
                 disabled={saving}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg transition-all disabled:opacity-50 active:scale-95"
               >
@@ -249,7 +289,7 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
             )}
 
             {/* Admin: Approve or Push Back (REVIEW state) */}
-            {isAdmin && status === 'review' && (
+            {status === 'review' && project?.reviewer_id === user?.id && (
               <>
                 <button
                   onClick={handleApprove}
@@ -293,11 +333,24 @@ export default function WorkflowActionBar({ project, onStatusChange }) {
         projectName={project?.projectName}
         saving={saving}
       />
+      <SendForReviewModal
+        isOpen={showSendForReviewModal}
+        onClose={() => setShowSendForReviewModal(false)}
+        onConfirm={handleSubmitReview}
+        project={project}
+        saving={saving}
+      />
       <SendToClientModal
         isOpen={showSendModal}
         onClose={() => setShowSendModal(false)}
         onConfirm={handleSendToClient}
         project={project}
+        saving={saving}
+      />
+      <AddEngineerModal
+        isOpen={showAddEngineerModal}
+        onClose={() => setShowAddEngineerModal(false)}
+        onConfirm={handleAddEngineer}
         saving={saving}
       />
     </>

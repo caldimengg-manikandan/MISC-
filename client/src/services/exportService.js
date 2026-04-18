@@ -20,7 +20,7 @@ const calculateSurfaceArea = (stair) => {
 /**
  * Professional PDF Proposal Generator
  */
-export const generateProposalPDF = (projectData, stairs) => {
+export const generateProposalPDF = (projectData, stairs, returnBlob = false) => {
   const doc = new jsPDF();
   const timestamp = new Date().toLocaleDateString();
 
@@ -94,6 +94,9 @@ export const generateProposalPDF = (projectData, stairs) => {
     styles: { fontSize: 10, cellPadding: 5 }
   });
 
+  if (returnBlob) {
+    return doc.output('blob');
+  }
   doc.save(`${projectData.projectName || 'Project'}_Proposal.pdf`);
 };
 
@@ -102,7 +105,7 @@ export const generateProposalPDF = (projectData, stairs) => {
  * Updated to match EXACTLY the latest summary layout and calculation methodology 
  * identified from the user's Excel spreadsheet screenshot.
  */
-export const generateFabricationExcel = async (projectData, stairs, estimationResult = null) => {
+export const generateFabricationExcel = async (projectData, stairs, estimationResult = null, returnBlob = false) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Final Estimate');
 
@@ -480,5 +483,6 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   // Download File
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  if (returnBlob) return blob;
   saveAs(blob, `${projectData.projectName || 'Project'}_Estimate_BOM.xlsx`);
 };

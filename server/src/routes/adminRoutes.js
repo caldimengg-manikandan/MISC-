@@ -113,9 +113,12 @@ router.post('/recalculate-all', async (req, res) => {
 
         if (result.success) {
           // 3. Update project totals and results
+          const totalWeight = result.totalWeight ?? result.summary?.totalSteelWeight ?? 0;
+          const totalCost = result.totalCost ?? result.summary?.grandTotal ?? 0;
+          
           await db.query(
             'UPDATE projects SET totalWeight = ?, totalCost = ?, estimationResult = ?, updatedAt = GETDATE() WHERE id = ?',
-            [result.totalWeight, result.totalCost, JSON.stringify(result), project.id]
+            [totalWeight, totalCost, JSON.stringify(result), project.id]
           );
           updatedCount++;
         }

@@ -27,6 +27,8 @@ export const EstimationProvider = ({ children }) => {
     const [trashNotes, setTrashNotes] = useState([]);
     const [activeContext, setActiveContext] = useState({ type: 'global', id: null, label: 'Global' });
     const [loading, setLoading] = useState(false);
+    const [listLoading, setListLoading] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState(null);
 
     const fetchDashboardStats = async () => {
@@ -41,7 +43,7 @@ export const EstimationProvider = ({ children }) => {
     };
 
     const fetchEstimations = async (filters = {}) => {
-        setLoading(true);
+        setListLoading(true);
         try {
             const res = await estimationApi.getList(filters);
             if (res.data.success) {
@@ -50,12 +52,12 @@ export const EstimationProvider = ({ children }) => {
         } catch (err) {
             setError(err.message);
         } finally {
-            setLoading(false);
+            setListLoading(false);
         }
     };
 
     const fetchEstimationDetail = async (id) => {
-        setLoading(true);
+        setDetailLoading(true);
         try {
             const res = await estimationApi.getDetail(id);
             if (res.data.success) {
@@ -65,7 +67,7 @@ export const EstimationProvider = ({ children }) => {
         } catch (err) {
             setError(err.message);
         } finally {
-            setLoading(false);
+            setDetailLoading(false);
         }
     };
 
@@ -267,6 +269,8 @@ export const EstimationProvider = ({ children }) => {
             selectedEstimation,
             notes,
             loading,
+            listLoading,
+            detailLoading,
             error,
             fetchDashboardStats,
             fetchEstimations,

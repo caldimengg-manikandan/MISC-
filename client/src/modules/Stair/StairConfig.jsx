@@ -1197,7 +1197,11 @@ export default function StairEstimation() {
           fetch(`${API_BASE_URL}/api/projects/${projectData.projectId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ estimationResult: data })
+            body: JSON.stringify({ 
+              estimationResult: data,
+              totalWeight: data.totalWeight || data.summary?.totalSteelWeight,
+              totalCost: data.totalCost || data.summary?.grandTotal 
+            })
           }).catch(err => console.error('Failed to auto-save estimation result:', err));
         }
 
@@ -2395,9 +2399,6 @@ export default function StairEstimation() {
               <span>{calculating ? 'Calculating…' : 'Run estimation'}</span>
             </div>
           </button>
-          <button className="sc-rail-action-btn sc-rail-save-btn" onClick={saveChanges} disabled={saving} style={{ background: '#ffffff', border: '1px solid #d1d5db', color: '#111827' }}>
-            {saving ? '⏳ Saving…' : 'Save assembly'}
-          </button>
           {!saving && <div style={{ textAlign: 'center', fontSize: '11px', color: '#9a3412', fontWeight: '800', marginTop: '6px' }}>{isDirty ? 'Unsaved changes' : 'Saved'}</div>}
           {estimationResult && (
             <button className="sc-rail-action-btn sc-rail-outline" onClick={() => setShowReport(true)}>
@@ -2440,9 +2441,6 @@ export default function StairEstimation() {
           </div>
           <div className="sc-header-actions">
             <span className="info-chip chip-blue">📐 {totalStairs} Stair{totalStairs !== 1 ? 's' : ''}</span>
-            <button className="header-btn header-btn-outline" onClick={saveChanges} disabled={saving}>
-              {saving ? '⏳ Saving...' : '📂 Save Assembly'}
-            </button>
             <button
               className="header-btn header-btn-outline"
               onClick={() => {

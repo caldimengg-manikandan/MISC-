@@ -12,7 +12,7 @@ import {
   ChevronRight, Zap, FileText
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import API_BASE_URL from '../../config/api';
 import SearchableSelect from '../../components/common/SearchableSelect';
@@ -53,13 +53,20 @@ export default function EstimationDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { fetchEstimationDetail, updateEstimationStatus, saveEstimationData, createEstimation, loading } = useEstimation();
+  const { 
+    createEstimation, 
+    fetchEstimationDetail, 
+    saveEstimationData, 
+    detailLoading, // Use detailLoading instead of shared loading state
+    error 
+  } = useEstimation();
   
   const [form, setForm] = useState(() => ({
     ...initialData,
     // By default for new projects, instantly show the logged-in user as the assigned engineer
     assigned_engineer_name: user?.full_name || user?.email || '',
-    assigned_engineer_id: user?.id || null
+    assignedEngineerId: user?.id || null, // consistently use one variation
+    engineerId: user?.id || null
   }));
   
   const [saved, setSaved] = useState(false);
@@ -67,6 +74,10 @@ export default function EstimationDetail() {
   const [customers, setCustomers] = useState([]);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [customersLoading, setCustomersLoading] = useState(false);
+  const [projectHistory, setProjectHistory] = useState([]);
+  const [duplicateWarning, setDuplicateWarning] = useState('');
+  const [latestMatch, setLatestMatch] = useState(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   const queryParams = new URLSearchParams(location.search);
   const projectId = queryParams.get('id');
@@ -79,7 +90,8 @@ export default function EstimationDetail() {
       setForm({
         ...initialData,
         assigned_engineer_name: user?.full_name || user?.email || '',
-        assigned_engineer_id: user?.id || null
+        assigned_engineer_id: user?.id || null,
+        engineerId: user?.id || null
       });
     }
     fetchCustomers();
@@ -88,11 +100,40 @@ export default function EstimationDetail() {
   const loadProject = useCallback(async (id) => {
     const data = await fetchEstimationDetail(id);
     if (data) {
+      // Extract estimation summary if available in estimationResult
+      const er = typeof data.estimationResult === 'string' ? JSON.parse(data.estimationResult) : data.estimationResult;
+      const summarySource = er?.summary || er?.standardSummary || {};
+      
       setForm({
         ...initialData,
         ...data,
-        aiscCertified: data.aiscCertified || 'Y',
+        // Map potential snake_case from DB or nested data from estimationResult
+        // 🔄 FIX: Use || instead of ?? because DB column may be 0 (initialized/default), 
+        // which would otherwise prevent the fallback to the JSON-stored calculation result.
+        totalWeight: data.totalWeight || data.total_weight || summarySource.totalSteelWeight || summarySource.total_weight || 0,
+        totalCost: data.totalCost || data.total_cost || summarySource.grandTotal || summarySource.totalCost || summarySource.total_cost || 0,
+        
+        // Ensure core identifiers and metadata are mapped
+        projectName: data.projectName || data.project_name || '',
+        projectNumber: data.projectNumber || data.project_number || '',
+        customer_name: data.customer_name || data.LinkedCustomerName || data.customerName || '',
+        customer_id: data.customer_id || data.customerId || null,
+        projectLocation: data.projectLocation || data.project_location || '',
+        architect: data.architect || '',
+        eor: data.eor || '',
+        gcName: data.gcName || data.gc_name || '',
+        detailer: data.detailer || '',
+        vendorName: data.vendorName || data.vendor_name || '',
+        aiscCertified: data.aiscCertified || data.aisc_certified || 'Y',
         units: data.units || 'Imperial',
+        
+        // Timestamps (Handle multiple DB field names created_at, created_At, createdAt)
+        createdAt: data.createdAt || data.created_at || data.created_At || data.updatedAt || null,
+        updatedAt: data.updatedAt || data.updated_at || data.updated_At || null,
+        
+        // Engineer details
+        assigned_engineer_name: data.assigned_engineer_name || data.assignedEngineer || '',
+        engineerId: data.engineerId || data.assigned_engineer_id || null
       });
     }
   }, [fetchEstimationDetail]);
@@ -113,6 +154,82 @@ export default function EstimationDetail() {
       setCustomersLoading(false);
     }
   };
+
+  const checkDuplicateProject = useCallback(async (name, number) => {
+    if (!name && !number) {
+      setProjectHistory([]);
+      setDuplicateWarning('');
+      setLatestMatch(null);
+      return;
+    }
+
+    if (projectId) return; // ONLY for new projects
+    
+    setCheckingDuplicate(true);
+    try {
+      const token = localStorage.getItem('steel_token');
+      const url = `${API_BASE_URL}/api/projects/check-duplicate?projectName=${encodeURIComponent(name || '')}&projectNumber=${encodeURIComponent(number || '')}`;
+      
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const { exists, history, exactMatch, numberCollision, latestProject } = res.data;
+      
+      if (exists || numberCollision) {
+        setProjectHistory(history || []);
+        setLatestMatch(latestProject);
+        
+        if (exactMatch) {
+          setDuplicateWarning('EXISTING_COLLISION');
+        } else if (numberCollision) {
+          setDuplicateWarning('NUMBER_TAKEN');
+        } else {
+          setDuplicateWarning('NAME_HISTORY');
+        }
+      } else {
+        setProjectHistory([]);
+        setDuplicateWarning('');
+        setLatestMatch(null);
+      }
+    } catch (err) {
+      console.error("Duplicate check failed:", err);
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  }, [projectId]);
+
+  const autoFillFromMatch = (matchToUse = latestMatch) => {
+    if (!matchToUse) return;
+    setForm(f => ({
+      ...f,
+      projectLocation: matchToUse.projectLocation || f.projectLocation,
+      architect: matchToUse.architect || f.architect,
+      eor: matchToUse.eor || f.eor,
+      gcName: matchToUse.gcName || f.gcName,
+      detailer: matchToUse.detailer || f.detailer,
+      vendorName: matchToUse.vendorName || f.vendorName,
+      aiscCertified: matchToUse.aiscCertified || f.aiscCertified,
+      units: matchToUse.units || f.units
+    }));
+    toast.success('Fields auto-filled from project history.');
+  };
+
+  // Auto-trigger duplicate check when name/number changes
+  useEffect(() => {
+    // Only run if we actually have input to check
+    if (!form.projectName && !form.projectNumber) {
+      setProjectHistory([]);
+      setDuplicateWarning('');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      checkDuplicateProject(form.projectName, form.projectNumber);
+    }, 600); 
+    
+    return () => clearTimeout(timer);
+  }, [form.projectName, form.projectNumber, checkDuplicateProject, projectId]);
 
   const handleSave = useCallback(async () => {
     // Basic validation
@@ -215,21 +332,9 @@ export default function EstimationDetail() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const onStatusAction = async (action) => {
-    if (!projectId) return;
-    try {
-      if (action === 'assign') {
-        const engId = prompt('Enter Engineer ID:');
-        if (engId) await updateEstimationStatus(projectId, 'assign', { engineerId: engId });
-      } else {
-        await updateEstimationStatus(projectId, action);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Action failed');
-    }
-  };
 
-  if (loading && !form.projectName) {
+
+  if (detailLoading && !form.projectName) {
     return (
       <div className="ed-loading">
         <div className="ed-spinner" />
@@ -238,8 +343,9 @@ export default function EstimationDetail() {
     );
   }
 
-  const st = getStatus(form.status);
-  const stageIndex = STAGE_ORDER.indexOf(form.status?.toUpperCase());
+  const st = getStatus(form.workflow_status || form.status);
+  const currentStageStatus = (form.workflow_status || form.status || 'NEW').toUpperCase();
+  const stageIndex = STAGE_ORDER.indexOf(currentStageStatus);
   const daysLeft = form.dueDate ? differenceInDays(new Date(form.dueDate), new Date()) : null;
 
   return (
@@ -307,6 +413,7 @@ export default function EstimationDetail() {
         <WorkflowActionBar
           project={form}
           onStatusChange={projectId ? () => loadProject(projectId) : undefined}
+          onEngineerChange={(email) => set('assigned_engineer_name', email)}
         />
       </div>
 
@@ -330,7 +437,15 @@ export default function EstimationDetail() {
               <div className="ed-form-grid">
                 <div className="ed-field">
                   <label className="ed-label">Project Name <span style={{color: '#ef4444'}}>*</span></label>
-                  <input className="ed-input" value={form.projectName || ''} onChange={e => set('projectName', e.target.value)} placeholder="e.g. Westside Industrial" />
+                  <div className="relative">
+                    <input 
+                      className={`ed-input ${duplicateWarning === 'EXISTING_COLLISION' ? 'border-red-500 bg-red-50' : duplicateWarning === 'NAME_HISTORY' ? 'border-amber-400 bg-amber-50' : ''}`}
+                      value={form.projectName || ''} 
+                      onChange={e => { set('projectName', e.target.value); setDuplicateWarning(''); }} 
+                      placeholder="e.g. Westside Industrial" 
+                    />
+                    {checkingDuplicate && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">Checking...</div>}
+                  </div>
                 </div>
                 <div className="ed-field">
                   <label className="ed-label">Customer Master <span style={{color: '#ef4444'}}>*</span></label>
@@ -363,13 +478,75 @@ export default function EstimationDetail() {
                 </div>
                 <div className="ed-field">
                   <label className="ed-label">Project Number</label>
-                  <input className="ed-input" value={form.projectNumber || ''} onChange={e => set('projectNumber', e.target.value)} placeholder="e.g. PRJ-1024" />
+                  <input 
+                    className={`ed-input ${(duplicateWarning === 'EXISTING_COLLISION' || duplicateWarning === 'NUMBER_TAKEN') ? 'border-red-500 bg-red-50 font-bold text-red-700' : ''}`}
+                    value={form.projectNumber || ''} 
+                    onChange={e => { set('projectNumber', e.target.value); setDuplicateWarning(''); }} 
+                    placeholder="e.g. PRJ-1024" 
+                  />
+                  {duplicateWarning === 'EXISTING_COLLISION' && (
+                    <div className="text-[10px] text-red-600 font-bold mt-1 uppercase tracking-tight leading-tight">
+                      Project name & number already exist. Please use a new number.
+                    </div>
+                  )}
+                  {duplicateWarning === 'NUMBER_TAKEN' && (
+                    <div className="text-[10px] text-red-600 font-bold mt-1 uppercase tracking-tight leading-tight">
+                      This Project Number is already assigned to another project.
+                    </div>
+                  )}
                 </div>
                 <div className="ed-field">
                   <label className="ed-label">Project Location</label>
                   <input className="ed-input" value={form.projectLocation || ''} onChange={e => set('projectLocation', e.target.value)} placeholder="e.g. Dallas, TX" />
                 </div>
               </div>
+
+              {/* Duplicate History Callout */}
+              <AnimatePresence>
+                {projectHistory.length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: 'auto' }} 
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-inner"
+                  >
+                    <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+                       <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                        <Clock size={12} /> Matching Projects & History
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400">{projectHistory.length} match{projectHistory.length !== 1 ? 'es' : ''} found</span>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {projectHistory.map(prj => (
+                        <div key={prj.id} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-lg text-xs hover:border-slate-300 transition-colors">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900">{prj.projectName}</span>
+                                <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">#{prj.projectNumber || '—'}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                                <Building2 size={10} /> {prj.customerName || 'No Customer'}
+                                <span className="text-slate-300">|</span>
+                                <Calendar size={10} /> {prj.updatedAt ? format(new Date(prj.updatedAt), 'dd MMM yyyy') : ''}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                             <WorkflowStatusBadge status={prj.status} small />
+                             {!projectId && (
+                                <button 
+                                  onClick={() => autoFillFromMatch(prj)}
+                                  className="text-[10px] text-[#10a37f] hover:bg-[#10a37f] hover:text-white px-3 py-1.5 rounded-lg font-bold border border-[#10a37f] transition-all whitespace-nowrap"
+                                >
+                                  Use Details
+                                </button>
+                             )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="ed-divider" />
 
@@ -398,7 +575,7 @@ export default function EstimationDetail() {
                 </div>
                 <div className="ed-field">
                   <label className="ed-label">Assigned Engineer (Name or Email)</label>
-                  <input className="ed-input" value={form.assigned_engineer_name || form.assigned_engineer_email || form.assignedEngineer || form.engineerId || ''} onChange={e => set('assigned_engineer_name', e.target.value)} placeholder="Engineer Name" />
+                  <input className="ed-input" value={form.assigned_engineer_name || ''} onChange={e => set('assigned_engineer_name', e.target.value)} placeholder="Engineer Name" />
                 </div>
               </div>
 

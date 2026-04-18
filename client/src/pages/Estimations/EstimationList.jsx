@@ -178,14 +178,16 @@ function DeleteConfirmModal({ project, projects = [], onConfirm, onCancel, delet
 /* ─── Component ─────────────────────────────────────────────────── */
 export default function EstimationList() {
   const navigate = useNavigate();
-  const { estimations, loading, fetchDashboardStats, fetchEstimations, deleteEstimation, bulkDeleteEstimations } = useEstimation();
+  const { estimations, listLoading: loading, fetchDashboardStats, fetchEstimations, deleteEstimation, bulkDeleteEstimations } = useEstimation();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('table');
   const [deleteModal, setDeleteModal] = useState(null); // { project: null, projects: [] }
   const [deleting, setDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  useEffect(() => { fetchEstimations(); }, []);
+
+  // Removed redundant fetchEstimations here as it is handled globally in MainLayout
+  // useEffect(() => { fetchEstimations(); }, []);
 
   const filtered = estimations.filter(p =>
     p.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||

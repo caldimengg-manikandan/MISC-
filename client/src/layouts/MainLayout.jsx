@@ -161,6 +161,27 @@ export default function MainLayout({ children }) {
   );
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting]   = useState(false);
+  const [isSaving, setIsSaving]     = useState(false);
+
+  // Global Save Handler (triggers app:save event)
+  const triggerGlobalSave = () => {
+    window.dispatchEvent(new CustomEvent('app:save'));
+    // Show a small visual feedback on the button if possible
+    setIsSaving(true);
+    setTimeout(() => setIsSaving(false), 2000);
+  };
+
+  // Keyboard shortcut: Ctrl + S
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        triggerGlobalSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const API = API_BASE_URL;
   const getToken = () => localStorage.getItem('steel_token');
@@ -620,6 +641,18 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
           </nav>
 
           <div className="header-actions">
+            <button 
+              className={`header-btn ${isSaving ? 'header-btn-success' : 'header-btn-primary'}`} 
+              onClick={triggerGlobalSave}
+              title="Save changes (Ctrl+S)"
+              id="header-save-btn"
+            >
+              {isSaving ? <Save size={15} style={{ animation: 'bounce 0.5s' }} /> : <Save size={15} />}
+              <span>{isSaving ? 'Saved' : 'Save'}</span>
+            </button>
+
+            <div className="header-actions-divider" />
+
             <button className="header-btn header-btn-outline" title="Help">
               <HelpCircle size={15} /> Help
             </button>

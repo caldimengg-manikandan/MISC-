@@ -182,15 +182,9 @@ export default function PricingSettings() {
             <button 
               onClick={fetchConfig}
               className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-800 font-semibold transition-colors"
+              title="Reload from server"
             >
-              <RotateCcw size={16} /> <span className="text-sm">Reset</span>
-            </button>
-            <button 
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold shadow-xl shadow-slate-200 transition-all disabled:opacity-50 active:scale-95"
-            >
-              <Save size={18} /> {saving ? 'Propagating...' : 'Save Changes'}
+              <RotateCcw size={16} /> <span className="text-sm">Refresh</span>
             </button>
           </div>
         </div>

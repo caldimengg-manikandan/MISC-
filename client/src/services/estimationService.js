@@ -77,10 +77,10 @@ export async function calculateFull(payload, debug = false) {
       success: true,
       breakdown: data.breakdown,
       summary: data.summary, // ⬅️ Critical: Preserves project summary for UI population
-      subtotal: data.costs?.subtotal || 0,
-      tax: data.costs?.tax || 0,
-      totalEstimatedCost: data.costs?.totalEstimatedCost || 0,
-      totalSteelWeight: data.breakdown?.totals?.totalSteelWeight || 0
+      subtotal: data.summary?.subtotalWithoutTax || 0,
+      tax: data.summary?.taxAmount || 0,
+      totalEstimatedCost: data.totalCost || data.summary?.grandTotal || 0,
+      totalSteelWeight: data.totalWeight || data.summary?.totalSteelWeight || 0
     };
 
   } catch (error) {

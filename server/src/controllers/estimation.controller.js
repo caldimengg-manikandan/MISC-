@@ -117,7 +117,25 @@ class EstimationController {
     async saveData(req, res) {
         try {
             const { id } = req.params;
-            await estimationRepository.updateData(id, req.body);
+            const data = req.body;
+
+            // 📐 DATA INTEGRITY GUARD: Extract totals from estimationResult if missing in top-level body
+            // This ensures columns are synchronized even if the frontend only sends the JSON result.
+            if (data.estimationResult && (!data.totalCost || !data.totalWeight)) {
+                let er = data.estimationResult;
+                if (typeof er === 'string') {
+                    try { er = JSON.parse(er); } catch (e) {}
+                }
+                
+                if (er && er.success) {
+                    const summary = er.summary || er.standardSummary || {};
+                    // Only overwrite if explicitly missing/zero in the top level
+                    if (!data.totalCost) data.totalCost = er.totalCost || summary.grandTotal || 0;
+                    if (!data.totalWeight) data.totalWeight = er.totalWeight || summary.totalSteelWeight || 0;
+                }
+            }
+
+            await estimationRepository.updateData(id, data);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ success: false, message: err.message });

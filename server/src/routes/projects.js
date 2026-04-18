@@ -68,6 +68,134 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Lookup projects by name or number (exact or pattern)
+router.get('/lookup/name', auth, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json({ success: true, projects: [] });
+
+    const cid = req.companyId;
+    const isAdmin = req.userRole === 'admin';
+
+    let query, params;
+    // We want to find exact or partial matches to help the user avoid duplicates or reuse templates
+    if (isAdmin) {
+      query = `SELECT id, projectNumber, projectName, customer_name, customer_id, 
+                      project_location, architect, eor, gc_name, detailer, vendor_name, 
+                      aisc_certified as aiscCertified, units, status, createdAt
+               FROM projects 
+               WHERE company_id = ? AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
+               ORDER BY createdAt DESC`;
+      params = [cid, q, `%${q}%`, q];
+    } else {
+      query = `SELECT id, projectNumber, projectName, customer_name, customer_id, 
+                      project_location, architect, eor, gc_name, detailer, vendor_name, 
+                      aisc_certified as aiscCertified, units, status, createdAt
+               FROM projects 
+               WHERE company_id = ? 
+               AND (userId = ? OR createdBy = ? OR engineerId = ?) 
+               AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
+               ORDER BY createdAt DESC`;
+      params = [cid, req.userId, req.userId, req.userId, q, `%${q}%`, q];
+    }
+
+    const [projects] = await db.query(query, params);
+    
+    // Normalize field names if they were snake_case in DB
+    const normalized = projects.map(p => ({
+      ...p,
+      projectName: p.projectName,
+      projectNumber: p.projectNumber,
+      customerName: p.customer_name,
+      customerId: p.customer_id,
+      projectLocation: p.project_location,
+      gcName: p.gc_name,
+      vendorName: p.vendor_name
+    }));
+
+    res.json({ success: true, projects: normalized });
+  } catch (error) {
+    console.error('Error in project lookup:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Check for duplicate project name/number and return history
+router.get('/check-duplicate', auth, async (req, res) => {
+  try {
+    const { projectName, projectNumber, excludeId } = req.query;
+    const cid = req.companyId;
+
+    if (!projectName && !projectNumber) {
+      return res.json({ success: true, exists: false, history: [] });
+    }
+
+    // Check for history (projects with same name or number)
+    // We EXCLUDE the current projectId if provided (e.g. when editing)
+    let query = `
+      SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email 
+      FROM projects p
+      LEFT JOIN users u ON p.engineerId = u.id 
+      WHERE p.company_id = ? 
+      AND (p.projectName = ? OR p.projectNumber = ?)
+    `;
+    let params = [cid, (projectName || '___NONE___').toString(), (projectNumber || '___NONE___').toString()];
+
+    if (excludeId && excludeId !== 'null' && excludeId !== 'undefined' && excludeId !== '') {
+      query += " AND p.id != ?";
+      params.push(excludeId);
+    }
+
+    query += " ORDER BY p.updatedAt DESC";
+
+    const [history] = await db.query(query, params);
+
+    // If history is not an array for some reason, default to empty
+    const results = Array.isArray(history) ? history : [];
+
+    const exists = results.length > 0;
+    
+    // Safety check for case-insensitive matching
+    const targetName = (projectName || '').toLowerCase();
+    const targetNum = (projectNumber || '').toLowerCase();
+
+    const exactMatch = results.some(p => 
+      (p.projectName || '').toLowerCase() === targetName && 
+      (p.projectNumber || '').toLowerCase() === targetNum
+    );
+
+    const numberCollision = results.some(p => 
+      (p.projectNumber || '').toLowerCase() === targetNum &&
+      (p.projectName || '').toLowerCase() !== targetName
+    );
+
+    // Normalize results for frontend (camelCase)
+    const nameHistory = results
+      .filter(p => (p.projectName || '').toLowerCase() === targetName)
+      .map(p => ({
+        ...p,
+        customerName: p.customer_name,
+        customerId: p.customer_id,
+        projectLocation: p.project_location,
+        gcName: p.gc_name,
+        vendorName: p.vendor_name,
+        aiscCertified: p.aisc_certified
+      }));
+
+    res.json({
+      success: true,
+      exists,
+      exactMatch,
+      numberCollision,
+      history: nameHistory,
+      latestProject: nameHistory.length > 0 ? nameHistory[0] : null
+    });
+  } catch (err) {
+    console.error('Error in check-duplicate:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Get Dashboard Metrics — scoped by company_id and role (W3)
 router.get('/dashboard-metrics', auth, async (req, res) => {
   try {
@@ -127,6 +255,8 @@ router.post('/upsert', auth, async (req, res) => {
       guardRails, 
       customRailValues,
       assignedEngineer,
+      assigned_engineer_id,
+      assigned_engineer_name,
       enquiryDate,
       submissionDeadline,
       status
@@ -166,14 +296,18 @@ router.post('/upsert', auth, async (req, res) => {
           projectNumber = ?, projectName = ?, customer_name = ?, customer_id = ?, project_location = ?, 
           architect = ?, eor = ?, gc_name = ?, detailer = ?, vendor_name = ?, 
           aisc_certified = ?, units = ?, notes = ?, stairs = ?, guardRails = ?, 
-          customRailValues = ?, assignedEngineer = ?, enquiryDate = ?, submissionDeadline = ?, status = ?, updatedAt = GETDATE() 
+          customRailValues = ?, assignedEngineer = ?, assigned_engineer_id = ?, engineerId = ?, 
+          enquiryDate = ?, submissionDeadline = ?, status = ?, updatedAt = GETDATE() 
         WHERE id = ? AND company_id = ? AND (userId = ? OR createdBy = ? OR engineerId = ?)`,
         [
           projectNumber, projectName, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
           stairsJson, guardRailsJson, customRailValuesJson, 
-          assignedEngineer || null, enquiryDate || null, submissionDeadline || null, status || 'Project Created',
+          assignedEngineer || assigned_engineer_name || null, 
+          assigned_engineer_id || null, // set assigned_engineer_id
+          assigned_engineer_id || null, // set engineerId
+          enquiryDate || null, submissionDeadline || null, status || 'Project Created',
           id, req.companyId, userId, userId, userId
         ]
       );
@@ -190,15 +324,19 @@ router.post('/upsert', auth, async (req, res) => {
         `INSERT INTO projects 
           (projectNumber, projectName, userId, createdBy, company_id, customer_name, customer_id, project_location, 
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units, 
-           notes, stairs, guardRails, customRailValues, status, workflow_status, engineerId, enquiryDate, submissionDeadline) 
+           notes, stairs, guardRails, customRailValues, status, workflow_status, 
+           assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline) 
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, ?, ?)`,
         [
           projectNumber, projectName, userId, userId, req.companyId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
           stairsJson, guardRailsJson, customRailValuesJson, status || 'Project Created',
-          req.body.assigned_engineer_id || userId, enquiryDate || new Date(), submissionDeadline || null
+          assignedEngineer || assigned_engineer_name || null,
+          assigned_engineer_id || userId,
+          assigned_engineer_id || userId,
+          enquiryDate || new Date(), submissionDeadline || null
         ]
       );
       

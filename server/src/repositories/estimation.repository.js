@@ -67,8 +67,8 @@ class EstimationRepository {
     }
 
     async updateStatus(id, status, extraFields = {}) {
-        let sets = ['status = ?', 'updatedAt = GETDATE()'];
-        let params = [status];
+        let sets = ['status = ?', 'workflow_status = ?', 'updatedAt = GETDATE()'];
+        let params = [status, status.toLowerCase()];
 
         if (extraFields.assignedAt) {
             sets.push('assignedAt = GETDATE()');
@@ -77,7 +77,17 @@ class EstimationRepository {
             sets.push('submittedAt = GETDATE()');
         }
         if (extraFields.engineerId) {
+            // Fetch engineer email to keep assignedEngineer field in sync
+            const [engRows] = await db.query('SELECT email FROM users WHERE id = ?', [extraFields.engineerId]);
+            if (engRows[0]) {
+                sets.push('assignedEngineer = ?');
+                params.push(engRows[0].email);
+            }
+            
             sets.push('engineerId = ?');
+            params.push(extraFields.engineerId);
+            
+            sets.push('assigned_engineer_id = ?');
             params.push(extraFields.engineerId);
         }
 
@@ -88,7 +98,7 @@ class EstimationRepository {
 
     async updateData(id, data) {
         const { 
-            modules, totalWeight, totalCost, 
+            estimationResult, totalWeight, totalCost, 
             projectName, customer_name, customer_id, customerId, dueDate, projectNumber, projectLocation,
             architect, eor, gcName, detailer, vendorName, aiscCertified, units,
             isPinned, isArchived
@@ -105,22 +115,22 @@ class EstimationRepository {
             }
         };
 
-        addField('modules',        modules !== undefined ? (modules ? JSON.stringify(modules) : null) : undefined);
-        addField('totalWeight',    totalWeight);
-        addField('totalCost',      totalCost);
-        addField('projectName',    projectName);
-        addField('customer_name',  customer_name || data.customerName);
-        addField('customer_id',    customer_id || customerId);
-        addField('dueDate',        dueDate);
-        addField('projectNumber',  projectNumber);
-        addField('projectLocation',projectLocation);
-        addField('architect',      architect);
-        addField('eor',            eor);
-        addField('gcName',         gcName);
-        addField('detailer',       detailer);
-        addField('vendorName',     vendorName);
-        addField('aiscCertified',  aiscCertified);
-        addField('units',          units);
+        addField('estimationResult', estimationResult !== undefined ? (estimationResult ? JSON.stringify(estimationResult) : null) : (data.modules ? JSON.stringify(data.modules) : undefined));
+        addField('totalWeight',     totalWeight);
+        addField('totalCost',       totalCost);
+        addField('projectName',     projectName);
+        addField('customer_name',   customer_name || data.customerName || data.customer_name);
+        addField('customer_id',     customer_id || customerId);
+        addField('dueDate',         dueDate);
+        addField('projectNumber',   projectNumber);
+        addField('project_location',projectLocation || data.project_location);
+        addField('architect',       architect);
+        addField('eor',             eor);
+        addField('gc_name',         gcName || data.gc_name);
+        addField('detailer',        detailer);
+        addField('vendor_name',     vendorName || data.vendor_name);
+        addField('aisc_certified',  aiscCertified || data.aisc_certified);
+        addField('units',           units);
         addField('isPinned',       isPinned !== undefined ? (isPinned ? 1 : 0) : undefined);
         addField('isArchived',     isArchived !== undefined ? (isArchived ? 1 : 0) : undefined);
 
@@ -164,15 +174,15 @@ class EstimationRepository {
         const [result] = await db.query(`
             INSERT INTO projects (
                 projectName, customer_name, customer_id, dueDate, status, userId, createdBy, created_at, updatedAt,
-                projectNumber, projectLocation, architect, eor, gcName, detailer, vendorName, aiscCertified, units,
-                modules, isPinned, isArchived
+                projectNumber, project_location, architect, eor, gc_name, detailer, vendor_name, aisc_certified, units,
+                estimationResult, isPinned, isArchived
             )
             OUTPUT INSERTED.id
             VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
         `, [
-            cloneName, src.customer_name, src.customer_id, src.dueDate, userId, userId,
-            src.projectNumber, src.projectLocation, src.architect, src.eor, src.gcName, src.detailer, src.vendorName, src.aiscCertified, src.units,
-            src.modules
+            cloneName, src.customer_name, src.customer_id, src.dueDate, 'draft', userId, userId,
+            src.projectNumber, src.project_location, src.architect, src.eor, src.gc_name, src.detailer, src.vendor_name, src.aisc_certified, src.units,
+            src.estimationResult || src.modules
         ]);
         
         return result[0].id;

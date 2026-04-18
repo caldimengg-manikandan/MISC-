@@ -1285,6 +1285,8 @@ class StairCalculationService {
 
       const response = {
         success: true,
+        totalWeight: final.standardSummary?.totalSteelWeight || 0,
+        totalCost: final.standardSummary?.grandTotal || 0,
         breakdown: {
           rails: final.rails || [],
           platforms: final.platforms || [],
