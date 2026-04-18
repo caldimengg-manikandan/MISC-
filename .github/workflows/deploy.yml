@@ -7,37 +7,74 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      # ── Build React Frontend on GitHub Runner (faster, no VPS RAM pressure) ──
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build React client for production
+        working-directory: client
+        env:
+          NODE_ENV: production
+          REACT_APP_API_URL: /misc
+          CI: false  # Prevents treating warnings as errors
+        run: npm run build
+
+      # ── Deploy everything to VPS via SSH ──
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }} # Optional
           script: |
-            # Navigate to the project directory
-            # Assuming the code is already cloned at this path on the VPS
-            cd /var/www/caldimproducts/misc
-            
-            # Update code
+            set -e
+            echo "🚀 Starting deployment..."
+
+            # Navigate to project root
+            cd /var/www/misc
+
+            # Pull latest code
             git pull origin master
-            
-            # --- Backend Deployment ---
-            cd server
-            npm install --production
-            
-            # Restart or Start the backend with PM2 on a specific port
-            # We use a unique name 'misc-automation' and port 5001 to avoid conflicts
-            pm2 restart misc-automation || pm2 start server.js --name misc-automation --env PORT=5001
-            
-            # --- Frontend Deployment ---
-            cd ../client
-            npm install
-            npm run build
-            
-            # Success message
-            echo "Deployment finished successfully!"
+            echo "✅ Code updated"
+
+            # --- Backend ---
+            cd /var/www/misc/server
+            npm install --omit=dev
+            echo "✅ Backend dependencies installed"
+
+            # Restart PM2 (or start if not running)
+            pm2 restart misc-automation || pm2 start server.js \
+              --name misc-automation \
+              --env production \
+              -- --port 5001
+            pm2 save
+            echo "✅ Backend restarted"
+
+            echo "🏆 Deployment finished!"
+
+      # ── Copy built frontend to VPS via SCP ──
+      - name: Upload built client to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "client/build/*"
+          target: "/var/www/misc/client/build/"
+          strip_components: 2
+
+      - name: Deployment success notification
+        run: echo "✅ MISC app deployed to https://caldimproducts.com/misc"
