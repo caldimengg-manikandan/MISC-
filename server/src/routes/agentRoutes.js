@@ -10,49 +10,45 @@
 const express = require('express');
 const router  = express.Router();
 
-const { runAgent, getHistory, clearHistory } = require('../ai/agent/agent');
+const { 
+  runAgent, 
+  getChatThreads, 
+  getThreadHistory, 
+  deleteThread 
+} = require('../ai/agent/agent');
 const authMiddleware = require('../middleware/auth');
 
 /**
  * POST /api/agent/chat
- * Body: { message: string, sessionId?: string }
- * Returns SSE stream: data: {"text":"...", "done": true/false}
+ * Body: { message: string, chatId?: number }
  */
 router.post('/chat', authMiddleware, async (req, res) => {
-  const { message, sessionId: clientSessionId } = req.body;
+  const { message, chatId } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ success: false, error: 'Message is required' });
   }
 
-  if (message.trim().length > 1000) {
-    return res.status(400).json({ success: false, error: 'Message too long (max 1000 chars)' });
-  }
-
-  // Build user context from the auth middleware
   const context = {
     userId:    req.userId,
     companyId: req.companyId,
     role:      req.userRole || req.user?.role || 'estimator',
-    sessionId: clientSessionId || `user_${req.userId}`,
+    chatId:    chatId || null
   };
 
-  // Set up SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // For nginx
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  // Send "thinking" status immediately
   sendSSE(res, { status: 'thinking', text: '' });
 
   try {
     const result = await runAgent(message.trim(), context);
 
-    // Simulate token streaming by sending the response in chunks
     const text   = result.text || '';
-    const chunks = splitIntoChunks(text, 40); // ~40 chars per chunk
+    const chunks = splitIntoChunks(text, 50);
 
     for (let i = 0; i < chunks.length; i++) {
       sendSSE(res, {
@@ -60,15 +56,14 @@ router.post('/chat', authMiddleware, async (req, res) => {
         text:   chunks[i],
         done:   false,
       });
-      // Small delay to simulate streaming effect
-      await sleep(18);
+      await sleep(15);
     }
 
-    // Final done event with metadata
     sendSSE(res, {
       status: 'done',
       text:   '',
       done:   true,
+      chatId: result.chatId,
       tool:   result.tool   || null,
       source: result.source || null,
       intent: result.intent || null,
@@ -78,7 +73,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
     console.error('[AgentRoutes] Error:', err);
     sendSSE(res, {
       status: 'error',
-      text: '⚠️ Something went wrong. Please try again.',
+      text: '⚠️ Something went wrong.',
       done: true,
     });
   } finally {
@@ -87,23 +82,42 @@ router.post('/chat', authMiddleware, async (req, res) => {
 });
 
 /**
- * GET /api/agent/history
- * Returns the conversation history for the current user session.
+ * GET /api/agent/threads
+ * List recent chat threads
  */
-router.get('/history', authMiddleware, (req, res) => {
-  const sessionId = `user_${req.userId}`;
-  const history   = getHistory(sessionId);
-  res.json({ success: true, history });
+router.get('/threads', authMiddleware, async (req, res) => {
+  try {
+    const threads = await getChatThreads(req.userId);
+    res.json({ success: true, threads });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 /**
- * POST /api/agent/clear
- * Clears the conversation history for the current session.
+ * GET /api/agent/threads/:id
+ * Get history for a specific thread
  */
-router.post('/clear', authMiddleware, (req, res) => {
-  const sessionId = `user_${req.userId}`;
-  clearHistory(sessionId);
-  res.json({ success: true, message: 'Conversation cleared.' });
+router.get('/threads/:id', authMiddleware, async (req, res) => {
+  try {
+    const history = await getThreadHistory(req.params.id);
+    res.json({ success: true, history });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/agent/threads/:id
+ * Delete a thread
+ */
+router.delete('/threads/:id', authMiddleware, async (req, res) => {
+  try {
+    await deleteThread(req.params.id);
+    res.json({ success: true, message: 'Thread deleted.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

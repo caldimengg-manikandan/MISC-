@@ -9,7 +9,7 @@ import {
   PanelLeftOpen, PanelLeftClose, PenLine, Search,
   Box, Database, ArrowUpDown, ChevronDown, Settings,
   HelpCircle, Share2, Save, Pin, DollarSign,
-  Zap, Users, Printer, FileSpreadsheet
+  Zap, Users, Printer, FileSpreadsheet, Trash2
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
@@ -253,6 +253,8 @@ export default function MainLayout({ children }) {
   const [isSaving, setIsSaving]     = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [pendingNav, setPendingNav] = useState(null);
+  const [recentChats, setRecentChats] = useState([]);
+  const [showAllRecent, setShowAllRecent] = useState(false);
 
   // Global Save Handler (triggers app:save event)
   const triggerGlobalSave = () => {
@@ -556,11 +558,55 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
   const activePath = location.pathname;
 
 
-  // Fetch projects for sidebar list (limit to 15 most recent)
+  // Fetch projects for sidebar list
   useEffect(() => {
     fetchEstimations();
+    fetchRecentChats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchRecentChats = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/agent/threads`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.success) setRecentChats(data.threads);
+    } catch (_) {}
+  };
+
+  // Listen for chat:refresh from Dashboard when a new conversation is saved
+  useEffect(() => {
+    const handler = () => fetchRecentChats();
+    window.addEventListener('chat:refresh', handler);
+    return () => window.removeEventListener('chat:refresh', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDeleteChat = async (chatId) => {
+    if (!window.confirm('Are you sure you want to delete this conversation?')) return;
+    
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/agent/threads/${chatId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Conversation deleted');
+        fetchRecentChats();
+        // If we're currently viewing this chat, go back to fresh dashboard
+        const params = new URLSearchParams(location.search);
+        if (params.get('chatId') === String(chatId)) {
+          navigate('/dashboard', { replace: true });
+        }
+      } else {
+        toast.error(data.error || 'Failed to delete chat');
+      }
+    } catch (err) {
+      toast.error('Connection error');
+    }
+  };
 
   // Project detection for Notes & Tools
   useEffect(() => {
@@ -598,9 +644,9 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
     }
   }, [location.pathname, location.search, selectedEstimation?.id, fetchNotes, setSelectedEstimation]);
 
-  // Split estimations into structural segments avoiding archived ones safely
-  const pinnedProjects = estimations.filter(p => p.isPinned && !p.isArchived);
-  const recentProjects = estimations.filter(p => !p.isPinned && !p.isArchived).slice(0, 15);
+  // Split estimations into structural segments
+  const recentProjects = estimations.filter(p => !p.isPinned && !p.isArchived);
+  const displayedRecent = showAllRecent ? recentProjects : recentProjects.slice(0, 5);
 
   const handleLogout = () => {
     logout();
@@ -706,34 +752,25 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
             );
           })}
 
-          {/* ── Pinned Projects ── */}
-          <div className="sidebar-section-title" style={{ marginTop: 8 }}>Projects</div>
-
-          {pinnedProjects.length === 0 ? (
-            <div className="sidebar-recent-item" style={{ cursor: 'default', fontStyle: 'italic', opacity: 0.5 }}>
-              No pinned projects
-            </div>
-          ) : (
-            pinnedProjects.map(p => (
-              <SidebarProjectRenderer
-                key={p.id}
-                p={p}
-                navigate={navigate}
-                isRecent={false}
-                useEstimation={useEstimation}
-              />
-            ))
-          )}
-
           {/* ── Recent Estimations ── */}
-          <div className="sidebar-section-title" style={{ marginTop: 12 }}>Recent Estimations</div>
+          <div className="flex justify-between items-center pr-4 mt-4">
+            <div className="sidebar-section-title" style={{ marginTop: 0 }}>Recent Estimations</div>
+            {recentProjects.length > 5 && (
+              <button 
+                onClick={() => setShowAllRecent(!showAllRecent)}
+                className="text-[10px] text-[#10a37f] hover:underline uppercase font-bold tracking-wider"
+              >
+                {showAllRecent ? 'Show Less' : 'Show All'}
+              </button>
+            )}
+          </div>
 
           {recentProjects.length === 0 ? (
             <div className="sidebar-recent-item" style={{ cursor: 'default', fontStyle: 'italic', opacity: 0.5 }}>
               No history yet
             </div>
           ) : (
-            recentProjects.map(p => (
+            displayedRecent.map(p => (
               <SidebarProjectRenderer
                 key={`r-${p.id}`}
                 p={p}
@@ -741,6 +778,37 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                 isRecent={true}
                 useEstimation={useEstimation}
               />
+            ))
+          )}
+
+          {/* ── Recent Chats ── */}
+          <div className="sidebar-section-title" style={{ marginTop: 16 }}>Recent Conversations</div>
+          {recentChats.length === 0 ? (
+            <div className="sidebar-recent-item" style={{ cursor: 'default', fontStyle: 'italic', opacity: 0.5 }}>
+              No chats yet
+            </div>
+          ) : (
+            recentChats.slice(0, 10).map(chat => (
+              <div 
+                key={chat.id} 
+                className="sidebar-recent-item flex items-center justify-between gap-2 group"
+                onClick={() => navigate(`/dashboard?chatId=${chat.id}`)}
+              >
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                  <span className="opacity-50 text-[10px]">💬</span>
+                  <span className="truncate">{chat.title || 'New Conversation'}</span>
+                </div>
+                <button
+                  className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity p-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteChat(chat.id);
+                  }}
+                  title="Delete chat"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
             ))
           )}
 

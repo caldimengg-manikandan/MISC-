@@ -13,6 +13,27 @@ const pct = (v) => (v != null ? `${(Number(v) * 100).toFixed(1)}%` : '—');
 const lbs = (v) => (v != null ? `${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lbs` : '—');
 const dt  = (v) => { try { return format(new Date(v), 'dd MMM yyyy'); } catch { return '—'; } };
 
+// ─── 3-Layer Response Formatter ───────────────────────────────────────────────
+
+/**
+ * Wraps a formula in a collapsible HTML structure for the frontend.
+ */
+function wrapFormula(formula) {
+  if (!formula) return '';
+  return `\n\n<details class="ai-formula-details"><summary>Show calculation details</summary>\n\n\`\`\`\n${formula}\n\`\`\`\n\n</details>`;
+}
+
+function buildLayeredResponse({ explanation, logic_steps, formula }) {
+  let response = explanation;
+  if (logic_steps && logic_steps.length > 0) {
+    response += '\n\n**Step-by-step logic:**\n' + logic_steps.map(s => `- ${s}`).join('\n');
+  }
+  if (formula) {
+    response += wrapFormula(formula);
+  }
+  return response;
+}
+
 // ─── Static knowledge response ────────────────────────────────────────────────
 
 function buildStaticResponse(chunks, query) {
@@ -37,9 +58,6 @@ function buildStaticResponse(chunks, query) {
   if (extraChunks.length > 0) {
     response += `\n\n---\n📌 **Also from ${toTitle(extraChunks[0].docTitle)}:**\n${extraChunks[0].text.substring(0, 500)}`;
   }
-
-  response += `\n\n> 📚 Source: ${topChunk.source}`;
-  if (otherDocs) response += ` | Related: ${otherDocs}`;
 
   return response;
 }
@@ -236,6 +254,37 @@ function buildMixedResponse(kbChunks, dbData, query) {
   return parts.join('\n\n');
 }
 
+// ─── Calculation Specific Builders ────────────────────────────────────────────
+
+function buildCalculationResponse(rule, data = null) {
+  let explanation = rule.explanation;
+  if (data) {
+    explanation = explanation.replace('total material weight', `**${lbs(data.weight)}**`);
+  }
+  
+  return buildLayeredResponse({
+    explanation: explanation,
+    logic_steps: rule.logic_steps,
+    formula: rule.formula
+  });
+}
+
+function buildClarificationResponse(rule, missingParams) {
+  const paramLabels = {
+    weight: 'Total material weight (in lbs)',
+    width: 'Stair width',
+    numRisers: 'Number of risers',
+    length: 'Steel length (ft)'
+  };
+
+  let response = `To calculate **${rule.description.toLowerCase()}**, I need a few more details:\n\n`;
+  missingParams.forEach(p => {
+    response += `- ${paramLabels[p] || p}\n`;
+  });
+  response += `\nCan you provide these?`;
+  return response;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function statusBadge(s = '') {
@@ -266,4 +315,6 @@ module.exports = {
   buildActivityResponse,
   buildSearchResponse,
   buildMixedResponse,
+  buildCalculationResponse,
+  buildClarificationResponse,
 };

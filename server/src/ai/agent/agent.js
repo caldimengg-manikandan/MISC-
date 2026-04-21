@@ -11,12 +11,14 @@
  *   6. BLOCKED: return polite denial message
  */
 
-const { classifyQuery, routeToTools } = require('./queryRouter');
-const { searchKnowledge }             = require('../search/knowledgeSearch');
 const { executeTool }                 = require('../tools/index');
 const rb                              = require('./responseBuilder');
+const chatRepo                        = require('./chatRepository');
+const CALCULATION_RULES               = require('./calculationRules');
+const { classifyQuery, routeToTools } = require('./queryRouter');
+const { searchKnowledge }             = require('../search/knowledgeSearch');
 
-// In-memory conversation history (per session) — keyed by sessionId
+// In-memory conversation history (Session cache for faster lookups, but DB is source of truth)
 const conversationHistory = new Map();
 const MAX_HISTORY = 10; // per session
 
@@ -24,21 +26,38 @@ const MAX_HISTORY = 10; // per session
  * Main agent entry point.
  * 
  * @param {string}  query      - User's message
- * @param {object}  context    - { userId, companyId, role, sessionId }
- * @returns {Promise<{text: string, tool?: string, source?: string}>}
+ * @param {object}  context    - { userId, companyId, role, sessionId, chatId }
+ * @returns {Promise<{text: string, tool?: string, source?: string, chatId?: number}>}
  */
 async function runAgent(query, context) {
-  const { userId, companyId, role, sessionId = 'default' } = context;
+  const { userId, companyId, role, chatId: clientChatId } = context;
+  let activeChatId = clientChatId;
 
   // Basic sanity check
   if (!query || query.trim().length === 0) {
-    return { text: 'Please ask me something! I can help with calculations, project data, workflow, and more.' };
+    return { text: 'Please ask me something!' };
   }
 
-  // Append query to session history
-  appendHistory(sessionId, { role: 'user', content: query });
+  // 1. Ensure a chat exists
+  if (!activeChatId) {
+    activeChatId = await chatRepo.createChat(userId, query.substring(0, 50) + (query.length > 50 ? '...' : ''));
+  } else if (clientChatId) {
+    // Check if title needs update (only if it's the default)
+    // For now we just use the first message as title inRepo
+  }
 
-  // 1. Classify the query
+  // Save User Message
+  await chatRepo.addMessage(activeChatId, { role: 'user', content: query });
+
+  // 2. Perform SMART VALIDATION
+  const validationResult = validateCalculationQuery(query);
+  if (validationResult.isCalculation && !validationResult.isValid) {
+    const responseText = rb.buildClarificationResponse(validationResult.rule, validationResult.missing);
+    await chatRepo.addMessage(activeChatId, { role: 'assistant', content: responseText, intent: 'validation' });
+    return { text: responseText, chatId: activeChatId, intent: 'validation' };
+  }
+
+  // 3. Classify the query
   const classification = classifyQuery(query, role);
 
   let responseText = '';
@@ -46,24 +65,26 @@ async function runAgent(query, context) {
   let sourceDocs   = null;
 
   try {
-    if (classification.type === 'BLOCKED') {
+    if (validationResult.isCalculation && validationResult.isValid) {
+       // Calculation triggered with valid data
+       responseText = rb.buildCalculationResponse(validationResult.rule, validationResult.extractedData);
+       classification.type = 'CALCULATION';
+    } 
+    else if (classification.type === 'BLOCKED') {
       responseText = rb.buildBlockedResponse(query, classification.reason);
 
     } else if (classification.type === 'STATIC') {
-      // Knowledge base search
       const chunks = searchKnowledge(query, 5);
       responseText = rb.buildStaticResponse(chunks, query);
       sourceDocs   = chunks.length > 0 ? chunks[0].source : null;
 
     } else if (classification.type === 'DYNAMIC') {
-      // DB tool execution
       const toolRoutes = routeToTools(query, role);
       const results    = await executeToolRoutes(toolRoutes, { userId, companyId, role });
       responseText = formatToolResults(toolRoutes, results, query);
       toolUsed     = toolRoutes.map(t => t.toolName).join(', ');
 
     } else if (classification.type === 'MIXED') {
-      // Both: search KB + run DB tools
       const chunks     = searchKnowledge(query, 3);
       const toolRoutes = routeToTools(query, role);
       const results    = await executeToolRoutes(toolRoutes, { userId, companyId, role });
@@ -75,22 +96,67 @@ async function runAgent(query, context) {
     }
 
   } catch (err) {
-    if (err.message && err.message.startsWith('ACCESS_DENIED')) {
-      responseText = rb.buildBlockedResponse(query, 'access_denied');
-    } else {
-      console.error('[Agent Error]', err);
-      responseText = `⚠️ I ran into an issue retrieving that data: ${err.message}. Please try again or rephrase your question.`;
-    }
+    console.error('[Agent Error]', err);
+    responseText = `⚠️ I ran into an issue: ${err.message}`;
   }
 
-  // Append bot response to session history
-  appendHistory(sessionId, { role: 'assistant', content: responseText });
+  // Save Assistant Message
+  await chatRepo.addMessage(activeChatId, { 
+    role: 'assistant', 
+    content: responseText, 
+    tool: toolUsed, 
+    source: sourceDocs, 
+    intent: classification.type 
+  });
 
   return {
     text:     responseText,
     tool:     toolUsed,
     source:   sourceDocs,
     intent:   classification.type,
+    chatId:   activeChatId
+  };
+}
+
+/**
+ * Validation logic for calculation rules.
+ */
+function validateCalculationQuery(query) {
+  const normalized = query.toLowerCase();
+  
+  // Find matching rule
+  const ruleKey = Object.keys(CALCULATION_RULES).find(key => {
+    const rule = CALCULATION_RULES[key];
+    return normalized.includes('calculate') && normalized.includes(key.toLowerCase().replace('_',' '));
+  }) || (normalized.includes('scrap') ? 'SCRAP' : null);
+
+  if (!ruleKey) return { isCalculation: false };
+
+  const rule = CALCULATION_RULES[ruleKey];
+  const extractedData = {};
+  const missing = [];
+
+  // Very basic extraction logic
+  const weightMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(?:lbs|pounds|weight)/);
+  if (weightMatch) extractedData.weight = parseFloat(weightMatch[1]);
+
+  const widthMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet|width|wide)/);
+  if (widthMatch) extractedData.width = parseFloat(widthMatch[1]);
+
+  const riserMatch = normalized.match(/(\d+)\s*(?:risers|steps)/);
+  if (riserMatch) extractedData.numRisers = parseInt(riserMatch[1]);
+
+  // Check requirements
+  rule.required_params.forEach(p => {
+    if (extractedData[p] === undefined) missing.push(p);
+  });
+
+  return {
+    isCalculation: true,
+    isValid: missing.length === 0,
+    rule,
+    extractedData,
+    missing
   };
 }
 
@@ -159,8 +225,27 @@ function getHistory(sessionId) {
   return conversationHistory.get(sessionId) || [];
 }
 
+async function getChatThreads(userId) {
+    return chatRepo.getRecentChats(userId);
+}
+
+async function getThreadHistory(chatId) {
+    return chatRepo.getChatHistory(chatId);
+}
+
+async function deleteThread(chatId) {
+    return chatRepo.deleteChat(chatId);
+}
+
 function clearHistory(sessionId) {
   conversationHistory.delete(sessionId);
 }
 
-module.exports = { runAgent, getHistory, clearHistory };
+module.exports = { 
+    runAgent, 
+    getHistory, 
+    clearHistory,
+    getChatThreads,
+    getThreadHistory,
+    deleteThread
+};

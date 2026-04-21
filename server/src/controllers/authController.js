@@ -79,17 +79,22 @@ const login = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
     }
 
+    console.log('--- LOGIN ATTEMPT ---', { email: email.toLowerCase() });
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
     const user = rows[0];
 
     if (!user) {
+      console.log('❌ Login failed: User not found');
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
+    console.log('✅ User found in DB. Comparing passwords...');
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log('❌ Login failed: Password mismatch');
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
+    console.log('✅ Password match! Proceeding to login...');
 
     // Update last login
     await db.query('UPDATE users SET lastLogin = GETDATE() WHERE id = ?', [user.id]);

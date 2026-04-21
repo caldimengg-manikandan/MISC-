@@ -37,7 +37,15 @@ module.exports = {
     const request = pool.request();
     
     let sqlText = text;
-    if (params && params.length > 0) {
+    
+    // Support named params (object)
+    if (params && !Array.isArray(params) && typeof params === 'object') {
+      Object.entries(params).forEach(([key, val]) => {
+        request.input(key, val);
+      });
+    } 
+    // Support positional params (array)
+    else if (Array.isArray(params) && params.length > 0) {
       params.forEach((val, i) => {
         const paramName = `p${i}`;
         request.input(paramName, val);
