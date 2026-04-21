@@ -203,16 +203,25 @@ export default function EstimationDetail() {
     if (!matchToUse) return;
     setForm(f => ({
       ...f,
-      projectLocation: matchToUse.projectLocation || f.projectLocation,
+      projectName: matchToUse.projectName || matchToUse.project_name || f.projectName,
+      projectNumber: matchToUse.projectNumber || matchToUse.project_number || f.projectNumber,
+      customer_id: matchToUse.customerId || matchToUse.customer_id || f.customer_id,
+      customer_name: matchToUse.customerName || matchToUse.customer_name || f.customer_name,
+      projectLocation: matchToUse.projectLocation || matchToUse.project_location || f.projectLocation,
       architect: matchToUse.architect || f.architect,
       eor: matchToUse.eor || f.eor,
-      gcName: matchToUse.gcName || f.gcName,
+      gcName: matchToUse.gcName || matchToUse.gc_name || f.gcName,
       detailer: matchToUse.detailer || f.detailer,
-      vendorName: matchToUse.vendorName || f.vendorName,
-      aiscCertified: matchToUse.aiscCertified || f.aiscCertified,
-      units: matchToUse.units || f.units
+      vendorName: matchToUse.vendorName || matchToUse.vendor_name || f.vendorName,
+      aiscCertified: matchToUse.aiscCertified || matchToUse.aisc_certified || f.aiscCertified,
+      units: matchToUse.units || f.units,
+      dueDate: matchToUse.dueDate || matchToUse.due_date || f.dueDate,
+      status: matchToUse.status || f.status,
+      // Also fill assigned engineer if it matches current user or is empty
+      assigned_engineer_name: matchToUse.assigned_engineer_name || f.assigned_engineer_name,
+      engineerId: matchToUse.engineerId || matchToUse.engineer_id || f.engineerId
     }));
-    toast.success('Fields auto-filled from project history.');
+    toast.success('All project details auto-filled from history.');
   };
 
   // Auto-trigger duplicate check when name/number changes
@@ -302,7 +311,9 @@ export default function EstimationDetail() {
       }
 
       // Write project info to localStorage for the estimation module
-      localStorage.setItem('steelProjectInfo', JSON.stringify({
+      const modulePath = '/estimate/stair-railings';
+      const contextKey = `steelProjectInfo_${modulePath}`;
+      localStorage.setItem(contextKey, JSON.stringify({
         id: resolvedId,
         projectName: form.projectName,
         projectNumber: form.projectNumber,
@@ -310,7 +321,7 @@ export default function EstimationDetail() {
         customerId: form.customer_id || null,
         projectLocation: form.projectLocation || ''
       }));
-      navigate('/estimate/stair-railings');
+      navigate(modulePath);
     } finally {
       setGoingToEstimation(false);
     }
@@ -355,7 +366,7 @@ export default function EstimationDetail() {
       <div className="ed-page-header">
         <div className="ed-header-left">
           <div className="ed-breadcrumb">
-            <button className="ed-breadcrumb-btn" onClick={() => navigate('/projects')}>Projects</button>
+            <button className="ed-breadcrumb-btn" onClick={() => navigate('/estimations')}>Projects</button>
             <ChevronRight size={13} className="ed-breadcrumb-sep" />
             <span>{form.projectName || 'New Estimation'}</span>
           </div>
@@ -530,15 +541,25 @@ export default function EstimationDetail() {
                                 <Calendar size={10} /> {prj.updatedAt ? format(new Date(prj.updatedAt), 'dd MMM yyyy') : ''}
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                           <div className="flex items-center gap-2">
                              <WorkflowStatusBadge status={prj.status} small />
                              {!projectId && (
-                                <button 
-                                  onClick={() => autoFillFromMatch(prj)}
-                                  className="text-[10px] text-[#10a37f] hover:bg-[#10a37f] hover:text-white px-3 py-1.5 rounded-lg font-bold border border-[#10a37f] transition-all whitespace-nowrap"
-                                >
-                                  Use Details
-                                </button>
+                               <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => autoFillFromMatch(prj)}
+                                    className="text-[10px] text-[#10a37f] hover:bg-[#10a37f]/10 px-3 py-1.5 rounded-lg font-bold border border-[#10a37f] transition-all whitespace-nowrap"
+                                    title="Use these details as a template"
+                                  >
+                                    Use Details
+                                  </button>
+                                  <button 
+                                    onClick={() => navigate(`/project-info?id=${prj.id}`)}
+                                    className="text-[10px] bg-[#10a37f] text-white hover:bg-[#0d8a6b] px-3 py-1.5 rounded-lg font-black transition-all whitespace-nowrap shadow-sm"
+                                    title="Open existing project and calculations"
+                                  >
+                                    Open Project
+                                  </button>
+                               </div>
                              )}
                           </div>
                         </div>

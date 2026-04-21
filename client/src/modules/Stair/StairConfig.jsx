@@ -5,10 +5,12 @@ import LandingConfig from '../Landing/LandingConfig';
 import RailConfig from '../Rail/RailConfig';
 import KickPlateConfig from '../KickPlate/KickPlateConfig';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin, Zap, X } from 'lucide-react';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils.js';
 import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
 import PricingOverridesModal from './PricingOverridesModal';
+import AllocateProjectModal from './components/AllocateProjectModal';
 import EstimateReport from './ProjectEstimateReport';
 import API_BASE_URL from '../../config/api';
 import toast from 'react-hot-toast';
@@ -818,6 +820,7 @@ function StairItem({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function StairEstimation() {
+  const navigate = useNavigate();
   const initialId = makeId();
   const [activeId, setActiveId] = useState(initialId);
   const [stairs, setStairs] = useState([
@@ -852,6 +855,7 @@ export default function StairEstimation() {
 
   const [showReport, setShowReport] = useState(false); // New state for showing report
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showAllocateModal, setShowAllocateModal] = useState(false);
   const [localConfig, setLocalConfig] = useState({});
   const [reportData, setReportData] = useState(null);   // New state for report data
   const [overallHistory, setOverallHistory] = useState(null);
@@ -876,9 +880,22 @@ export default function StairEstimation() {
   const stairsRef = useRef(stairs);
   stairsRef.current = stairs;
 
+  // Helper to get module-specific context key
+  const getContextKey = () => `steelProjectInfo_${window.location.pathname.split('?')[0]}`;
+
+  const handleDisconnectProject = () => {
+    if (window.confirm("Disconnect this estimation from the project and return to Draft Mode?")) {
+      localStorage.removeItem(getContextKey());
+      setSelectedEstimation(null);
+      // Navigate to the same path but without the ?id=... to fully return to draft state
+      navigate(window.location.pathname, { replace: true });
+      window.location.reload();
+    }
+  };
+
   // ── Load project info + stair data from DB on mount ───────────────────────
   useEffect(() => {
-    const savedInfo = localStorage.getItem('steelProjectInfo');
+    const savedInfo = localStorage.getItem(getContextKey());
     if (!savedInfo) return;
     try {
       const parsed = JSON.parse(savedInfo);
@@ -892,7 +909,17 @@ export default function StairEstimation() {
       }));
 
       const projectId = parsed.id;
-      if (!projectId) return;
+      if (!projectId) {
+        // 🚀 DRAFT MODE: Try loading local draft if it exists
+        const draft = localStorage.getItem('stair_draft_global');
+        if (draft) {
+          const restored = restoreStairs(JSON.parse(draft));
+          isUpdatingFromCalc.current = true; 
+          setStairs(restored);
+          if (restored.length > 0) setActiveId(restored[0].id);
+        }
+        return;
+      }
       
       setSelectedEstimation({ id: projectId, ...parsed });
       fetchNotes(projectId);
@@ -957,6 +984,9 @@ export default function StairEstimation() {
       setEstimationResult(proj.estimationResult);
       setReportData(proj.estimationResult);
     }
+    if (proj.localConfig) {
+      setLocalConfig(proj.localConfig);
+    }
 
     const raw = proj.stairs;
     const saved = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null);
@@ -979,12 +1009,13 @@ export default function StairEstimation() {
       const token = localStorage.getItem('steel_token');
       if (!token) { toast.error('Please log in first'); return; }
 
-      const savedInfo = localStorage.getItem('steelProjectInfo');
+      const savedInfo = localStorage.getItem(getContextKey());
       const parsed = savedInfo ? JSON.parse(savedInfo) : {};
       const projectId = projectData.projectId || parsed.id;
 
       if (!projectId) {
-        toast.error('No project selected. Please select a project from Project Info first.');
+        setShowAllocateModal(true);
+        setSaving(false);
         return;
       }
 
@@ -1005,7 +1036,8 @@ export default function StairEstimation() {
         body: JSON.stringify({ 
           stairs: stairsToSave,
           customerName: projectData.customerName,
-          customerId: projectData.customerId
+          customerId: projectData.customerId,
+          localConfig
         })
       });
 
@@ -1024,7 +1056,39 @@ export default function StairEstimation() {
     } finally {
       setSaving(false);
     }
-  }, [projectData.projectId]);
+  }, [projectData.projectId, projectData.customerName, projectData.customerId, localConfig]);
+
+  const handleAllocated = useCallback((data) => {
+    setProjectData(prev => ({
+      ...prev,
+      projectId: data.id,
+      projectName: data.projectName,
+      projectNumber: data.projectNumber,
+      customerName: data.customerName,
+      customerId: data.customerId,
+      customerInfo: data.customerInfo
+    }));
+
+    // Update global context
+    setSelectedEstimation({
+      id: data.id,
+      projectName: data.projectName,
+      projectNumber: data.projectNumber,
+      customer_id: data.customerId,
+      customer_name: data.customerName
+    });
+
+    // Write to localStorage so other modules see it
+    localStorage.setItem(getContextKey(), JSON.stringify({
+      id: data.id,
+      projectName: data.projectName,
+      projectNumber: data.projectNumber,
+      customerName: data.customerName,
+      customerId: data.customerId
+    }));
+
+    toast.success('Estimations can now be saved to the project ✓');
+  }, [setSelectedEstimation]);
 
   // Global Save implementation
   useEffect(() => {
@@ -1440,7 +1504,7 @@ export default function StairEstimation() {
       });
 
     }, 400);
-  }, []);
+  }, [localConfig]);
 
   // Trigger live calc whenever stairs change, but NOT when we wrote results or restored from DB
   useEffect(() => {
@@ -2223,11 +2287,39 @@ export default function StairEstimation() {
       {/* ══ LEFT RAIL ══════════════════════════════════════════════════════ */}
       <aside className="sc-rail">
 
+        {/* Draft Mode / Create Project CTA */}
+        {!projectData.projectId && (
+          <div className="sc-rail-section" style={{ borderBottom: '2px solid #fbbf24', background: '#fffbeb', margin: '-16px -16px 16px -16px', padding: '16px' }}>
+            <div className="sc-rail-heading" style={{ color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Zap size={13} fill="#fbbf24" /> Draft Mode
+            </div>
+            <p style={{ fontSize: '11px', color: '#b45309', margin: '4px 0 12px', lineHeight: '1.4' }}>
+              You are working in draft mode. Allocating this to a project will save your progress.
+            </p>
+            <button 
+              className="confirm-btn-solid" 
+              style={{ width: '100%', fontSize: '11px', padding: '8px', background: '#d97706' }}
+              onClick={() => setShowAllocateModal(true)}
+            >
+              Allocate to Project
+            </button>
+          </div>
+        )}
+
         {/* Customer Information Card */}
         {projectData.customerInfo && (
           <div className="sc-rail-section" style={{ borderBottom: '2px solid var(--border-blueprint)', background: 'var(--color-primary-50)', margin: '-16px -16px 16px -16px', padding: '16px' }}>
-            <div className="sc-rail-heading" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary-700)' }}>
-              <Building2 size={13} /> Customer Details
+            <div className="sc-rail-heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--color-primary-700)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Building2 size={13} /> Customer Details
+              </div>
+              <button 
+                onClick={handleDisconnectProject}
+                className="text-[10px] uppercase font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 transition-colors"
+                title="Disconnect from Project & Return to Draft"
+              >
+                <X size={10} /> Cancel
+              </button>
             </div>
             <div className="sc-customer-card">
               <div className="sc-cust-primary">{projectData.customerInfo.company}</div>
@@ -2428,15 +2520,25 @@ export default function StairEstimation() {
             </div>
 
             <div className="sc-header-rates">
-              <div className="sc-rate-item">Steel <b>${configManager.get('steel_price_per_lb')}/lb</b></div>
+              <div className={`sc-rate-item ${localConfig.steel_price_per_lb ? 'text-blue-600 font-bold' : ''}`}>
+                Steel <b>${localConfig.steel_price_per_lb ?? configManager.get('steel_price_per_lb')}/lb</b>
+              </div>
               <div className="sc-rate-dot">·</div>
-              <div className="sc-rate-item">Shop <b>${configManager.get('shop_hourly_rate')}/hr</b></div>
+              <div className={`sc-rate-item ${localConfig.shop_hourly_rate ? 'text-blue-600 font-bold' : ''}`}>
+                Shop <b>${localConfig.shop_hourly_rate ?? configManager.get('shop_hourly_rate')}/hr</b>
+              </div>
               <div className="sc-rate-dot">·</div>
-              <div className="sc-rate-item">Field <b>${configManager.get('field_hourly_rate')}/hr</b></div>
+              <div className={`sc-rate-item ${localConfig.field_hourly_rate ? 'text-blue-600 font-bold' : ''}`}>
+                Field <b>${localConfig.field_hourly_rate ?? configManager.get('field_hourly_rate')}/hr</b>
+              </div>
               <div className="sc-rate-dot">·</div>
-              <div className="sc-rate-item">Scrap <b>{configManager.get('scrap_factor_pct')}%</b></div>
+              <div className={`sc-rate-item ${localConfig.scrap_factor_pct ? 'text-blue-600 font-bold' : ''}`}>
+                Scrap <b>{localConfig.scrap_factor_pct ?? configManager.get('scrap_factor_pct')}%</b>
+              </div>
               <div className="sc-rate-dot">·</div>
-              <div className="sc-rate-item">Tax <b>{(configManager.get('tax_rate') * 100).toFixed(1)}%</b></div>
+              <div className={`sc-rate-item ${localConfig.tax_rate ? 'text-blue-600 font-bold' : ''}`}>
+                Tax <b>{((localConfig.tax_rate ?? configManager.get('tax_rate')) * 100).toFixed(1)}%</b>
+              </div>
             </div>
           </div>
           <div className="sc-header-actions">
@@ -2697,6 +2799,7 @@ export default function StairEstimation() {
         onClose={() => setShowPricingModal(false)}
         localConfig={localConfig}
         setLocalConfig={setLocalConfig}
+        globalConfig={configManager.config || {}}
         onApply={calculateEstimation}
       />
 
@@ -2731,6 +2834,13 @@ export default function StairEstimation() {
           </motion.div>
         </div>
       )}
+
+      <AllocateProjectModal
+        isOpen={showAllocateModal}
+        onClose={() => setShowAllocateModal(false)}
+        onAllocate={handleAllocated}
+        initialData={{ projectName: projectData.projectName }}
+      />
 
     </div>
     </>

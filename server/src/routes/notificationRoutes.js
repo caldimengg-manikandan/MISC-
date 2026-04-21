@@ -13,7 +13,8 @@ const logger = require('../utils/logger');
 router.get('/', async (req, res) => {
   try {
     const [notifications] = await db.query(
-      `SELECT n.*, p.projectName, p.projectNumber
+      `SELECT n.id, n.user_id, n.project_id, n.type, n.message, n.is_read, 
+              n.createdAt as created_at, p.projectName, p.projectNumber
        FROM notifications n
        LEFT JOIN projects p ON n.project_id = p.id
        WHERE n.user_id = ?
@@ -55,6 +56,22 @@ router.patch('/mark-all-read', async (req, res) => {
   try {
     await db.query(
       'UPDATE notifications SET is_read = 1 WHERE user_id = ?',
+      [req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/notifications/clear
+// Delete all notifications for user
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/clear', async (req, res) => {
+  try {
+    await db.query(
+      'DELETE FROM notifications WHERE user_id = ?',
       [req.userId]
     );
     res.json({ success: true });

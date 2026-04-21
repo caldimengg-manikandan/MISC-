@@ -11,84 +11,10 @@ import {
   Box, Database, ArrowUpDown, ChevronDown
 } from 'lucide-react';
 import { useEstimation } from '../../contexts/EstimationContext';
+import AiHomeSearch from '../../components/ai/AiHomeSearch';
 import './EstimationDashboard.css';
 
-// ── Tab Bar ───────────────────────────────────────────────────────────────────
-const TABS = [
-  { id: 'dashboard',  label: 'Dashboard',     icon: <LayoutDashboard size={14} />, path: '/dashboard' },
-  { id: 'projects',   label: 'Projects',       icon: <FolderOpen size={14} />,     path: '/estimations' },
-  { id: 'estimate',   label: 'New Estimation', icon: <PenLine size={14} />,        path: null,
-    children: [
-      { label: 'Stair & Railings', icon: <Box size={13} />,        path: '/estimate/stair-railings' },
-      { label: 'Railings',         icon: <Database size={13} />,    path: '/estimate/railings' },
-      { label: 'Ladders',          icon: <ArrowUpDown size={13} />, path: '/estimate/ladders' },
-      { label: 'Bollards & Gates', icon: <Box size={13} />,        path: '/estimate/bollards' },
-    ],
-  },
-  { id: 'reports',    label: 'Reports',        icon: <BarChart3 size={14} />,      path: '/reports' },
-];
 
-function TabBar({ navigate }) {
-  const [estimateOpen, setEstimateOpen] = useState(false);
-  const dropdownRef = useRef();
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = e => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setEstimateOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  return (
-    <div className="dash-tab-bar">
-      {TABS.map(tab => {
-        if (tab.children) {
-          return (
-            <div key={tab.id} className="dash-tab-dropdown" ref={dropdownRef}>
-              <button
-                className={`dash-tab ${estimateOpen ? 'active' : ''}`}
-                onClick={() => setEstimateOpen(o => !o)}
-              >
-                {tab.icon}
-                {tab.label}
-                <ChevronDown size={12} style={{ marginLeft: 2, opacity: 0.7 }} />
-              </button>
-              {estimateOpen && (
-                <div className="dash-tab-dropdown-menu">
-                  {tab.children.map(child => (
-                    <button
-                      key={child.path}
-                      className="dash-dropdown-item"
-                      onClick={() => { setEstimateOpen(false); navigate(child.path); }}
-                    >
-                      {child.icon}
-                      {child.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        }
-
-        return (
-          <button
-            key={tab.id}
-            className="dash-tab"
-            onClick={() => tab.path && navigate(tab.path)}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 // ── Dashboard Page ────────────────────────────────────────────────────────────
 export default function EstimationDashboard() {
@@ -153,8 +79,7 @@ export default function EstimationDashboard() {
       {/* ── GPT-style home header ── */}
       <div className="dash-home">
         <h1 className="dash-greeting">Ready when you are.</h1>
-        <TabBar navigate={navigate} />
-        <div className="dash-divider" />
+        <AiHomeSearch />
       </div>
 
       {/* ── Dashboard data ── */}

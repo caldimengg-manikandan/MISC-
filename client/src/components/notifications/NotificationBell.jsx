@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Check, CheckCheck, FolderOpen, X } from 'lucide-react';
+import { Bell, Check, CheckCheck, FolderOpen, Trash2, X, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../config/api';
 
@@ -23,13 +23,18 @@ const TYPE_COLORS = {
 };
 
 const timeAgo = (dateStr) => {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  
+  const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 };
 
 export default function NotificationBell() {
@@ -37,6 +42,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const panelRef = useRef(null);
   const navigate = useNavigate();
 
@@ -66,7 +72,10 @@ export default function NotificationBell() {
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
+      if (panelRef.current && !panelRef.current.contains(e.target)) {
+        setOpen(false);
+        setConfirmClear(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -92,6 +101,23 @@ export default function NotificationBell() {
       });
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
       setUnreadCount(0);
+    } catch {}
+    setLoading(false);
+  };
+
+  const clearAll = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/clear`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setConfirmClear(false);
+      }
     } catch {}
     setLoading(false);
   };
@@ -123,7 +149,7 @@ export default function NotificationBell() {
       </button>
 
       {/* Dropdown Panel */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {open && (
           <motion.div
             initial={{ opacity: 0, y: 8, scale: 0.97 }}
@@ -132,36 +158,72 @@ export default function NotificationBell() {
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className="absolute right-0 top-full mt-2 w-[380px] bg-white rounded-2xl border border-slate-100 shadow-2xl shadow-slate-200/50 z-50 overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-50">
-              <div className="flex items-center gap-2">
-                <Bell size={15} className="text-slate-700" />
-                <span className="text-sm font-bold text-slate-900">Notifications</span>
-                {unreadCount > 0 && (
-                  <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[9px] font-black rounded-full">
-                    {unreadCount} new
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllRead}
-                    disabled={loading}
-                    className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-all"
-                  >
-                    <CheckCheck size={11} />
-                    Mark all read
-                  </button>
-                )}
-                <button onClick={() => setOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition-all">
-                  <X size={14} />
-                </button>
-              </div>
+            {/* Header / Dynamic confirmation area */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-50 bg-white">
+              {!confirmClear ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Bell size={15} className="text-slate-700" />
+                    <span className="text-sm font-bold text-slate-900">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[9px] font-black rounded-full">
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {notifications.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => setConfirmClear(true)}
+                          disabled={loading}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          title="Clear all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          onClick={markAllRead}
+                          disabled={loading}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-all"
+                          title="Mark all read"
+                        >
+                          <CheckCheck size={14} />
+                        </button>
+                      </>
+                    )}
+                    <button onClick={() => setOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition-all">
+                      <X size={14} />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between w-full animate-in slide-in-from-right-2 duration-200">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <AlertCircle size={14} />
+                    <span className="text-xs font-bold">Clear all history?</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={clearAll}
+                      disabled={loading}
+                      className="px-3 py-1 bg-red-500 text-white text-[10px] font-black rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      CLEAR
+                    </button>
+                    <button 
+                      onClick={() => setConfirmClear(false)}
+                      className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      NO
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notification List */}
-            <div className="overflow-y-auto max-h-[420px]">
+            <div className={`overflow-y-auto max-h-[420px] transition-all ${confirmClear ? 'opacity-40 grayscale' : ''}`}>
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                   <Bell size={28} className="mb-3 opacity-30" />
@@ -173,9 +235,8 @@ export default function NotificationBell() {
                   <button
                     key={notif.id}
                     onClick={() => handleNotifClick(notif)}
-                    className={`w-full flex items-start gap-3 p-4 text-left hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0 ${!notif.is_read ? 'bg-blue-50/30' : ''}`}
+                    className={`w-full flex items-start gap-3 p-4 text-left hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0 ${!notif.is_read ? 'bg-blue-50/10' : ''}`}
                   >
-                    {/* Type indicator dot */}
                     <div className={`mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${TYPE_COLORS[notif.type] || 'bg-slate-50 text-slate-500'}`}>
                       <FolderOpen size={14} />
                     </div>
@@ -196,8 +257,9 @@ export default function NotificationBell() {
               )}
             </div>
 
-            {notifications.length > 0 && (
-              <div className="p-3 border-t border-slate-50 text-center">
+            {/* Footer */}
+            {notifications.length > 0 && !confirmClear && (
+              <div className="p-3 border-t border-slate-50 text-center bg-slate-50/20">
                 <p className="text-[10px] text-slate-400">Showing last 50 notifications</p>
               </div>
             )}

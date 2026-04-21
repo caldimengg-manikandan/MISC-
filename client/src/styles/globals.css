@@ -850,6 +850,90 @@ body {
 }
 
 /* ===================== TOP HEADER — GPT STYLE ===================== */
+/* ── Global Header Navigation Tab Bar ── */
+.header-nav-pill-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px;
+  background: var(--gpt-body-bg);
+  border: 1px solid var(--gpt-border);
+  border-radius: 999px;
+  margin: 0 16px;
+  height: 34px;
+}
+
+.header-nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gpt-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.header-nav-tab:hover {
+  color: var(--gpt-text-primary);
+  background: rgba(0,0,0,0.05);
+}
+
+.header-nav-tab.active {
+  background: var(--gpt-text-primary);
+  color: #ffffff;
+}
+
+.header-nav-dropdown {
+  position: relative;
+}
+
+.header-nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 190px;
+  background: var(--gpt-surface);
+  border: 1px solid var(--gpt-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  padding: 5px;
+  z-index: 1000;
+}
+
+.header-nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--gpt-text-primary);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.header-nav-dropdown-item:hover {
+  background: var(--gpt-body-bg);
+}
+
+.header-nav-dropdown-item svg {
+  color: var(--gpt-text-muted);
+  flex-shrink: 0;
+}
+
 .top-header {
   height: var(--gpt-header-height);
   background: var(--gpt-header-bg);

@@ -19,6 +19,7 @@ import SupportCenter from '../pages/Support/SupportCenter';
 
 // Modules
 import StairConfig from '../modules/Stair/StairConfig';
+import RailingsConfig from '../modules/Rail/RailingsConfig';
 
 // Common
 import Placeholder from '../components/common/PlaceholderModule';
@@ -49,7 +50,7 @@ const AppRoutes = () => {
       
       {/* Estimation Modules */}
       <Route path="/estimate/stair-railings" element={<EngRoute element={<StairConfig />} />} />
-      <Route path="/estimate/railings" element={<EngRoute element={<Placeholder type="Railings" />} />} />
+      <Route path="/estimate/railings" element={<EngRoute element={<RailingsConfig />} />} />
       <Route path="/estimate/ladders" element={<EngRoute element={<Placeholder type="Ladders" />} />} />
       <Route path="/estimate/bollards" element={<EngRoute element={<Placeholder type="Bollards" />} />} />
       <Route path="/estimate/gates" element={<EngRoute element={<Placeholder type="Gates" />} />} />

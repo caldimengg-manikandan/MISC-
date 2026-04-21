@@ -137,9 +137,9 @@ router.get('/check-duplicate', auth, async (req, res) => {
       FROM projects p
       LEFT JOIN users u ON p.engineerId = u.id 
       WHERE p.company_id = ? 
-      AND (p.projectName = ? OR p.projectNumber = ?)
+      AND (p.projectName LIKE ? OR p.projectNumber LIKE ?)
     `;
-    let params = [cid, (projectName || '___NONE___').toString(), (projectNumber || '___NONE___').toString()];
+    let params = [cid, `%${projectName || '___NONE___'}%`, `%${projectNumber || '___NONE___'}%` ];
 
     if (excludeId && excludeId !== 'null' && excludeId !== 'undefined' && excludeId !== '') {
       query += " AND p.id != ?";
@@ -170,9 +170,7 @@ router.get('/check-duplicate', auth, async (req, res) => {
     );
 
     // Normalize results for frontend (camelCase)
-    const nameHistory = results
-      .filter(p => (p.projectName || '').toLowerCase() === targetName)
-      .map(p => ({
+    const nameHistory = results.map(p => ({
         ...p,
         customerName: p.customer_name,
         customerId: p.customer_id,
@@ -259,7 +257,8 @@ router.post('/upsert', auth, async (req, res) => {
       assigned_engineer_name,
       enquiryDate,
       submissionDeadline,
-      status
+      status,
+      localConfig
     } = req.body;
     
     if (!projectNumber || !projectName) {
@@ -288,6 +287,7 @@ router.post('/upsert', auth, async (req, res) => {
     const stairsJson = JSON.stringify(Array.isArray(stairs) ? stairs : []);
     const guardRailsJson = JSON.stringify(Array.isArray(guardRails) ? guardRails : []);
     const customRailValuesJson = JSON.stringify(customRailValues || {});
+    const localConfigJson = JSON.stringify(localConfig || {});
 
     if (existingProject) {
       // Update existing
@@ -296,14 +296,14 @@ router.post('/upsert', auth, async (req, res) => {
           projectNumber = ?, projectName = ?, customer_name = ?, customer_id = ?, project_location = ?, 
           architect = ?, eor = ?, gc_name = ?, detailer = ?, vendor_name = ?, 
           aisc_certified = ?, units = ?, notes = ?, stairs = ?, guardRails = ?, 
-          customRailValues = ?, assignedEngineer = ?, assigned_engineer_id = ?, engineerId = ?, 
+          customRailValues = ?, localConfig = ?, assignedEngineer = ?, assigned_engineer_id = ?, engineerId = ?, 
           enquiryDate = ?, submissionDeadline = ?, status = ?, updatedAt = GETDATE() 
         WHERE id = ? AND company_id = ? AND (userId = ? OR createdBy = ? OR engineerId = ?)`,
         [
           projectNumber, projectName, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
-          stairsJson, guardRailsJson, customRailValuesJson, 
+          stairsJson, guardRailsJson, customRailValuesJson, localConfigJson,
           assignedEngineer || assigned_engineer_name || null, 
           assigned_engineer_id || null, // set assigned_engineer_id
           assigned_engineer_id || null, // set engineerId
@@ -324,7 +324,7 @@ router.post('/upsert', auth, async (req, res) => {
         `INSERT INTO projects 
           (projectNumber, projectName, userId, createdBy, company_id, customer_name, customer_id, project_location, 
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units, 
-           notes, stairs, guardRails, customRailValues, status, workflow_status, 
+           notes, stairs, guardRails, customRailValues, localConfig, status, workflow_status, 
            assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline) 
         OUTPUT INSERTED.id
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, ?, ?)`,
@@ -332,7 +332,7 @@ router.post('/upsert', auth, async (req, res) => {
           projectNumber, projectName, userId, userId, req.companyId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
-          stairsJson, guardRailsJson, customRailValuesJson, status || 'Project Created',
+          stairsJson, guardRailsJson, customRailValuesJson, localConfigJson, status || 'Project Created',
           assignedEngineer || assigned_engineer_name || null,
           assigned_engineer_id || userId,
           assigned_engineer_id || userId,
@@ -445,6 +445,7 @@ router.get('/:projectId', auth, async (req, res) => {
     project.guardRails = tryParseJson(project.guardRails);
     project.customRailValues = tryParseJson(project.customRailValues);
     project.estimationResult = tryParseJson(project.estimationResult);
+    project.localConfig = tryParseJson(project.localConfig);
     
     res.json({ success: true, project });
   } catch (error) {

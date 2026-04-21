@@ -22,6 +22,8 @@ export default function ProjectHistory() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        const savedInfo = localStorage.getItem(getContextKey());
+        const parsed = savedInfo ? JSON.parse(savedInfo) : {};
         const token = localStorage.getItem('steel_token');
         if (!token) {
           navigate('/login');
@@ -53,14 +55,15 @@ export default function ProjectHistory() {
 
   const handleSelectProject = (project) => {
     // Save to local storage for estimation module
-    localStorage.setItem('steelProjectInfo', JSON.stringify({
+    const modulePath = '/estimate/stair-railings';
+    localStorage.setItem(`steelProjectInfo_${modulePath}`, JSON.stringify({
       id: project.id,
       projectName: project.projectName,
       projectNumber: project.projectNumber,
       customerName: project.customerName || '',
       projectLocation: project.projectLocation || ''
     }));
-    navigate('/estimate/stair-railings');
+    navigate(modulePath);
   };
 
   return (

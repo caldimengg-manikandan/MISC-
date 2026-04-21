@@ -5,19 +5,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  padding: 48px 24px;
+  justify-content: flex-start;
+  padding: 60px 24px 30px;
   text-align: center;
 }
 
 .dash-greeting {
-  font-size: 32px;
+  font-size: 38px;
   font-weight: 600;
   color: var(--gpt-text-primary);
-  letter-spacing: -0.5px;
-  margin-bottom: 36px;
-  font-family: 'DM Sans', sans-serif;
+  letter-spacing: -0.8px;
+  margin-bottom: 24px;
+  font-family: 'Outfit', 'Inter', sans-serif;
 }
 
 /* ── Pill Tab Bar ── (matches user screenshot) */
@@ -29,8 +28,8 @@
   background: var(--gpt-surface);
   border: 1.5px solid var(--gpt-border);
   border-radius: 999px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 12px;
 }
 
 .dash-tab {

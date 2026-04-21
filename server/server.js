@@ -46,6 +46,7 @@ const debugRoutes = require('./src/routes/debug');
 const noteRoutes = require('./src/routes/notes');
 const customerRoutes = require('./src/routes/customer.routes');
 const reportRoutes = require('./src/routes/reportRoutes');
+const agentRoutes  = require('./src/routes/agentRoutes');
 // Remove duplicate import: const excelDebugRoutes = require('./src/routes/excelDebugRoutes');
 
 console.log('🚀 SERVER READY - BULK DELETE RECONFIGURED');
@@ -312,6 +313,7 @@ app.use('/api/notes', authMiddleware, noteRoutes);
 app.use('/api/customers', authMiddleware, customerRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/agent',   authMiddleware, agentRoutes);
 
 // IMPORTANT: Make sure you have this route for flight geometry
 // This should already be in your projectRoutes file

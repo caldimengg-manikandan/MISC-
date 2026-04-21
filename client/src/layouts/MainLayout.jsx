@@ -1,5 +1,5 @@
 // client/src/layouts/MainLayout.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useEstimation } from '../contexts/EstimationContext';
@@ -16,6 +16,7 @@ import ProfileContextMenu from '../components/ProfileContextMenu';
 import ToolsDock from '../modules/Stair/components/ToolsDock';
 import StickyNote from '../modules/Stair/components/StickyNote';
 import NotificationBell from '../components/notifications/NotificationBell';
+import AiChatButton from '../components/ai/AiChatButton';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../config/api';
 
@@ -148,6 +149,94 @@ const SidebarProjectRenderer = ({ p, navigate, isRecent = false, useEstimation }
   );
 };
 
+// ── Global Header Navigation Definition ───────────────────────────────────────
+const HEADER_TABS = [
+  { id: 'dashboard',  label: 'Dashboard',     icon: <LayoutDashboard size={14} />, path: '/dashboard' },
+  { id: 'estimations', label: 'Projects', icon: <FolderOpen size={14} />, path: '/estimations' },
+  { id: 'estimate',   label: 'New Estimation', icon: <PenLine size={14} />,        path: null,
+    children: [
+      { label: 'Stair & Railings', icon: <Box size={13} />,        path: '/estimate/stair-railings' },
+      { label: 'Railings',         icon: <Database size={13} />,    path: '/estimate/railings' },
+      { label: 'Ladders',          icon: <ArrowUpDown size={13} />, path: '/estimate/ladders' },
+      { label: 'Bollards & Gates', icon: <Box size={13} />,        path: '/estimate/bollards' },
+    ],
+  },
+  { id: 'reports',    label: 'Reports',        icon: <BarChart3 size={14} />,      path: '/reports' },
+];
+
+const HeaderTabBar = ({ navigate, activePath }) => {
+  const [estimateOpen, setEstimateOpen] = useState(false);
+  const dropdownRef = useRef();
+
+  useEffect(() => {
+    const handler = e => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setEstimateOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="header-nav-pill-bar">
+      {HEADER_TABS.map(tab => {
+        const isActive = activePath === tab.path || (tab.id === 'estimate' && activePath.startsWith('/estimate'));
+        
+        if (tab.children) {
+          return (
+            <div key={tab.id} className="header-nav-dropdown" ref={dropdownRef}>
+              <button
+                className={`header-nav-tab ${isActive || estimateOpen ? 'active' : ''}`}
+                onClick={() => setEstimateOpen(o => !o)}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+                <ChevronDown size={11} style={{ marginLeft: 2, opacity: 0.7 }} />
+              </button>
+              <AnimatePresence>
+                {estimateOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    className="header-nav-dropdown-menu"
+                    style={{ zIndex: 10001 }}
+                  >
+                    {tab.children.map(child => (
+                      <button
+                        key={child.path}
+                        className="header-nav-dropdown-item"
+                        onClick={() => { 
+                          setEstimateOpen(false); 
+                          if (window.handleNav) window.handleNav(child.path);
+                          else navigate(child.path);
+                        }}
+                      >
+                        {child.icon}
+                        <span>{child.label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={tab.id}
+            className={`header-nav-tab ${isActive ? 'active' : ''}`}
+            onClick={() => tab.path && navigate(tab.path)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 // ── Main Layout ───────────────────────────────────────────────────────────────
 export default function MainLayout({ children }) {
   const navigate = useNavigate();
@@ -162,6 +251,8 @@ export default function MainLayout({ children }) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting]   = useState(false);
   const [isSaving, setIsSaving]     = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [pendingNav, setPendingNav] = useState(null);
 
   // Global Save Handler (triggers app:save event)
   const triggerGlobalSave = () => {
@@ -402,9 +493,68 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
+  // Helper to get module-specific context key
+  const getContextKey = (path = location.pathname) => {
+    const base = path.split('?')[0];
+    return `steelProjectInfo_${base}`;
+  };
 
+  const handleNavWithDraftCheck = (path) => {
+    const isNewEstimationItem = NAV_ITEMS.find(n => n.id === 'estimate')?.children.some(c => c.path === path);
+    
+    if (isNewEstimationItem) {
+      const savedInfo = localStorage.getItem(getContextKey(path));
+      if (savedInfo) {
+        try {
+          const parsed = JSON.parse(savedInfo);
+          // 1. If it's a DRAFT (no ID)
+          if (!parsed.id) {
+            setPendingNav(path);
+            setShowResumeModal(true);
+            return;
+          }
+          // 2. If it's a REAL project (has ID)
+          const confirmLeave = window.confirm(`You are currently editing "${parsed.projectName || 'a project'}". \n\nLeave this project and start a NEW estimation?`);
+          if (!confirmLeave) return;
+
+          localStorage.removeItem(getContextKey(path));
+          localStorage.removeItem('stair_draft_global');
+          localStorage.removeItem('railings_draft_global');
+          setSelectedEstimation(null); 
+        } catch (e) {}
+      }
+    }
+    navigate(path);
+  };
+
+  useEffect(() => {
+    window.handleNav = handleNavWithDraftCheck;
+    return () => { delete window.handleNav; };
+  }, [handleNavWithDraftCheck]);
+
+  const handleResumeDraft = () => {
+    navigate(pendingNav);
+    setShowResumeModal(false);
+    setPendingNav(null);
+  };
+
+  const handleStartFresh = () => {
+    const key = getContextKey(pendingNav);
+    localStorage.removeItem(key);
+    localStorage.removeItem('stair_draft_global');
+    localStorage.removeItem('railings_draft_global');
+    setSelectedEstimation(null);
+    if (location.pathname === pendingNav) {
+      window.location.reload(); 
+    } else {
+      navigate(pendingNav);
+    }
+    setShowResumeModal(false);
+    setPendingNav(null);
+  };
 
   const activePath = location.pathname;
+
 
   // Fetch projects for sidebar list (limit to 15 most recent)
   useEffect(() => {
@@ -428,7 +578,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
     }
     // 2. Fallback to localStorage if we are in estimation module
     else if (location.pathname.startsWith('/estimate')) {
-      const savedInfo = localStorage.getItem('steelProjectInfo');
+      const savedInfo = localStorage.getItem(getContextKey());
       if (savedInfo) {
         try {
           const parsed = JSON.parse(savedInfo);
@@ -536,7 +686,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                       <SubMenu
                         items={item.children.filter(c => !c.adminOnly || user?.role === 'admin')}
                         activePath={activePath}
-                        onNavigate={navigate}
+                        onNavigate={handleNavWithDraftCheck}
                       />
                     )}
                   </AnimatePresence>
@@ -629,16 +779,8 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
             <ChevronDown size={14} />
           </button>
 
-          <nav className="header-breadcrumb">
-            {crumbs.map((c, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <span className="header-breadcrumb-sep">›</span>}
-                <span className={`header-breadcrumb-item ${i === crumbs.length - 1 ? 'current' : ''}`}>
-                  {c}
-                </span>
-              </React.Fragment>
-            ))}
-          </nav>
+          {/* Centralized Navigation Pill Bar */}
+          <HeaderTabBar navigate={navigate} activePath={activePath} />
 
           <div className="header-actions">
             <button 
@@ -758,6 +900,54 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
         {/* Global Tools Dock (Fixed Right) */}
         {selectedEstimation?.id && <ToolsDock />}
       </div>
+      {/* ── Resume / Fresh Start Modal ── */}
+      {showResumeModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                  <PenLine size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">Unsaved Session Found</h3>
+                  <p className="text-slate-500 text-sm">We found a recent draft in your session.</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100 italic text-slate-600 text-sm">
+                "You have an ongoing estimation that hasn't been saved to a project yet. How would you like to proceed?"
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleResumeDraft}
+                  className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all text-sm flex items-center justify-center gap-2"
+                >
+                  <PenLine size={14} /> Resume Current Draft
+                </button>
+                <button 
+                  onClick={handleStartFresh}
+                  className="w-full px-4 py-3 rounded-xl border border-rose-200 text-rose-600 font-semibold hover:bg-rose-50 transition-all text-sm flex items-center justify-center gap-2"
+                >
+                  🗑️ Discard & Start New
+                </button>
+                <button 
+                  onClick={() => { setShowResumeModal(false); setPendingNav(null); }}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-all text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
     </div>
   );
 }
