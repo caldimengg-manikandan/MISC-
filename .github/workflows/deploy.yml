@@ -47,6 +47,7 @@ jobs:
             cd /var/www/misc
 
             # Pull latest code
+            git checkout server/package-lock.json || true
             git pull origin master
             echo "✅ Code updated"
 
