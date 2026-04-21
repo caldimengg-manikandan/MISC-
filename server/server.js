@@ -116,15 +116,25 @@ app.use(helmet({
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
       'http://localhost:3001',
-      'http://localhost:5173' // Vite dev server
-    ];
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000'
+    ].filter(Boolean);
 
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1 || !process.env.NODE_ENV || process.env.NODE_ENV === 'development' || /192\.168\.\d+\.\d+/.test(origin)) {
+    // Dynamic check: Allow any origin in dev, or check whitelist in prod
+    const isAllowed = allowedOrigins.includes(origin) || 
+                     !process.env.NODE_ENV || 
+                     process.env.NODE_ENV === 'development' || 
+                     /192\.168\.\d+\.\d+/.test(origin) ||
+                     (origin && origin.includes('caldimproducts.com')); // Auto-allow your domain
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       logger.warn(`CORS blocked origin: ${origin}`);
@@ -315,32 +325,35 @@ app.use('/api/admin', authMiddleware, adminRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/agent',   authMiddleware, agentRoutes);
 
-// IMPORTANT: Make sure you have this route for flight geometry
-// This should already be in your projectRoutes file
+// ================ SERVE CLIENT (VPS READY) ================
+
+// Serve static files from the React app
+const clientBuildPath = path.join(__dirname, '../client/build');
+if (fs.existsSync(clientBuildPath)) {
+  app.use(express.static(clientBuildPath));
+  logger.info(`Serving static files from: ${clientBuildPath}`);
+} else {
+  logger.warn(`Client build path not found: ${clientBuildPath}. Make sure to run 'npm run build' in client folder.`);
+}
 
 // ================ ERROR HANDLING ================
 
-// 404 handler with detailed logging
-app.use('*', (req, res) => {
-  const requestId = crypto.randomBytes(16).toString('hex');
-
-  logger.warn(`Route not found: ${req.originalUrl}`, {
-    requestId,
-    ip: req.ip,
-    method: req.method,
-    userAgent: req.get('User-Agent'),
-    referrer: req.get('Referer'),
-    timestamp: new Date().toISOString()
-  });
-
+// API Health check already defined above, but ensure it captures 404s for /api
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found',
-    requestId,
-    path: req.originalUrl,
-    method: req.method,
-    suggestion: 'Check the API documentation at /api/docs'
+    message: `API endpoint not found: ${req.originalUrl}`
   });
+});
+
+// The "catchall" handler: for any request that doesn't match an API route, send back React's index.html file.
+app.get('*', (req, res) => {
+  const indexFile = path.join(__dirname, '../client/build/index.html');
+  if (fs.existsSync(indexFile)) {
+    res.sendFile(indexFile);
+  } else {
+    res.status(404).send('Frontend not built. If this is the API, check your path.');
+  }
 });
 
 // Global error handler with detailed logging
@@ -435,7 +448,15 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // ================ START SERVER ================
 
-const PORT = process.env.PORT || 5000;
+// Handle PORT from arguments (for PM2: -- --port 5001) or Env
+let PORT = process.env.PORT || 5000;
+
+// Simple command line arg parser for --port
+const portArgIndex = process.argv.indexOf('--port');
+if (portArgIndex > -1 && process.argv[portArgIndex + 1]) {
+  PORT = process.argv[portArgIndex + 1];
+}
+
 const server = app.listen(PORT, '0.0.0.0', () => {
   const { address, port } = server.address();
   const actualPort = typeof port === 'string' ? port : port.toString();

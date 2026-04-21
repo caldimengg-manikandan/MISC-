@@ -48,18 +48,15 @@ jobs:
             git pull origin master
             echo "✅ Code updated"
 
-            # --- Backend ---
-            cd /var/www/misc/server
-            npm install --omit=dev
+            # --- Backend & Process Management ---
+            cd /var/www/misc
+            npm install --prefix server --omit=dev
             echo "✅ Backend dependencies installed"
 
-            # Restart PM2 (or start if not running)
-            pm2 restart misc-automation || pm2 start server.js \
-              --name misc-automation \
-              --env production \
-              -- --port 5001
+            # Restart PM2 using the ecosystem file for consistency
+            pm2 startOrReload ecosystem.config.js --env production
             pm2 save
-            echo "✅ Backend restarted"
+            echo "✅ Application restarted with PM2"
 
             echo "🏆 Deployment finished!"
 
