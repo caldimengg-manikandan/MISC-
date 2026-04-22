@@ -29,11 +29,14 @@ router.post('/chat', authMiddleware, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Message is required' });
   }
 
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] ?? req.ip;
+
   const context = {
     userId:    req.userId,
     companyId: req.companyId,
     role:      req.userRole || req.user?.role || 'estimator',
-    chatId:    chatId || null
+    chatId:    chatId || null,
+    ip:        ip
   };
 
   res.setHeader('Content-Type', 'text/event-stream');

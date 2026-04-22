@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   FileCode2, Megaphone, Clock,
   MessageSquare, Sun, Moon, Monitor, X, Download, PlusSquare, Image as ImageIcon,
-  Trash2, RotateCcw, Calculator, UploadCloud
+  Trash2, RotateCcw, Calculator, UploadCloud, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEstimation } from '../../../contexts/EstimationContext';
@@ -15,6 +15,7 @@ export default function ToolsDock() {
     trashNotes, fetchTrashNotes, restoreNote, permanentlyDeleteNote, notes
   } = useEstimation();
   const [activePopover, setActivePopover] = useState(null);
+  const [isDockVisible, setIsDockVisible] = useState(true);
   const dockRef = useRef(null);
 
   // Close any open popover when clicking outside the dock
@@ -160,7 +161,17 @@ export default function ToolsDock() {
 
   return (
     <>
-      <div className="tdk-root" ref={dockRef}>
+      <div 
+        className="tdk-root" 
+        ref={dockRef}
+        style={{ transform: isDockVisible ? 'translateX(0)' : 'translateX(100%)' }}
+      >
+        <button 
+          className="tdk-toggle-btn"
+          onClick={() => setIsDockVisible(!isDockVisible)}
+        >
+          {isDockVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
         
         {/* Top Group */}
         <div className="tdk-group">

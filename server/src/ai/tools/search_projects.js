@@ -39,7 +39,7 @@ async function search_projects({ userId, companyId, role, params = {} }) {
     sqlParams.push(userId, userId, userId);
   }
 
-  sql += ' ORDER BY updatedAt DESC LIMIT ?';
+  sql += ' ORDER BY updatedAt DESC OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY';
   sqlParams.push(limit);
 
   const [rows] = await db.query(sql, sqlParams);

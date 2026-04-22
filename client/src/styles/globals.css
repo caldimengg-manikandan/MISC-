@@ -1073,7 +1073,7 @@ body {
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
-  padding: 28px 80px 110px 32px;
+  padding: 16px 20px 20px 20px;
 }
 
 /* ===================== PAGE ===================== */

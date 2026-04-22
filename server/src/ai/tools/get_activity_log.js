@@ -33,7 +33,7 @@ async function get_activity_log({ userId, companyId, role, params = {} }) {
   }
 
   const [projRows] = await db.query(
-    `SELECT id, projectName, projectNumber FROM projects p ${projWhere} LIMIT 1`,
+    `SELECT TOP 1 id, projectName, projectNumber FROM projects p ${projWhere}`,
     projParams
   );
 
@@ -55,7 +55,7 @@ async function get_activity_log({ userId, companyId, role, params = {} }) {
       LEFT JOIN users u ON wh.changedBy = u.id
       WHERE wh.projectId = ?
       ORDER BY wh.changedAt DESC
-      LIMIT ?
+      OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
     `, [resolvedProjectId, limit]);
 
     activityRows = histRows;

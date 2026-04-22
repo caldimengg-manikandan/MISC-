@@ -30,7 +30,7 @@ const STATIC_PATTERNS = [
 ];
 
 const DYNAMIC_PATTERNS = [
-  /\b(my|our)\s+(project|estimate|job|work|deadline)\b/i,
+  /\b(my|our)\s+(current|active|recent|latest|assigned|upcoming|overall)?\s*(project|estimate|job|work|deadline|account)s?\b/i,
   /\bproject\s+(named?|number|#|called|id)\s+\S+/i,
   /\bshow\s+(me)?\s+my\s+project/i,
   /\b(total\s+cost|estimated\s+cost|grand\s+total|how\s+much)\b.*\b(project|job|estimate)\b/i,
@@ -64,6 +64,15 @@ const ADMIN_ONLY_PATTERNS = [
 function classifyQuery(query, role) {
   const isAdmin = role === 'admin' || role === 'owner';
   const normalizedRole = (role || 'estimator').toLowerCase();
+
+  // Direct response overrides
+  if (/\bhow\s+(can|do|to)\s+(i\s+)?change\s+(the\s+)?(pricing|rates?)\b/i.test(query)) {
+    return {
+      type: 'DIRECT',
+      responseText: "Go to Settings → Pricing Settings. You need admin role to change global rates. Estimators can set project-level overrides in the Local Pricing Overrides modal.",
+      adminRequired: false
+    };
+  }
 
   // Check admin-only queries first
   const adminRequired = ADMIN_ONLY_PATTERNS.some(p => p.test(query));

@@ -40,7 +40,7 @@ async function get_company_metrics({ userId, companyId, role, params = {} }) {
     FROM projects
     WHERE company_id = ?
     ORDER BY updatedAt DESC
-    LIMIT 5
+    OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY
   `, [companyId]);
 
   const statusMap = {};

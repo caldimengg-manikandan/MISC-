@@ -39,7 +39,7 @@ async function get_project_detail({ userId, companyId, role, params = {} }) {
     SELECT 
       p.id, p.projectNumber, p.projectName, p.customer_name,
       p.customer_id, p.projectLocation, p.status, p.workflow_status,
-      p.submissionDeadline, p.updatedAt, p.createdAt,
+      p.submissionDeadline, p.updatedAt, p.created_at,
       p.totalWeight, p.totalCost, p.estimationResult, p.localConfig,
       p.architect, p.eor, p.gcName, p.detailer, p.vendorName,
       p.aiscCertified, p.units, p.assignedEngineer,
@@ -51,7 +51,7 @@ async function get_project_detail({ userId, companyId, role, params = {} }) {
     LEFT JOIN customers c ON p.customer_id = c.id
     ${whereClause}
     ORDER BY p.updatedAt DESC
-    LIMIT 5
+    OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY
   `;
 
   const [rows] = await db.query(query, queryParams);

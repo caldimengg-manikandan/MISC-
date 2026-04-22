@@ -8,7 +8,8 @@ import {
 import { 
   ChevronLeft, ChevronRight, Search, ArrowRight, Send, Plus,
   FileText, HardDrive, Globe, Palette, Lightbulb, Zap,
-  Calculator, Scale, List, Layout, X
+  Calculator, Scale, List, Layout, X, FolderOpen,
+  Copy, ThumbsUp, ThumbsDown, Share2, RotateCcw, MoreHorizontal, Check
 } from 'lucide-react';
 import { useEstimation } from '../../contexts/EstimationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -91,26 +92,95 @@ const PlusMenu = ({ isOpen, onClose, onSelect }) => {
 };
 
 // 2. Chat Message Bubble
-const ChatMessage = ({ msg, isBot, userInitials }) => (
-  <div className={`dcp-msg-row ${isBot ? 'assistant' : 'user'}`}>
-    {isBot && <div className="dcp-av bot">AI</div>}
-    <div className={`dcp-bubble ${isBot ? 'bot' : 'usr'}`}>
-      {isBot ? (
-        <div className="markdown-content" dangerouslySetInnerHTML={{ __html: renderContent(msg.content) }} />
-      ) : (
-        <div className="user-content">
-          {msg.content}
-          {msg.attachments?.map((f, idx) => (
-            <div key={idx} className="msg-attachment-pill">
-              <FileText size={12} /> <span>{f.name}</span>
-            </div>
-          ))}
+const ChatMessage = ({ msg, isBot, userInitials, isStreaming, onRegenerate }) => {
+  const [copied, setCopied] = React.useState(false);
+  const [feedback, setFeedback] = React.useState(null); // 'up' or 'down'
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(msg.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleFeedback = (type) => {
+    setFeedback(type);
+    // In a real app, send to API here
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: 'MISC AI Response', text: msg.content, url: window.location.href });
+    } else {
+      handleCopy();
+    }
+  };
+
+  return (
+    <div className={`dcp-msg-row ${isBot ? 'assistant' : 'user'}`} style={{ animation: 'dcp-fade-in 0.3s ease-out' }}>
+      {isBot && (
+        <div className={`dcp-av bot ${isStreaming ? 'ai-avatar-thinking' : ''}`}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L14.83 8.39L22 12L14.83 15.61L12 22L9.17 15.61L2 12L9.17 8.39L12 2Z" fill="white"/>
+          </svg>
         </div>
       )}
+      
+      <div className="dcp-msg-content-wrap">
+        <div className={`dcp-bubble ${isBot ? 'bot' : 'usr'}`}>
+          {isBot ? (
+            <div className="markdown-content">
+              <div dangerouslySetInnerHTML={{ __html: renderContent(msg.content) }} />
+              {isStreaming && <span className="ai-cursor" />}
+            </div>
+          ) : (
+            <div className="user-content">
+              {msg.content}
+              {msg.attachments?.map((f, idx) => (
+                <div key={idx} className="msg-attachment-pill">
+                  <FileText size={12} /> <span>{f.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ChatGPT Actions Bar */}
+        {isBot && !isStreaming && msg.content && (
+          <div className="dcp-bot-actions">
+            <button onClick={handleCopy} title="Copy" className="dcp-action-btn">
+              {copied ? <Check size={14} style={{color: '#10a37f'}} /> : <Copy size={14} />}
+            </button>
+            <button 
+              onClick={() => handleFeedback('up')} 
+              title="Good response" 
+              className={`dcp-action-btn ${feedback === 'up' ? 'active' : ''}`}
+            >
+              <ThumbsUp size={14} fill={feedback === 'up' ? 'currentColor' : 'none'} />
+            </button>
+            <button 
+              onClick={() => handleFeedback('down')} 
+              title="Bad response" 
+              className={`dcp-action-btn ${feedback === 'down' ? 'active' : ''}`}
+            >
+              <ThumbsDown size={14} fill={feedback === 'down' ? 'currentColor' : 'none'} />
+            </button>
+            <button onClick={handleShare} title="Share" className="dcp-action-btn">
+              <Share2 size={14} />
+            </button>
+            <button onClick={onRegenerate} title="Regenerate" className="dcp-action-btn">
+              <RotateCcw size={14} />
+            </button>
+            <button title="More" className="dcp-action-btn">
+              <MoreHorizontal size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {!isBot && <div className="dcp-av usr">{userInitials}</div>}
     </div>
-    {!isBot && <div className="dcp-av usr">{userInitials}</div>}
-  </div>
-);
+  );
+};
 
 // 3. File Modal (ChatGPT Lightbox style)
 const FileModal = ({ file, onClose }) => {
@@ -286,6 +356,7 @@ export default function EstimationDashboard() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [previewFile, setPreviewFile]     = useState(null);
+  const [recentChats, setRecentChats]     = useState([]);
 
   const messagesEndRef = useRef(null);
   const abortRef       = useRef(null);
@@ -314,6 +385,7 @@ export default function EstimationDashboard() {
   useEffect(() => {
     fetchDashboardStats();
     fetchEstimations();
+    fetchRecentChats();
   }, []);
 
   useEffect(() => {
@@ -335,6 +407,22 @@ export default function EstimationDashboard() {
   // ── API ───────────────────────────────────────────────────────────────────
   const getToken = () => localStorage.getItem('steel_token');
   const refreshSidebarChats = () => window.dispatchEvent(new CustomEvent('chat:refresh'));
+
+  const fetchRecentChats = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/agent/threads`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.success) setRecentChats(data.threads || []);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    const handler = () => fetchRecentChats();
+    window.addEventListener('chat:refresh', handler);
+    return () => window.removeEventListener('chat:refresh', handler);
+  }, []);
 
   const loadThread = async (id) => {
     setActiveChatId(id);
@@ -375,7 +463,7 @@ export default function EstimationDashboard() {
       const res = await fetch(`${API_BASE_URL}/api/agent/chat`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body:    JSON.stringify({ message: query, chatId: activeChatId }),
+        body:    JSON.stringify({ message: query, chatId: activeChatId, userName: user?.name }),
         signal:  ctrl.signal,
       });
 
@@ -461,7 +549,16 @@ export default function EstimationDashboard() {
           <div 
             className={`cal-cell ${!isSameMonth(day, monthStart) ? 'disabled' : ''} ${isToday(day) ? 'today' : ''} ${isSelected ? 'selected' : ''}`} 
             key={day.toString()}
-            onClick={(e) => { e.stopPropagation(); setSelectedDate(isSelected ? null : cloneDay); }}
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              if (isSelected) {
+                setSelectedDate(null);
+                setIsCalExpanded(false);
+              } else {
+                setSelectedDate(cloneDay);
+                setIsCalExpanded(true);
+              }
+            }}
           >
             <span className="cal-number">{fmtDate}</span>
             {count > 0 && (
@@ -518,6 +615,8 @@ export default function EstimationDashboard() {
   // CHAT MODE
   // ═══════════════════════════════════════════════════════════════════════════
   if (chatMode) {
+    const displayedRecentProjects = estimations.filter(p => !p.isPinned && !p.isArchived).slice(0, 5);
+
     return (
       <div className="dash-chat-page">
         <FileModal file={previewFile} onClose={() => setPreviewFile(null)} />
@@ -528,19 +627,60 @@ export default function EstimationDashboard() {
           onChange={handleMainFileChange} 
           accept=".pdf,.dwg,.zip,.jpg,.png" 
         />
-        <header className="dcp-topbar">
-          <button className="dcp-back" onClick={handleBackToDashboard}>← Dashboard</button>
-          <div className="dcp-header-title">MISC Assistance</div>
-          <button className="dcp-new" onClick={() => { setMessages([]); setActiveChatId(null); navigate('/dashboard', { replace: true }); }}>
-            <Plus size={14} /> <span>New Chat</span>
-          </button>
-        </header>
+        
+        <div className="misc-chat-sidebar">
+          <div className="mcs-top-actions">
+            <button className="mcs-action-btn" onClick={() => { setMessages([]); setActiveChatId(null); navigate('/dashboard', { replace: true }); }}>
+              <Plus size={14} /> New chat
+            </button>
+            <button className="mcs-action-btn">
+              <Search size={14} /> Search chats
+            </button>
+            <button className="mcs-action-btn">
+              <div style={{fontWeight: 700, letterSpacing: '1px'}}>...</div> More
+            </button>
+          </div>
+          
+          <div className="mcs-section">
+            <div className="mcs-section-title">Projects</div>
+            <button className="mcs-action-btn" style={{padding: '6px 12px', fontSize: '13px'}} onClick={() => navigate('/project-info')}>
+              <FolderOpen size={14} /> New project
+            </button>
+            {displayedRecentProjects.map(p => (
+              <div key={p.id} className="mcs-list-item" onClick={() => navigate(`/project-info?id=${p.id}`)}>
+                <FolderOpen size={14} /> <span>{p.projectName || 'Project'}</span>
+              </div>
+            ))}
+          </div>
 
-        <main className="dcp-thread">
+          <div className="mcs-section">
+            <div className="mcs-section-title">Recents</div>
+            {recentChats.slice(0, 8).map(chat => (
+              <div key={chat.id} className="mcs-list-item" onClick={() => navigate(`/dashboard?chatId=${chat.id}`)}>
+                <span style={{opacity: 0.5, fontSize: '10px'}}>💬</span> <span>{chat.title || 'New Conversation'}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mcs-footer">
+            <button className="mcs-action-btn" onClick={() => navigate('/profile')}>
+              <div className="dcp-av usr">{userInitials}</div> {user?.name || 'User Profile'}
+            </button>
+          </div>
+        </div>
+
+        <div className="dcp-chat-container">
+          <header className="dcp-topbar">
+            <button className="dcp-back" onClick={handleBackToDashboard}>← Dashboard</button>
+            <div className="dcp-header-title">MISC Assistance</div>
+            <div style={{width: 60}} />
+          </header>
+
+          <main className="dcp-thread">
           <div className="dcp-messages-container">
             {showWelcome && (
               <div className="dcp-welcome">
-                <h1 className="dcp-welcome-title">How can I help you today?</h1>
+                <h1 className="dcp-welcome-title">How can I help you today, {user?.name?.split(' ')[0] || 'there'}?</h1>
                 <p className="dcp-welcome-sub">Ask about scrap factors, weights, or current project statuses.</p>
                 <div className="dcp-faq-grid">
                   {FAQ_CARDS.map((c, i) => (
@@ -558,16 +698,25 @@ export default function EstimationDashboard() {
 
             <div className="dcp-messages-wrap">
               {messages.map((msg, i) => (
-                <ChatMessage key={i} msg={msg} isBot={msg.role === 'assistant'} userInitials={userInitials} />
+                <ChatMessage 
+                  key={i} 
+                  msg={msg} 
+                  isBot={msg.role === 'assistant'} 
+                  userInitials={userInitials} 
+                  onRegenerate={() => {
+                    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+                    if (lastUserMsg) sendMessage(lastUserMsg.content);
+                  }}
+                />
               ))}
 
               {streamingMsg && (
-                <ChatMessage msg={streamingMsg} isBot={true} userInitials={userInitials} />
+                <ChatMessage msg={streamingMsg} isBot={true} userInitials={userInitials} isStreaming={true} />
               )}
 
               {isThinking && (
-                <div className="dcp-msg-row bot">
-                  <div className="dcp-av bot">AI</div>
+                <div className="dcp-msg-row assistant">
+                  <div className="dcp-av bot ai-avatar-thinking">AI</div>
                   <div className="typing-indicator"><span></span><span></span><span></span></div>
                 </div>
               )}
@@ -589,6 +738,7 @@ export default function EstimationDashboard() {
           onRemoveFile={handleRemoveFile}
           onPreviewFile={setPreviewFile}
         />
+        </div>
       </div>
     );
   }
@@ -655,7 +805,7 @@ export default function EstimationDashboard() {
         <div className="ems-dashboard mt-0">
           <div className="ems-layout">
             <div className="ems-col-left">
-              <div className={`ems-panel cal-panel modern-card ${isCalExpanded ? 'expanded' : ''}`} onClick={() => setIsCalExpanded(!isCalExpanded)}>
+              <div className={`ems-panel cal-panel modern-card ${isCalExpanded ? 'expanded' : ''}`}>
                 <div className="cal-header">
                   <button onClick={prevMonth}><ChevronLeft size={16} /></button>
                   <h2>{format(currentMonth, 'MMM yyyy')}</h2>
@@ -668,7 +818,7 @@ export default function EstimationDashboard() {
                     <h4 className="cal-details-title">Details for {format(selectedDate, 'dd MMMM')}</h4>
                     <ul className="cal-details-list">
                       {estimations.filter(p => p.dueDate && isSameDay(new Date(p.dueDate), selectedDate)).map(p => (
-                        <li key={p.id} className="cal-detail-item">
+                        <li key={p.id} className="cal-detail-item" onClick={(e) => { e.stopPropagation(); navigate('/project-info?id=' + p.id); }}>
                           <span className={`status-dot dot-${p.status?.toLowerCase()}`} />
                           <span className="detail-name">{p.projectName}</span>
                           <span className="detail-status">{p.status}</span>
@@ -678,7 +828,7 @@ export default function EstimationDashboard() {
                   </div>
                 )}
               </div>
-              <div className="ems-panel mt-4 modern-card">
+              <div className="ems-panel modern-card">
                 <h3 className="panel-title mb-4">Monthly Pipeline</h3>
                 {renderPipelineMetrics()}
               </div>

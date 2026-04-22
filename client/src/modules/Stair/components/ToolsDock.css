@@ -29,7 +29,6 @@
   border-color: transparent transparent transparent #0d0d0d;
 }
 
-/* ── Container ── */
 .tdk-root {
   position: fixed;
   top: 50px; /* Below header */
@@ -43,6 +42,30 @@
   align-items: center;
   padding: 16px 0;
   z-index: 900;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tdk-toggle-btn {
+  position: absolute;
+  top: 50%;
+  left: -24px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: #374151; /* Dark gray */
+  color: white;
+  border: none;
+  border-radius: 24px 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 901;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+  transition: background 0.2s, color 0.2s;
+}
+.tdk-toggle-btn:hover {
+  background: #4b5563;
 }
 
 /* ── Icon Groups ── */

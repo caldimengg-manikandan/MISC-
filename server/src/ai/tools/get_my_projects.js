@@ -19,7 +19,7 @@ async function get_my_projects({ userId, companyId, role, params = {} }) {
     SELECT 
       id, projectNumber, projectName, customer_name,
       assignedEngineer, status, workflow_status,
-      submissionDeadline, updatedAt, createdAt,
+      submissionDeadline, updatedAt, created_at,
       totalWeight, totalCost, company_id,
       userId, engineerId
     FROM projects
@@ -28,19 +28,19 @@ async function get_my_projects({ userId, companyId, role, params = {} }) {
 
   const statusFilter = status ? ` AND (status = ? OR workflow_status = ?)` : '';
   const estimatorFilter = ` AND (userId = ? OR engineerId = ? OR createdBy = ?)`;
-  const orderLimit = ` ORDER BY updatedAt DESC LIMIT ? OFFSET ?`;
+  const orderLimit = ` ORDER BY updatedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`;
 
   if (role === 'admin' || role === 'owner') {
     query = baseSelect + statusFilter + orderLimit;
     queryParams = status
-      ? [companyId, status, status, limit, offset]
-      : [companyId, limit, offset];
+      ? [companyId, status, status, offset, limit]
+      : [companyId, offset, limit];
   } else {
     // Estimator — own projects only
     query = baseSelect + estimatorFilter + statusFilter + orderLimit;
     queryParams = status
-      ? [companyId, userId, userId, userId, status, status, limit, offset]
-      : [companyId, userId, userId, userId, limit, offset];
+      ? [companyId, userId, userId, userId, status, status, offset, limit]
+      : [companyId, userId, userId, userId, offset, limit];
   }
 
   const [rows] = await db.query(query, queryParams);

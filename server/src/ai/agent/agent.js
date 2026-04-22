@@ -17,6 +17,7 @@ const chatRepo                        = require('./chatRepository');
 const CALCULATION_RULES               = require('./calculationRules');
 const { classifyQuery, routeToTools } = require('./queryRouter');
 const { searchKnowledge }             = require('../search/knowledgeSearch');
+const { classifySecurity, logSecurityAttempt, getRefusalMessage } = require('./securityClassifier');
 
 // In-memory conversation history (Session cache for faster lookups, but DB is source of truth)
 const conversationHistory = new Map();
@@ -30,7 +31,7 @@ const MAX_HISTORY = 10; // per session
  * @returns {Promise<{text: string, tool?: string, source?: string, chatId?: number}>}
  */
 async function runAgent(query, context) {
-  const { userId, companyId, role, chatId: clientChatId } = context;
+  const { userId, companyId, role, chatId: clientChatId, ip } = context;
   let activeChatId = clientChatId;
 
   // Basic sanity check
@@ -46,10 +47,51 @@ async function runAgent(query, context) {
     // For now we just use the first message as title inRepo
   }
 
+  // Pre-check for simple greetings
+  const GREETINGS = /^(hi|hello|good\s+(morning|afternoon|evening)|hey|thanks|thank\s+you|bye)\b/i;
+  if (GREETINGS.test(query.trim())) {
+    await chatRepo.addMessage(activeChatId, { role: 'user', content: query });
+    const firstName = context.userName ? context.userName.split(' ')[0] : '';
+    const greetingText = firstName 
+      ? `Hey ${firstName}! 👋 How can I help you with MISC Pro today?`
+      : "Hello! How can I help you with MISC Pro today?";
+      
+    await chatRepo.addMessage(activeChatId, { role: 'assistant', content: greetingText, intent: 'GREETING' });
+    return { text: greetingText, intent: 'GREETING', chatId: activeChatId };
+  }
+
+  const UNCLEAR = /^(today|time|date|now|what time|what day)\s*$/i;
+  if (UNCLEAR.test(query.trim())) {
+    await chatRepo.addMessage(activeChatId, { role: 'user', content: query });
+    const unclearText = "I'm not sure what you're looking for. Try asking about estimation calculations, your projects, or how to use a feature.";
+    await chatRepo.addMessage(activeChatId, { role: 'assistant', content: unclearText, intent: 'UNCLEAR' });
+    return { text: unclearText, intent: 'UNCLEAR', chatId: activeChatId };
+  }
+
   // Save User Message
   await chatRepo.addMessage(activeChatId, { role: 'user', content: query });
 
-  // 2. Perform SMART VALIDATION
+  // 2. PRE-FLIGHT SECURITY CHECK
+  const security = classifySecurity(query);
+  if (security.blocked) {
+    await logSecurityAttempt(userId, companyId, query, security.category, ip);
+    const refusalText = getRefusalMessage(security.category);
+    
+    // Save Assistant Message (Refusal)
+    await chatRepo.addMessage(activeChatId, { 
+      role: 'assistant', 
+      content: refusalText, 
+      intent: 'SECURITY_BLOCK' 
+    });
+
+    return { 
+      text: refusalText, 
+      intent: 'SECURITY_BLOCK', 
+      chatId: activeChatId 
+    };
+  }
+
+  // 3. Perform SMART VALIDATION
   const validationResult = validateCalculationQuery(query);
   if (validationResult.isCalculation && !validationResult.isValid) {
     const responseText = rb.buildClarificationResponse(validationResult.rule, validationResult.missing);
@@ -72,6 +114,9 @@ async function runAgent(query, context) {
     } 
     else if (classification.type === 'BLOCKED') {
       responseText = rb.buildBlockedResponse(query, classification.reason);
+
+    } else if (classification.type === 'DIRECT') {
+      responseText = classification.responseText;
 
     } else if (classification.type === 'STATIC') {
       const chunks = searchKnowledge(query, 5);
@@ -124,6 +169,13 @@ async function runAgent(query, context) {
 function validateCalculationQuery(query) {
   const normalized = query.toLowerCase();
   
+  const hasNumbers = /\d/.test(normalized);
+  const isExplicitAction = /\b(calculate|compute)\b/.test(normalized);
+  
+  if (!hasNumbers && !isExplicitAction) {
+    return { isCalculation: false };
+  }
+
   // Find matching rule
   const ruleKey = Object.keys(CALCULATION_RULES).find(key => {
     const rule = CALCULATION_RULES[key];

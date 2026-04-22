@@ -326,6 +326,33 @@ const sendWelcomeEmail = async (fullName, email) => {
   await sendEmail(email, subject, html);
 };
 
+/**
+ * Trigger 14: Security Alert -> notify Admin (email only)
+ */
+const onSecurityAlert = async (companyId, userId, exceedCount) => {
+  // get company admins
+  const [admins] = await db.query(
+    "SELECT id, email, full_name FROM users WHERE role = 'admin' AND company_id = ?",
+    [companyId]
+  );
+  
+  const [userRow] = await db.query(
+    "SELECT email FROM users WHERE id = ?", [userId]
+  );
+  const userEmail = userRow && userRow.length > 0 ? userRow[0].email : `User ${userId}`;
+
+  for (const admin of admins) {
+    const time = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const msg = `SECURITY ALERT: User ${userEmail} triggered ${exceedCount} security blocks in the last 24 hours.`;
+    await createNotification(admin.id, null, 'security_alert', msg);
+    await sendEmail(
+      admin.email,
+      'URGENT: Security Policy Violation',
+      buildEmailHtml('Security Policy Violation', msg)
+    );
+  }
+};
+
 module.exports = {
   createNotification,
   sendEmail,
@@ -340,4 +367,5 @@ module.exports = {
   onApproved,
   onReportSentToClient,
   onDeadlineApproaching,
+  onSecurityAlert,
 };

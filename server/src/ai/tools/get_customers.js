@@ -14,7 +14,7 @@ async function get_customers({ userId, companyId, role, params = {} }) {
   let sql = `
     SELECT 
       id, companyName, contactName, email, phone,
-      city, state, status, createdAt
+      city, state, status, created_at
     FROM customers
     WHERE company_id = ?
       AND status = ?
@@ -28,7 +28,7 @@ async function get_customers({ userId, companyId, role, params = {} }) {
     sqlParams.push(term, term, term);
   }
 
-  sql += ' ORDER BY companyName ASC LIMIT ?';
+  sql += ' ORDER BY companyName ASC OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY';
   sqlParams.push(limit);
 
   const [rows] = await db.query(sql, sqlParams);

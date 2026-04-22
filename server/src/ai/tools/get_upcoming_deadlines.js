@@ -19,7 +19,7 @@ async function get_upcoming_deadlines({ userId, companyId, role, params = {} }) 
     FROM projects
     WHERE company_id = ?
       AND submissionDeadline IS NOT NULL
-      AND submissionDeadline BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL ? DAY)
+      AND submissionDeadline BETWEEN GETDATE() AND DATEADD(day, ?, GETDATE())
       AND status != 'SUBMITTED'
   `;
 
@@ -31,7 +31,7 @@ async function get_upcoming_deadlines({ userId, companyId, role, params = {} }) 
     sqlParams.push(userId, userId, userId);
   }
 
-  sql += ' ORDER BY submissionDeadline ASC LIMIT 20';
+  sql += ' ORDER BY submissionDeadline ASC OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY';
 
   const [rows] = await db.query(sql, sqlParams);
   return rows;

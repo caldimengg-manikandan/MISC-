@@ -243,10 +243,13 @@ function AiChatPanel({ onClose }) {
         {/* Thinking indicator */}
         {isThinking && (
           <div className="ai-thinking">
+            <div className={`ai-panel-avatar ai-avatar-thinking`} style={{
+              width: 28, height: 28, fontSize: 12, background: 'linear-gradient(135deg,#10a37f,#0d8a6b)', color: '#fff'
+            }}>✦</div>
             <div className="ai-thinking-dots">
               <span /><span /><span />
             </div>
-            <span className="ai-thinking-label">Looking that up…</span>
+            <span className="ai-thinking-label">Thinking…</span>
           </div>
         )}
 
@@ -294,9 +297,12 @@ function AiMessageWrapper({ message, isStreaming }) {
       flexDirection: isBot ? 'row' : 'row-reverse',
       gap: 8,
       alignItems: 'flex-start',
+      animation: isStreaming ? 'none' : 'ai-panel-in 0.2s ease-out'
     }}>
       {/* Avatar */}
-      <div style={{
+      <div 
+        className={isStreaming ? 'ai-avatar-thinking' : ''}
+        style={{
         width: 28,
         height: 28,
         borderRadius: '50%',
@@ -336,11 +342,13 @@ function AiMessageWrapper({ message, isStreaming }) {
           {isStreaming && (
             <span style={{
               display: 'inline-block',
-              width: 8,
-              height: 16,
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
               background: '#10a37f',
-              marginLeft: 2,
-              verticalAlign: 'middle',
+              marginLeft: 4,
+              verticalAlign: 'baseline',
+              boxShadow: '0 0 8px rgba(16,163,127,0.4)',
               animation: 'ai-cursor-blink 0.8s ease-in-out infinite',
             }}/>
           )}
