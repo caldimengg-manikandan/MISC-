@@ -22,7 +22,7 @@ function App() {
 
       <Routes>
         {/* PUBLIC ROUTES — no auth required */}
-        <Route path="/" element={<Navigate to="/landing" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/login" element={<LoginPage />} />
