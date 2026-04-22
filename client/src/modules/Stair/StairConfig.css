@@ -650,7 +650,7 @@ button.form-input-unit:hover {
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────── */
-@media (max-width: 860px) {
+@media (max-width: 768px) {
   .stair-page .sc-rail { display: none; }
   .stair-page .sc-canvas { padding: 16px; }
 }

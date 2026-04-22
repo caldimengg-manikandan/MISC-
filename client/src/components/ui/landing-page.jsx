@@ -1,5 +1,6 @@
 // src/components/ui/landing-page.jsx
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Globe from "./globe";
 import { cn } from "../../lib/utils";
 
@@ -15,6 +16,7 @@ const NAV_LINKS = [
 ];
 
 function LandingHeader({ scrolled }) {
+  const navigate = useNavigate();
   return (
     <header
       style={{
@@ -40,14 +42,15 @@ function LandingHeader({ scrolled }) {
       }}
     >
       {/* Logo / Brand */}
-      <a
-        href="/landing"
+      <div
+        onClick={() => navigate("/")}
         style={{
           display: "flex",
           alignItems: "center",
           gap: "0.55rem",
           textDecoration: "none",
           flexShrink: 0,
+          cursor: "pointer"
         }}
       >
         <span
@@ -75,7 +78,7 @@ function LandingHeader({ scrolled }) {
           MISC
           <span style={{ color: "#10a37f", marginLeft: "2px" }}>StairPro</span>
         </span>
-      </a>
+      </div>
 
       {/* Navigation Links — content anchors */}
       <nav
@@ -86,21 +89,20 @@ function LandingHeader({ scrolled }) {
         }}
       >
         {NAV_LINKS.map((link) => (
-          <a
+          <div
             key={link.href}
-            href={link.href}
             title={link.tooltip}
             onClick={(e) => {
               // Smooth scroll for hash links
               if (link.href.startsWith("#")) {
-                e.preventDefault();
                 const target = document.querySelector(link.href);
                 if (target) {
                   target.scrollIntoView({ behavior: "smooth", block: "center" });
                 } else {
-                  // If we're on another page, navigate to landing first
-                  window.location.href = "/landing" + link.href;
+                  navigate("/" + link.href);
                 }
+              } else {
+                navigate(link.href);
               }
             }}
             style={{
@@ -126,14 +128,14 @@ function LandingHeader({ scrolled }) {
             }}
           >
             {link.label}
-          </a>
+          </div>
         ))}
       </nav>
 
       {/* Auth Button */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
-        <a
-          href="./login"
+        <div
+          onClick={() => navigate("/login")}
           style={{
             padding: "0.45rem 1rem",
             borderRadius: "8px",
@@ -143,6 +145,7 @@ function LandingHeader({ scrolled }) {
             textDecoration: "none",
             border: "1px solid rgba(255,255,255,0.16)",
             transition: "all 0.2s",
+            cursor: "pointer"
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.color = "rgba(255,255,255,0.95)";
@@ -156,9 +159,9 @@ function LandingHeader({ scrolled }) {
           }}
         >
           Login
-        </a>
-        <a
-          href="./login?mode=signup"
+        </div>
+        <div
+          onClick={() => navigate("/login?mode=signup")}
           style={{
             padding: "0.45rem 1.25rem",
             borderRadius: "8px",
@@ -169,6 +172,7 @@ function LandingHeader({ scrolled }) {
             background: "linear-gradient(135deg, #10a37f, #0ea5e9)",
             boxShadow: "0 2px 14px rgba(16,163,127,0.4)",
             transition: "transform 0.2s, box-shadow 0.2s",
+            cursor: "pointer"
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "scale(1.04)";
@@ -180,7 +184,7 @@ function LandingHeader({ scrolled }) {
           }}
         >
           Join the Forge
-        </a>
+        </div>
       </div>
     </header>
   );
@@ -631,6 +635,7 @@ function ScrollGlobe({ sections, globeConfig = defaultGlobeConfig, className }) 
 // Developed by CALDIM
 
 export default function GlobeScrollDemo() {
+  const navigate = useNavigate();
   const demoSections = [
     {
       id: "platform",
@@ -644,12 +649,12 @@ export default function GlobeScrollDemo() {
         {
           label: "Explore Solutions",
           variant: "primary",
-          onClick: () => (window.location.href = "/products"),
+          onClick: () => navigate("/products"),
         },
         {
           label: "Login",
           variant: "secondary",
-          onClick: () => (window.location.href = "/login"),
+          onClick: () => navigate("/login"),
         },
       ],
     },
@@ -736,12 +741,12 @@ export default function GlobeScrollDemo() {
         {
           label: "Initialize Workspace",
           variant: "primary",
-          onClick: () => (window.location.href = "login?mode=signup"),
+          onClick: () => navigate("/login?mode=signup"),
         },
         {
           label: "Login",
           variant: "secondary",
-          onClick: () => (window.location.href = "login"),
+          onClick: () => navigate("/login"),
         },
       ],
     },

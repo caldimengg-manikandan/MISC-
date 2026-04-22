@@ -244,7 +244,9 @@ export default function MainLayout({ children }) {
   const { user, logout } = useAuth();
   const { estimations, fetchEstimations, notes, fetchNotes, selectedEstimation, setSelectedEstimation, activeContext } = useEstimation();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    location.pathname.startsWith('/estimate') // Auto-collapse on estimation routes for max space
+  );
   const [estimateOpen, setEstimateOpen] = useState(
     location.pathname.startsWith('/estimate')
   );
@@ -633,16 +635,22 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
               fetchNotes(parsed.id);
               setSelectedEstimation({ id: Number(parsed.id), ...parsed });
             }
-            return; // Found context
+            return; // Found real context
           }
         } catch (e) { }
+      }
+      
+      // 🚀 DRAFT MODE: If we are in estimation but no project is loaded yet, set a "Draft" context
+      // This ensures ToolsDock (Right Sidebar) and other UI elements render correctly.
+      if (!selectedEstimation || selectedEstimation.id === null) {
+        setSelectedEstimation({ id: 'draft', projectName: 'New Estimation (Draft)', isDraft: true });
       }
     }
     // 3. NO PROJECT CONTEXT: Clear it (Dashboard, generic Reports, etc.)
     else if (selectedEstimation !== null) {
       setSelectedEstimation(null);
     }
-  }, [location.pathname, location.search, selectedEstimation?.id, fetchNotes, setSelectedEstimation]);
+  }, [location.pathname, location.search, selectedEstimation, fetchNotes, setSelectedEstimation]);
 
   // Split estimations into structural segments
   const recentProjects = estimations.filter(p => !p.isPinned && !p.isArchived);

@@ -896,7 +896,25 @@ export default function StairEstimation() {
   // ── Load project info + stair data from DB on mount ───────────────────────
   useEffect(() => {
     const savedInfo = localStorage.getItem(getContextKey());
-    if (!savedInfo) return;
+    
+    if (!savedInfo) {
+      // 🚀 FRESH DRAFT: No project info in localStorage yet
+      // We still set a draft context so the MainLayout/ToolsDock know we are in "Estimation Mode"
+      setSelectedEstimation({ id: 'draft', projectName: 'New Estimation', isDraft: true });
+      
+      // Try loading global draft if it exists
+      const draft = localStorage.getItem('stair_draft_global');
+      if (draft) {
+        try {
+          const restored = restoreStairs(JSON.parse(draft));
+          isUpdatingFromCalc.current = true; 
+          setStairs(restored);
+          if (restored.length > 0) setActiveId(restored[0].id);
+        } catch (e) {}
+      }
+      return;
+    }
+
     try {
       const parsed = JSON.parse(savedInfo);
       setProjectData(prev => ({
@@ -910,7 +928,8 @@ export default function StairEstimation() {
 
       const projectId = parsed.id;
       if (!projectId) {
-        // 🚀 DRAFT MODE: Try loading local draft if it exists
+        // 🚀 NAMED DRAFT (Has names but no DB ID yet)
+        setSelectedEstimation({ id: 'draft', ...parsed, isDraft: true });
         const draft = localStorage.getItem('stair_draft_global');
         if (draft) {
           const restored = restoreStairs(JSON.parse(draft));

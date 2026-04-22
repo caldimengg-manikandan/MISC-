@@ -42,6 +42,90 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
       setSaving(false);
     }
   };
+  
+  const MODAL_STYLE = `
+    .sc-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .sc-modal-panel {
+      background: #fff;
+      border-radius: 20px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+    .sc-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sc-modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+    }
+    .sc-confirm-actions {
+      padding: 20px 24px;
+      background: #f9fafb;
+      border-top: 1px solid #f3f4f6;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .confirm-btn-outline {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: white;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .confirm-btn-outline:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+    .confirm-btn-solid {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: #111827;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .confirm-btn-solid:hover {
+      background: #000;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .confirm-btn-solid:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  `;
 
   return (
     <AnimatePresence>
@@ -127,10 +211,21 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
                 </p>
               </div>
 
-              <div className="sc-confirm-actions" style={{ padding: '16px 24px', background: 'var(--color-neutral-50)', borderTop: '1px solid var(--border-blueprint)' }}>
+              <style>{MODAL_STYLE}</style>
+              <div className="sc-confirm-actions">
                 <button type="button" className="confirm-btn-outline" onClick={onClose} disabled={saving}>Cancel</button>
                 <button type="submit" className="confirm-btn-solid" disabled={saving}>
-                  {saving ? 'Creating...' : 'Create Customer'}
+                  {saving ? (
+                    <>
+                      <div className="sc-spinner" style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Create Customer
+                    </>
+                  )}
                 </button>
               </div>
             </form>
