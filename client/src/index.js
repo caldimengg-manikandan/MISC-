@@ -16,7 +16,7 @@ async function init() {
   
   root.render(
     <React.StrictMode>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Router basename="/misc" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <EstimationProvider>
             <App />
