@@ -275,11 +275,11 @@ router.post('/upsert', auth, async (req, res) => {
         `INSERT INTO projects
           (projectNumber, projectName, userId, createdBy, owner_admin_id, customer_name, customer_id, project_location,
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units,
-           notes, stairs, guardRails, customRailValues, localConfig, status, workflow_status,
+           notes, stairs, guardRails, customRailValues, localConfig, status, workflow_status, revision_number,
            assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline,
            isPinned, isArchived)
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', 0, ?, ?, ?, ?, ?, ?, ?)`,
         [
           projectNumber, projectName, userId, userId, ownerAdminId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
