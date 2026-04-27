@@ -1,13 +1,22 @@
 /**************************************************
- * MISC DATABASE MIGRATION DUMP
- * Generated at: 27/4/2026, 10:41:52 pm
+ * MISC FULL DATABASE SYNC (SCHEMA + DATA)
+ * Generated at: 27/4/2026, 10:46:11 pm
  **************************************************/
 
--- Disable all constraints
 EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL";
 
--- [rail_types] (6 rows)
-DELETE FROM [rail_types];
+-- [rail_types] Structure
+IF OBJECT_ID('[rail_types]', 'U') IS NOT NULL DROP TABLE [rail_types];
+CREATE TABLE [rail_types] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [type] NVARCHAR(40) NULL,
+  [name] NVARCHAR(510) NULL,
+  [steel_lbs_per_lf] DECIMAL(15,6) NULL,
+  [shop_labor_rate] DECIMAL(15,6) NULL,
+  [field_labor_rate] DECIMAL(15,6) NULL,
+  [is_active] BIT NULL
+);
+-- [rail_types] Data (6 rows)
 SET IDENTITY_INSERT [rail_types] ON;
 INSERT INTO [rail_types] ([id], [type], [name], [steel_lbs_per_lf], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('1', 'GUARD', '2-Line Steel Pipe Guardrail 1.25 SCH40', 6.84, 0.5, 0.35, 1);
 INSERT INTO [rail_types] ([id], [type], [name], [steel_lbs_per_lf], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('2', 'GUARD', '2-Line Steel Pipe Guardrail 1.5 SCH40', 8.16, 0.6, 0.375, 1);
@@ -16,17 +25,38 @@ INSERT INTO [rail_types] ([id], [type], [name], [steel_lbs_per_lf], [shop_labor_
 INSERT INTO [rail_types] ([id], [type], [name], [steel_lbs_per_lf], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('5', 'GRAB', '1-Line Hand Railing wall bolted 1.25 SCH40', 1.8, 0.18, 0.13, 1);
 INSERT INTO [rail_types] ([id], [type], [name], [steel_lbs_per_lf], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('6', 'CANE', 'Standard Cane Rail', 3.5, 0.3, 0.22, 1);
 SET IDENTITY_INSERT [rail_types] OFF;
+GO
 
--- [platform_types] (3 rows)
-DELETE FROM [platform_types];
+-- [platform_types] Structure
+IF OBJECT_ID('[platform_types]', 'U') IS NOT NULL DROP TABLE [platform_types];
+CREATE TABLE [platform_types] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [name] NVARCHAR(510) NULL,
+  [steel_lbs_per_sqft] DECIMAL(15,6) NULL,
+  [shop_labor_rate] DECIMAL(15,6) NULL,
+  [field_labor_rate] DECIMAL(15,6) NULL,
+  [is_active] BIT NULL
+);
+-- [platform_types] Data (3 rows)
 SET IDENTITY_INSERT [platform_types] ON;
 INSERT INTO [platform_types] ([id], [name], [steel_lbs_per_sqft], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('1', 'Metal Pan Stair Platform', 12.5, 0.45, 0.32, 1);
 INSERT INTO [platform_types] ([id], [name], [steel_lbs_per_sqft], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('2', 'Grating Platform', 10.2, 0.38, 0.28, 1);
 INSERT INTO [platform_types] ([id], [name], [steel_lbs_per_sqft], [shop_labor_rate], [field_labor_rate], [is_active]) VALUES ('3', 'Checker Plate Platform', 15, 0.5, 0.35, 1);
 SET IDENTITY_INSERT [platform_types] OFF;
+GO
 
--- [stringer_types] (9 rows)
-DELETE FROM [stringer_types];
+-- [stringer_types] Structure
+IF OBJECT_ID('[stringer_types]', 'U') IS NOT NULL DROP TABLE [stringer_types];
+CREATE TABLE [stringer_types] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [name] NVARCHAR(510) NULL,
+  [steel_lbs_per_ft] DECIMAL(15,6) NULL,
+  [is_active] BIT NULL,
+  [shop_hrs_per_lf] DECIMAL(15,6) NULL,
+  [field_hrs_per_lf] DECIMAL(15,6) NULL,
+  [galv_weep_hrs_per_lf] DECIMAL(15,6) NULL
+);
+-- [stringer_types] Data (9 rows)
 SET IDENTITY_INSERT [stringer_types] ON;
 INSERT INTO [stringer_types] ([id], [name], [steel_lbs_per_ft], [is_active], [shop_hrs_per_lf], [field_hrs_per_lf], [galv_weep_hrs_per_lf]) VALUES ('5', 'W8x31', 31, 1, 0.55, 0.25, 0.08);
 INSERT INTO [stringer_types] ([id], [name], [steel_lbs_per_ft], [is_active], [shop_hrs_per_lf], [field_hrs_per_lf], [galv_weep_hrs_per_lf]) VALUES ('6', 'W10x33', 33, 1, 0.57, 0.26, 0.08);
@@ -38,9 +68,16 @@ INSERT INTO [stringer_types] ([id], [name], [steel_lbs_per_ft], [is_active], [sh
 INSERT INTO [stringer_types] ([id], [name], [steel_lbs_per_ft], [is_active], [shop_hrs_per_lf], [field_hrs_per_lf], [galv_weep_hrs_per_lf]) VALUES ('12', 'C12x20.7', 20.7, 1, 0.48, 0.2, 0.07);
 INSERT INTO [stringer_types] ([id], [name], [steel_lbs_per_ft], [is_active], [shop_hrs_per_lf], [field_hrs_per_lf], [galv_weep_hrs_per_lf]) VALUES ('13', 'C15x33.9', 33.9, 1, 0.58, 0.25, 0.08);
 SET IDENTITY_INSERT [stringer_types] OFF;
+GO
 
--- [system_config] (31 rows)
-DELETE FROM [system_config];
+-- [system_config] Structure
+IF OBJECT_ID('[system_config]', 'U') IS NOT NULL DROP TABLE [system_config];
+CREATE TABLE [system_config] (
+  [config_key] NVARCHAR(200) NOT NULL,
+  [config_value] NVARCHAR(MAX) NULL,
+  [last_updated] DATETIME NULL
+);
+-- [system_config] Data (31 rows)
 INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUES ('anchor_bolt_rate', '0.025', NULL);
 INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUES ('bolted_field_mh', '0.5', NULL);
 INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUES ('bolted_shop_mh', '1', NULL);
@@ -72,18 +109,43 @@ INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUE
 INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUES ('tax_rate', '0.06', NULL);
 INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUES ('welded_field_mh', '0.25', NULL);
 INSERT INTO [system_config] ([config_key], [config_value], [last_updated]) VALUES ('welded_shop_mh', '0.5', NULL);
+GO
 
--- [categories] (4 rows)
-DELETE FROM [categories];
+-- [categories] Structure
+IF OBJECT_ID('[categories]', 'U') IS NOT NULL DROP TABLE [categories];
+CREATE TABLE [categories] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [name] NVARCHAR(200) NULL
+);
+-- [categories] Data (4 rows)
 SET IDENTITY_INSERT [categories] ON;
 INSERT INTO [categories] ([id], [name]) VALUES (2, 'PLATFORM');
 INSERT INTO [categories] ([id], [name]) VALUES (1, 'RAIL');
 INSERT INTO [categories] ([id], [name]) VALUES (4, 'STAIR');
 INSERT INTO [categories] ([id], [name]) VALUES (3, 'STRINGER');
 SET IDENTITY_INSERT [categories] OFF;
+GO
 
--- [dictionary] (113 rows)
-DELETE FROM [dictionary];
+-- [dictionary] Structure
+IF OBJECT_ID('[dictionary]', 'U') IS NOT NULL DROP TABLE [dictionary];
+CREATE TABLE [dictionary] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [category] NVARCHAR(200) NULL,
+  [label] NVARCHAR(510) NULL,
+  [value] NVARCHAR(510) NULL,
+  [sort_order] INT NULL,
+  [is_active] BIT NULL,
+  [order] INT NULL,
+  [isActive] BIT NULL,
+  [description] NVARCHAR(MAX) NULL,
+  [steelLbsLf] DECIMAL(10,4) NULL,
+  [shopLaborMhLf] DECIMAL(10,4) NULL,
+  [fieldLaborMhLf] DECIMAL(10,4) NULL,
+  [widthMax] DECIMAL(5,2) NULL,
+  [spanMin] DECIMAL(5,2) NULL,
+  [spanMax] DECIMAL(5,2) NULL
+);
+-- [dictionary] Data (113 rows)
 SET IDENTITY_INSERT [dictionary] ON;
 INSERT INTO [dictionary] ([id], [category], [label], [value], [sort_order], [is_active], [order], [isActive], [description], [steelLbsLf], [shopLaborMhLf], [fieldLaborMhLf], [widthMax], [spanMin], [spanMax]) VALUES ('76', 'stair_type', 'PAN PLATE CONC. FILLED', 'pan-concrete', 0, 1, 1, 1, NULL, 25.32, 1.5, 1, NULL, NULL, NULL);
 INSERT INTO [dictionary] ([id], [category], [label], [value], [sort_order], [is_active], [order], [isActive], [description], [steelLbsLf], [shopLaborMhLf], [fieldLaborMhLf], [widthMax], [spanMin], [spanMax]) VALUES ('77', 'stair_type', 'GRATING TREAD', 'grating-tread', 0, 1, 2, 1, NULL, 25.32, 1.5, 1, NULL, NULL, NULL);
@@ -199,19 +261,47 @@ INSERT INTO [dictionary] ([id], [category], [label], [value], [sort_order], [is_
 INSERT INTO [dictionary] ([id], [category], [label], [value], [sort_order], [is_active], [order], [isActive], [description], [steelLbsLf], [shopLaborMhLf], [fieldLaborMhLf], [widthMax], [spanMin], [spanMax]) VALUES ('341', 'caneRail_type', '8-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and Posts', '8-line-steel-pipe-guardrail-1-1-4-sch-40-pipe-rails-and-posts', 0, 1, 13, 1, NULL, 20.52, 2, 0.55, NULL, NULL, NULL);
 INSERT INTO [dictionary] ([id], [category], [label], [value], [sort_order], [is_active], [order], [isActive], [description], [steelLbsLf], [shopLaborMhLf], [fieldLaborMhLf], [widthMax], [spanMin], [spanMax]) VALUES ('342', 'caneRail_type', '8-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and Posts', '8-line-steel-pipe-guardrail-1-1-2-sch-40-pipe-rails-and-posts', 0, 1, 14, 1, NULL, 24.48, 2.25, 0.6, NULL, NULL, NULL);
 SET IDENTITY_INSERT [dictionary] OFF;
+GO
 
--- [labor_rates] (2 rows)
-DELETE FROM [labor_rates];
+-- [labor_rates] Structure
+IF OBJECT_ID('[labor_rates]', 'U') IS NOT NULL DROP TABLE [labor_rates];
+CREATE TABLE [labor_rates] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [labor_type] NVARCHAR(40) NULL,
+  [rate] DECIMAL(15,6) NULL
+);
+-- [labor_rates] Data (2 rows)
 SET IDENTITY_INSERT [labor_rates] ON;
 INSERT INTO [labor_rates] ([id], [labor_type], [rate]) VALUES ('1', 'SHOP', 75);
 INSERT INTO [labor_rates] ([id], [labor_type], [rate]) VALUES ('2', 'FIELD', 85);
 SET IDENTITY_INSERT [labor_rates] OFF;
+GO
 
--- [pricing] (0 rows)
-DELETE FROM [pricing];
+-- [pricing] Structure
+IF OBJECT_ID('[pricing]', 'U') IS NOT NULL DROP TABLE [pricing];
+CREATE TABLE [pricing] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [item_key] NVARCHAR(200) NULL,
+  [description] NVARCHAR(510) NULL,
+  [rate] DECIMAL(15,6) NULL,
+  [unit] NVARCHAR(100) NULL
+);
+-- [pricing] Data (0 rows)
+GO
 
--- [activity_log] (22 rows)
-DELETE FROM [activity_log];
+-- [activity_log] Structure
+IF OBJECT_ID('[activity_log]', 'U') IS NOT NULL DROP TABLE [activity_log];
+CREATE TABLE [activity_log] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [project_id] INT NOT NULL,
+  [user_id] INT NOT NULL,
+  [action] NVARCHAR(200) NOT NULL,
+  [comment] NVARCHAR(MAX) NULL,
+  [from_status] NVARCHAR(100) NULL,
+  [to_status] NVARCHAR(100) NULL,
+  [createdAt] DATETIME NOT NULL
+);
+-- [activity_log] Data (22 rows)
 SET IDENTITY_INSERT [activity_log] ON;
 INSERT INTO [activity_log] ([id], [project_id], [user_id], [action], [comment], [from_status], [to_status], [createdAt]) VALUES (1, 134, 4, 'assign_engineer', 'Assigned to logaprasath@caldimengg.in', 'new', 'assigned', '2026-04-16 10:26:13');
 INSERT INTO [activity_log] ([id], [project_id], [user_id], [action], [comment], [from_status], [to_status], [createdAt]) VALUES (2, 136, 5, 'assign_engineer', 'Assigned to admin@caldim.com', 'new', 'assigned', '2026-04-17 10:17:29');
@@ -236,9 +326,20 @@ INSERT INTO [activity_log] ([id], [project_id], [user_id], [action], [comment], 
 INSERT INTO [activity_log] ([id], [project_id], [user_id], [action], [comment], [from_status], [to_status], [createdAt]) VALUES (21, 134, 5, 'start_project', NULL, 'assigned', 'in_progress', '2026-04-18 15:47:38');
 INSERT INTO [activity_log] ([id], [project_id], [user_id], [action], [comment], [from_status], [to_status], [createdAt]) VALUES (22, 134, 5, 'submit_review', 'Submitted for review to logaprasath@caldimengg.in (Rev #1)', 'in_progress', 'review', '2026-04-18 15:47:45');
 SET IDENTITY_INSERT [activity_log] OFF;
+GO
 
--- [notifications] (104 rows)
-DELETE FROM [notifications];
+-- [notifications] Structure
+IF OBJECT_ID('[notifications]', 'U') IS NOT NULL DROP TABLE [notifications];
+CREATE TABLE [notifications] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [user_id] INT NOT NULL,
+  [project_id] INT NULL,
+  [type] NVARCHAR(200) NOT NULL,
+  [message] NVARCHAR(MAX) NOT NULL,
+  [is_read] BIT NOT NULL,
+  [createdAt] DATETIME NOT NULL
+);
+-- [notifications] Data (104 rows)
 SET IDENTITY_INSERT [notifications] ON;
 INSERT INTO [notifications] ([id], [user_id], [project_id], [type], [message], [is_read], [createdAt]) VALUES (1, 1, 134, 'engineer_assigned', 'You have been assigned to "MISC_estimation"', 0, '2026-04-16 10:26:13');
 INSERT INTO [notifications] ([id], [user_id], [project_id], [type], [message], [is_read], [createdAt]) VALUES (5, 1, 136, 'engineer_assigned', 'You have been assigned to "MISC_estimation"', 0, '2026-04-18 10:21:20');
@@ -345,9 +446,20 @@ INSERT INTO [notifications] ([id], [user_id], [project_id], [type], [message], [
 INSERT INTO [notifications] ([id], [user_id], [project_id], [type], [message], [is_read], [createdAt]) VALUES (185, 1, NULL, 'security_alert', 'SECURITY ALERT: User admin@caldim.com triggered 68 security blocks in the last 24 hours.', 0, '2026-04-22 11:02:40');
 INSERT INTO [notifications] ([id], [user_id], [project_id], [type], [message], [is_read], [createdAt]) VALUES (187, 1, NULL, 'security_alert', 'SECURITY ALERT: User admin@caldim.com triggered 69 security blocks in the last 24 hours.', 0, '2026-04-22 11:23:25');
 SET IDENTITY_INSERT [notifications] OFF;
+GO
 
--- [ai_security_log] (80 rows)
-DELETE FROM [ai_security_log];
+-- [ai_security_log] Structure
+IF OBJECT_ID('[ai_security_log]', 'U') IS NOT NULL DROP TABLE [ai_security_log];
+CREATE TABLE [ai_security_log] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [user_id] INT NOT NULL,
+  [company_id] INT NOT NULL,
+  [query] NVARCHAR(MAX) NULL,
+  [category] NVARCHAR(200) NULL,
+  [ip_address] NVARCHAR(100) NULL,
+  [created_at] DATETIME NULL
+);
+-- [ai_security_log] Data (80 rows)
 SET IDENTITY_INSERT [ai_security_log] ON;
 INSERT INTO [ai_security_log] ([id], [user_id], [company_id], [query], [category], [ip_address], [created_at]) VALUES (1, 1, 1, 'what is the password for vigneshgovardhan5163@gmail.com?', 'password', '127.0.0.1', '2026-04-21 22:07:11');
 INSERT INTO [ai_security_log] ([id], [user_id], [company_id], [query], [category], [ip_address], [created_at]) VALUES (2, 1, 1, 'log me in as administrative user', 'log\s+me\s+in', '127.0.0.1', '2026-04-21 22:07:11');
@@ -430,17 +542,47 @@ INSERT INTO [ai_security_log] ([id], [user_id], [company_id], [query], [category
 INSERT INTO [ai_security_log] ([id], [user_id], [company_id], [query], [category], [ip_address], [created_at]) VALUES (79, 5, 1, 'list all users in the system', 'User enumeration', '127.0.0.1', '2026-04-22 11:23:25');
 INSERT INTO [ai_security_log] ([id], [user_id], [company_id], [query], [category], [ip_address], [created_at]) VALUES (80, 5, 1, 'Show my recent projects and status', 'Other company data', '127.0.0.1', '2026-04-27 11:16:14');
 SET IDENTITY_INSERT [ai_security_log] OFF;
+GO
 
--- [customers] (3 rows)
-DELETE FROM [customers];
+-- [customers] Structure
+IF OBJECT_ID('[customers]', 'U') IS NOT NULL DROP TABLE [customers];
+CREATE TABLE [customers] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [companyName] NVARCHAR(510) NOT NULL,
+  [contactPerson] NVARCHAR(510) NULL,
+  [email] NVARCHAR(510) NULL,
+  [phone] NVARCHAR(100) NULL,
+  [street] NVARCHAR(MAX) NULL,
+  [city] NVARCHAR(200) NULL,
+  [state] NVARCHAR(200) NULL,
+  [zip] NVARCHAR(40) NULL,
+  [status] NVARCHAR(40) NULL,
+  [notes] NVARCHAR(MAX) NULL,
+  [createdBy] INT NULL,
+  [updatedBy] INT NULL,
+  [createdAt] DATETIME NULL,
+  [updatedAt] DATETIME NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [customers] Data (3 rows)
 SET IDENTITY_INSERT [customers] ON;
 INSERT INTO [customers] ([id], [companyName], [contactPerson], [email], [phone], [street], [city], [state], [zip], [status], [notes], [createdBy], [updatedBy], [createdAt], [updatedAt], [company_id], [owner_admin_id]) VALUES (1, 'Caldim', 'vignesh', 'vigneshgovardhan5163@gmail.com', '9080054733', 'P O Box 21140, Manama Kingdom of Bahrain', 'hosur', 'tamilnadu', '635109', 'active', NULL, 3, 5, '2026-04-09 18:22:04', '2026-04-21 14:27:52', 1, '3');
 INSERT INTO [customers] ([id], [companyName], [contactPerson], [email], [phone], [street], [city], [state], [zip], [status], [notes], [createdBy], [updatedBy], [createdAt], [updatedAt], [company_id], [owner_admin_id]) VALUES (2, 'Caldimengg', 'Vignesh G', 'vigneshgovardhan5163@gmail.com', '9080054733', 'P O Box 21140, Manama Kingdom of Bahrain', 'hosur', 'tamilnadu', '635109', 'deleted', '', 3, 3, '2026-04-14 16:00:17', '2026-04-22 21:34:22', 1, '3');
 INSERT INTO [customers] ([id], [companyName], [contactPerson], [email], [phone], [street], [city], [state], [zip], [status], [notes], [createdBy], [updatedBy], [createdAt], [updatedAt], [company_id], [owner_admin_id]) VALUES (4, 'Caldimengg.com', 'dinesh', 'vignesh@caldimengg.in', '', NULL, NULL, NULL, NULL, 'active', NULL, 5, 5, '2026-04-22 16:45:55', '2026-04-22 16:45:55', 1, '5');
 SET IDENTITY_INSERT [customers] OFF;
+GO
 
--- [EmailOtps] (6 rows)
-DELETE FROM [EmailOtps];
+-- [EmailOtps] Structure
+IF OBJECT_ID('[EmailOtps]', 'U') IS NOT NULL DROP TABLE [EmailOtps];
+CREATE TABLE [EmailOtps] (
+  [Id] INT IDENTITY(1,1) NOT NULL,
+  [Email] NVARCHAR(510) NOT NULL,
+  [OtpCode] NVARCHAR(12) NOT NULL,
+  [ExpiresAt] DATETIME NOT NULL,
+  [IsUsed] BIT NULL
+);
+-- [EmailOtps] Data (6 rows)
 SET IDENTITY_INSERT [EmailOtps] ON;
 INSERT INTO [EmailOtps] ([Id], [Email], [OtpCode], [ExpiresAt], [IsUsed]) VALUES (1, 'logaprasaath3@gmail.com', '120716', '2026-04-17 06:33:30', 1);
 INSERT INTO [EmailOtps] ([Id], [Email], [OtpCode], [ExpiresAt], [IsUsed]) VALUES (2, 'logaprasaath45@gmail.in', '598678', '2026-04-17 06:38:27', 0);
@@ -449,16 +591,47 @@ INSERT INTO [EmailOtps] ([Id], [Email], [OtpCode], [ExpiresAt], [IsUsed]) VALUES
 INSERT INTO [EmailOtps] ([Id], [Email], [OtpCode], [ExpiresAt], [IsUsed]) VALUES (5, 'logaprasaath41@gmail.com', '359173', '2026-04-17 09:56:53', 1);
 INSERT INTO [EmailOtps] ([Id], [Email], [OtpCode], [ExpiresAt], [IsUsed]) VALUES (6, 'logaprasaath3@gmail.com', '639051', '2026-04-27 06:02:58', 1);
 SET IDENTITY_INSERT [EmailOtps] OFF;
+GO
 
--- [licenses] (2 rows)
-DELETE FROM [licenses];
+-- [licenses] Structure
+IF OBJECT_ID('[licenses]', 'U') IS NOT NULL DROP TABLE [licenses];
+CREATE TABLE [licenses] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [license_key] NVARCHAR(128) NOT NULL,
+  [admin_user_id] BIGINT NULL,
+  [license_type] NVARCHAR(100) NOT NULL,
+  [max_estimators] INT NOT NULL,
+  [valid_from] DATE NOT NULL,
+  [valid_until] DATE NOT NULL,
+  [is_active] BIT NOT NULL,
+  [created_by] BIGINT NOT NULL,
+  [created_at] DATETIME NOT NULL,
+  [notes] NVARCHAR(MAX) NULL,
+  [invite_token] NVARCHAR(256) NULL,
+  [invite_email] NVARCHAR(510) NULL,
+  [invite_sent_at] DATETIME NULL,
+  [invite_accepted_at] DATETIME NULL
+);
+-- [licenses] Data (2 rows)
 SET IDENTITY_INSERT [licenses] ON;
 INSERT INTO [licenses] ([id], [license_key], [admin_user_id], [license_type], [max_estimators], [valid_from], [valid_until], [is_active], [created_by], [created_at], [notes], [invite_token], [invite_email], [invite_sent_at], [invite_accepted_at]) VALUES (1, '05018CCAE14046C39447F975FCD889FA', '16', 'standard', 4, '2026-04-27 00:00:00', '2027-04-27 00:00:00', 1, '5', '2026-04-27 14:52:13', 'loga', 'e7c0358953fe5171995b9ea8110e9a61d65dd52a1d52f46fd22395f2ede0c403308e491a21b643064f81b55214853aeb', 'loga@gmail.com', '2026-04-27 14:52:13', '2026-04-27 15:01:40');
 INSERT INTO [licenses] ([id], [license_key], [admin_user_id], [license_type], [max_estimators], [valid_from], [valid_until], [is_active], [created_by], [created_at], [notes], [invite_token], [invite_email], [invite_sent_at], [invite_accepted_at]) VALUES (2, 'E100FF6FFB2AE9299DA618964C5D3EC3', '5', 'standard', 10, '2026-04-27 00:00:00', '2027-04-27 00:00:00', 1, '15', '2026-04-27 15:51:44', NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT [licenses] OFF;
+GO
 
--- [estimation_activity_logs] (9 rows)
-DELETE FROM [estimation_activity_logs];
+-- [estimation_activity_logs] Structure
+IF OBJECT_ID('[estimation_activity_logs]', 'U') IS NOT NULL DROP TABLE [estimation_activity_logs];
+CREATE TABLE [estimation_activity_logs] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [estimationId] BIGINT NOT NULL,
+  [action] NVARCHAR(100) NOT NULL,
+  [performedBy] BIGINT NOT NULL,
+  [timestamp] DATETIME NULL,
+  [notes] NVARCHAR(MAX) NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [estimation_activity_logs] Data (9 rows)
 SET IDENTITY_INSERT [estimation_activity_logs] ON;
 INSERT INTO [estimation_activity_logs] ([id], [estimationId], [action], [performedBy], [timestamp], [notes], [company_id], [owner_admin_id]) VALUES ('231', '139', 'CREATED', '5', '2026-04-20 10:50:14', NULL, 1, NULL);
 INSERT INTO [estimation_activity_logs] ([id], [estimationId], [action], [performedBy], [timestamp], [notes], [company_id], [owner_admin_id]) VALUES ('232', '140', 'CREATED', '5', '2026-04-20 13:02:51', NULL, 1, NULL);
@@ -470,9 +643,20 @@ INSERT INTO [estimation_activity_logs] ([id], [estimationId], [action], [perform
 INSERT INTO [estimation_activity_logs] ([id], [estimationId], [action], [performedBy], [timestamp], [notes], [company_id], [owner_admin_id]) VALUES ('238', '146', 'CREATED', '3', '2026-04-27 17:25:34', NULL, 3, NULL);
 INSERT INTO [estimation_activity_logs] ([id], [estimationId], [action], [performedBy], [timestamp], [notes], [company_id], [owner_admin_id]) VALUES ('239', '147', 'CREATED', '3', '2026-04-27 17:25:48', NULL, 3, NULL);
 SET IDENTITY_INSERT [estimation_activity_logs] OFF;
+GO
 
--- [superadmin_activity_log] (8 rows)
-DELETE FROM [superadmin_activity_log];
+-- [superadmin_activity_log] Structure
+IF OBJECT_ID('[superadmin_activity_log]', 'U') IS NOT NULL DROP TABLE [superadmin_activity_log];
+CREATE TABLE [superadmin_activity_log] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [actor_id] BIGINT NOT NULL,
+  [action] NVARCHAR(200) NOT NULL,
+  [target_id] BIGINT NULL,
+  [target_type] NVARCHAR(100) NULL,
+  [detail] NVARCHAR(MAX) NULL,
+  [created_at] DATETIME NOT NULL
+);
+-- [superadmin_activity_log] Data (8 rows)
 SET IDENTITY_INSERT [superadmin_activity_log] ON;
 INSERT INTO [superadmin_activity_log] ([id], [actor_id], [action], [target_id], [target_type], [detail], [created_at]) VALUES (1, '5', 'CREATE_LICENSE', '1', 'license', '{"adminEmail":"loga@gmail.com","licenseType":"standard","maxEstimators":4}', '2026-04-27 14:52:17');
 INSERT INTO [superadmin_activity_log] ([id], [actor_id], [action], [target_id], [target_type], [detail], [created_at]) VALUES (2, '5', 'UPDATE_LICENSE', '1', 'license', '{"isActive":false}', '2026-04-27 15:02:46');
@@ -483,25 +667,94 @@ INSERT INTO [superadmin_activity_log] ([id], [actor_id], [action], [target_id], 
 INSERT INTO [superadmin_activity_log] ([id], [actor_id], [action], [target_id], [target_type], [detail], [created_at]) VALUES (7, '15', 'FORCE_LOGOUT', '5', 'user', NULL, '2026-04-27 16:53:18');
 INSERT INTO [superadmin_activity_log] ([id], [actor_id], [action], [target_id], [target_type], [detail], [created_at]) VALUES (8, '15', 'CHANGE_ROLE', '3', 'user', '{"from":"admin","to":"superadmin"}', '2026-04-27 17:01:53');
 SET IDENTITY_INSERT [superadmin_activity_log] OFF;
+GO
 
--- [project_attachments] (3 rows)
-DELETE FROM [project_attachments];
+-- [project_attachments] Structure
+IF OBJECT_ID('[project_attachments]', 'U') IS NOT NULL DROP TABLE [project_attachments];
+CREATE TABLE [project_attachments] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [projectId] INT NOT NULL,
+  [userId] INT NOT NULL,
+  [filename] NVARCHAR(600) NOT NULL,
+  [original_name] NVARCHAR(600) NOT NULL,
+  [mime_type] NVARCHAR(240) NOT NULL,
+  [file_size] BIGINT NOT NULL,
+  [file_path] NVARCHAR(1200) NOT NULL,
+  [category] NVARCHAR(100) NULL,
+  [createdAt] DATETIME NULL,
+  [is_deleted] BIT NULL,
+  [doc_type] NVARCHAR(100) NULL,
+  [folder_name] NVARCHAR(600) NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [project_attachments] Data (3 rows)
 SET IDENTITY_INSERT [project_attachments] ON;
 INSERT INTO [project_attachments] ([id], [projectId], [userId], [filename], [original_name], [mime_type], [file_size], [file_path], [category], [createdAt], [is_deleted], [doc_type], [folder_name], [company_id], [owner_admin_id]) VALUES (1, 37, 3, '1775811915001_97bfbaa4af08_MISC_Estimate_BOM__1_.xlsx', 'MISC_Estimate_BOM (1).xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '7858', 'D:\Caldim\MISC--main\MISC--main\MISC--main\uploads\attachments\MISC_37\1775811915001_97bfbaa4af08_MISC_Estimate_BOM__1_.xlsx', 'excel', '2026-04-10 14:35:15', 0, NULL, 'MISC_37', NULL, NULL);
 INSERT INTO [project_attachments] ([id], [projectId], [userId], [filename], [original_name], [mime_type], [file_size], [file_path], [category], [createdAt], [is_deleted], [doc_type], [folder_name], [company_id], [owner_admin_id]) VALUES (2, 37, 3, '1775812482941_f35c06f56b64_MISC_Estimate_BOM__1_.xlsx', 'MISC_Estimate_BOM (1).xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '7858', 'D:\Caldim\MISC--main\MISC--main\MISC--main\uploads\attachments\MISC_37\1775812482941_f35c06f56b64_MISC_Estimate_BOM__1_.xlsx', 'excel', '2026-04-10 14:44:42', 0, 'SFE Master Sheet', 'MISC_37', NULL, NULL);
 INSERT INTO [project_attachments] ([id], [projectId], [userId], [filename], [original_name], [mime_type], [file_size], [file_path], [category], [createdAt], [is_deleted], [doc_type], [folder_name], [company_id], [owner_admin_id]) VALUES (3, 37, 3, '1775813479973_fadb07ed18a1_Caldim_Estimate_BOM.xlsx', 'Caldim_Estimate_BOM.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '7732', 'D:\Caldim\MISC--main\MISC--main\MISC--main\server\uploads\attachments\MISC_37\1775813479973_fadb07ed18a1_Caldim_Estimate_BOM.xlsx', 'excel', '2026-04-10 15:01:20', 0, 'SFE Master Sheet', 'MISC_37', NULL, NULL);
 SET IDENTITY_INSERT [project_attachments] OFF;
+GO
 
--- [companies] (3 rows)
-DELETE FROM [companies];
+-- [companies] Structure
+IF OBJECT_ID('[companies]', 'U') IS NOT NULL DROP TABLE [companies];
+CREATE TABLE [companies] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [name] NVARCHAR(510) NOT NULL,
+  [slug] NVARCHAR(200) NOT NULL,
+  [plan] NVARCHAR(100) NOT NULL,
+  [is_active] BIT NOT NULL,
+  [created_at] DATETIME NOT NULL
+);
+-- [companies] Data (3 rows)
 SET IDENTITY_INSERT [companies] ON;
 INSERT INTO [companies] ([id], [name], [slug], [plan], [is_active], [created_at]) VALUES (1, 'Caldim Engineering', 'caldim', 'standard', 1, '2026-04-17 14:16:02');
 INSERT INTO [companies] ([id], [name], [slug], [plan], [is_active], [created_at]) VALUES (2, 'Steel Estimate Test Co.', 'steelestimate-test', 'standard', 1, '2026-04-17 14:16:02');
 INSERT INTO [companies] ([id], [name], [slug], [plan], [is_active], [created_at]) VALUES (3, 'Admin Corp', 'admin-corp', 'standard', 1, '2026-04-17 15:06:05');
 SET IDENTITY_INSERT [companies] OFF;
+GO
 
--- [users] (12 rows)
-DELETE FROM [users];
+-- [users] Structure
+IF OBJECT_ID('[users]', 'U') IS NOT NULL DROP TABLE [users];
+CREATE TABLE [users] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [email] NVARCHAR(510) NOT NULL,
+  [password] NVARCHAR(510) NOT NULL,
+  [company] NVARCHAR(510) NULL,
+  [phone] NVARCHAR(100) NULL,
+  [role] NVARCHAR(100) NULL,
+  [plan] NVARCHAR(100) NULL,
+  [isPaid] BIT NULL,
+  [subscriptionStatus] NVARCHAR(100) NULL,
+  [trialStart] DATETIME NULL,
+  [trialEnd] DATETIME NULL,
+  [lastLogin] DATETIME NULL,
+  [createdAt] DATETIME NULL,
+  [name] NVARCHAR(510) NULL,
+  [bio] NVARCHAR(MAX) NULL,
+  [region] NVARCHAR(200) NULL,
+  [avatar] NVARCHAR(MAX) NULL,
+  [full_name] NVARCHAR(200) NULL,
+  [otp] VARCHAR(6) NULL,
+  [otpExpires] DATETIME NULL,
+  [isVerified] BIT NULL,
+  [company_id] INT NULL,
+  [mustChangePassword] BIT NOT NULL,
+  [fullName] NVARCHAR(510) NULL,
+  [admin_owner_id] BIGINT NULL,
+  [session_token] NVARCHAR(510) NULL,
+  [session_ip] NVARCHAR(100) NULL,
+  [session_device] NVARCHAR(1000) NULL,
+  [session_device_id] NVARCHAR(200) NULL,
+  [session_at] DATETIME NULL,
+  [otp_code] NVARCHAR(20) NULL,
+  [otp_expires_at] DATETIME NULL,
+  [otp_attempts] INT NOT NULL,
+  [otp_resend_count] INT NOT NULL,
+  [otp_resend_window_start] DATETIME NULL,
+  [locked_until] DATETIME NULL
+);
+-- [users] Data (12 rows)
 SET IDENTITY_INSERT [users] ON;
 INSERT INTO [users] ([id], [email], [password], [company], [phone], [role], [plan], [isPaid], [subscriptionStatus], [trialStart], [trialEnd], [lastLogin], [createdAt], [name], [bio], [region], [avatar], [full_name], [otp], [otpExpires], [isVerified], [company_id], [mustChangePassword], [fullName], [admin_owner_id], [session_token], [session_ip], [session_device], [session_device_id], [session_at], [otp_code], [otp_expires_at], [otp_attempts], [otp_resend_count], [otp_resend_window_start], [locked_until]) VALUES ('1', 'logaprasath@caldimengg.in', '$2a$12$/pKhjfQLIU2nKmTntmIpQOWqoufTBcu/3QTX1NjSNL8Xmcy5HGw7e', 'caldim', '96541098765432', 'admin', 'trial', 0, 'active', '2026-03-18 09:57:44', '2026-04-17 09:57:44', '2026-03-22 21:58:40', '2026-03-18 15:27:44', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL);
 INSERT INTO [users] ([id], [email], [password], [company], [phone], [role], [plan], [isPaid], [subscriptionStatus], [trialStart], [trialEnd], [lastLogin], [createdAt], [name], [bio], [region], [avatar], [full_name], [otp], [otpExpires], [isVerified], [company_id], [mustChangePassword], [fullName], [admin_owner_id], [session_token], [session_ip], [session_device], [session_device_id], [session_at], [otp_code], [otp_expires_at], [otp_attempts], [otp_resend_count], [otp_resend_window_start], [locked_until]) VALUES ('2', 'e2e.test@steelestimate.com', '$2a$12$X.v5C5qgafVhd/9wQek7ceVzXWX0Ywc123/GhVEI42uvZcoq/ecsu', 'Steel Estimate Test Co.', '9876543210', 'admin', 'trial', 0, 'active', '2026-03-18 11:05:21', '2026-04-17 11:05:21', '2026-03-18 17:00:46', '2026-03-18 16:35:21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, NULL);
@@ -516,9 +769,88 @@ INSERT INTO [users] ([id], [email], [password], [company], [phone], [role], [pla
 INSERT INTO [users] ([id], [email], [password], [company], [phone], [role], [plan], [isPaid], [subscriptionStatus], [trialStart], [trialEnd], [lastLogin], [createdAt], [name], [bio], [region], [avatar], [full_name], [otp], [otpExpires], [isVerified], [company_id], [mustChangePassword], [fullName], [admin_owner_id], [session_token], [session_ip], [session_device], [session_device_id], [session_at], [otp_code], [otp_expires_at], [otp_attempts], [otp_resend_count], [otp_resend_window_start], [locked_until]) VALUES ('15', 'superadmin@miscpro.com', '$2a$12$dTcqmW3xhJWcmVvvWB4maOdv2gahTTpZCnOtWnhtbROfOB4gpYqJu', NULL, NULL, 'superadmin', 'trial', 1, 'active', '2026-04-27 14:14:51', '2026-05-27 14:14:51', '2026-04-27 18:19:57', '2026-04-27 14:14:51', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, 1, NULL, NULL, '01a85da646944ff413a8e36763f2ebde90774104a7bba373d25bc181423d39d9', '127.0.0.1', '1667ff80f9c32f8fc2ef206e89aec023debca38b9d45564a566589045392b831', NULL, '2026-04-27 18:19:57', NULL, NULL, 0, 0, NULL, NULL);
 INSERT INTO [users] ([id], [email], [password], [company], [phone], [role], [plan], [isPaid], [subscriptionStatus], [trialStart], [trialEnd], [lastLogin], [createdAt], [name], [bio], [region], [avatar], [full_name], [otp], [otpExpires], [isVerified], [company_id], [mustChangePassword], [fullName], [admin_owner_id], [session_token], [session_ip], [session_device], [session_device_id], [session_at], [otp_code], [otp_expires_at], [otp_attempts], [otp_resend_count], [otp_resend_window_start], [locked_until]) VALUES ('16', 'loga@gmail.com', '$2a$12$WNlM0ZOsbNaRrNthsWPsjuhEvARl6qI1VOjqPmfB6Twpcj8HlV/ii', NULL, NULL, 'admin', 'trial', 1, 'active', '2026-04-27 14:52:13', '2026-05-27 14:52:13', '2026-04-27 17:33:31', '2026-04-27 14:52:13', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, 0, NULL, NULL, NULL, '127.0.0.1', '387ae7aef0ff2cb88b68b8790a2f5eb8b677c19a765a3118517b46df17c55193', NULL, '2026-04-27 17:33:31', NULL, NULL, 0, 0, NULL, NULL);
 SET IDENTITY_INSERT [users] OFF;
+GO
 
--- [projects] (9 rows)
-DELETE FROM [projects];
+-- [projects] Structure
+IF OBJECT_ID('[projects]', 'U') IS NOT NULL DROP TABLE [projects];
+CREATE TABLE [projects] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [userId] BIGINT NOT NULL,
+  [project_number] NVARCHAR(200) NULL,
+  [projectName] NVARCHAR(510) NOT NULL,
+  [projectNumber] NVARCHAR(200) NULL,
+  [customer_name] NVARCHAR(510) NULL,
+  [project_location] NVARCHAR(510) NULL,
+  [architect] NVARCHAR(510) NULL,
+  [engineer] NVARCHAR(510) NULL,
+  [eor] NVARCHAR(510) NULL,
+  [gc_name] NVARCHAR(510) NULL,
+  [detailer] NVARCHAR(510) NULL,
+  [vendor_name] NVARCHAR(510) NULL,
+  [aisc_certified] NVARCHAR(100) NULL,
+  [units] NVARCHAR(40) NULL,
+  [notes] NVARCHAR(MAX) NULL,
+  [stairs] NVARCHAR(MAX) NULL,
+  [guardRails] NVARCHAR(MAX) NULL,
+  [customRailValues] NVARCHAR(MAX) NULL,
+  [status] NVARCHAR(100) NULL,
+  [created_at] DATETIME NULL,
+  [updatedAt] DATETIME NULL,
+  [assignedEngineer] NVARCHAR(200) NULL,
+  [enquiryDate] DATETIME NULL,
+  [submissionDeadline] DATETIME NULL,
+  [materialRate] DECIMAL(18,2) NULL,
+  [shopLaborRate] DECIMAL(18,2) NULL,
+  [fieldLaborRate] DECIMAL(18,2) NULL,
+  [overheadPercent] DECIMAL(18,2) NULL,
+  [profitPercent] DECIMAL(18,2) NULL,
+  [scope] NVARCHAR(MAX) NULL,
+  [totalRevenue] DECIMAL(18,2) NULL,
+  [totalCost] DECIMAL(18,2) NULL,
+  [marginPercent] DECIMAL(18,2) NULL,
+  [metadata] NVARCHAR(MAX) NULL,
+  [engineerId] INT NULL,
+  [assignedAt] DATETIME NULL,
+  [dueDate] DATETIME NULL,
+  [submittedAt] DATETIME NULL,
+  [modules] NVARCHAR(MAX) NULL,
+  [createdBy] INT NULL,
+  [projectLocation] VARCHAR(255) NULL,
+  [gcName] VARCHAR(255) NULL,
+  [vendorName] VARCHAR(255) NULL,
+  [aiscCertified] VARCHAR(10) NULL,
+  [isPinned] BIT NOT NULL,
+  [isArchived] BIT NOT NULL,
+  [estimationResult] NVARCHAR(MAX) NULL,
+  [customer_id] INT NULL,
+  [assigned_engineer_id] INT NULL,
+  [workflow_status] NVARCHAR(40) NOT NULL,
+  [revision_number] INT NOT NULL,
+  [review_comment] NVARCHAR(MAX) NULL,
+  [submitted_at] DATETIME NULL,
+  [sent_to_client_at] DATETIME NULL,
+  [sent_to_email] NVARCHAR(510) NULL,
+  [company_id] INT NULL,
+  [totalWeight] DECIMAL(15,2) NULL,
+  [reviewer_id] BIGINT NULL,
+  [reviewer_email] NVARCHAR(510) NULL,
+  [review_count] INT NULL,
+  [push_back_reason] NVARCHAR(MAX) NULL,
+  [sent_to_cc] NVARCHAR(1000) NULL,
+  [sent_at] DATETIME NULL,
+  [sent_by] BIGINT NULL,
+  [send_message] NVARCHAR(MAX) NULL,
+  [attachment_type] NVARCHAR(100) NULL,
+  [localConfig] NVARCHAR(MAX) NULL,
+  [deadline] DATETIME NULL,
+  [submitted_date] DATETIME NULL,
+  [approved_date] DATETIME NULL,
+  [approved_cost] DECIMAL(18,2) NULL,
+  [estimation_type] VARCHAR(50) NULL,
+  [total_cost] DECIMAL(18,2) NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [projects] Data (9 rows)
 SET IDENTITY_INSERT [projects] ON;
 INSERT INTO [projects] ([id], [userId], [project_number], [projectName], [projectNumber], [customer_name], [project_location], [architect], [engineer], [eor], [gc_name], [detailer], [vendor_name], [aisc_certified], [units], [notes], [stairs], [guardRails], [customRailValues], [status], [created_at], [updatedAt], [assignedEngineer], [enquiryDate], [submissionDeadline], [materialRate], [shopLaborRate], [fieldLaborRate], [overheadPercent], [profitPercent], [scope], [totalRevenue], [totalCost], [marginPercent], [metadata], [engineerId], [assignedAt], [dueDate], [submittedAt], [modules], [createdBy], [projectLocation], [gcName], [vendorName], [aiscCertified], [isPinned], [isArchived], [estimationResult], [customer_id], [assigned_engineer_id], [workflow_status], [revision_number], [review_comment], [submitted_at], [sent_to_client_at], [sent_to_email], [company_id], [totalWeight], [reviewer_id], [reviewer_email], [review_count], [push_back_reason], [sent_to_cc], [sent_at], [sent_by], [send_message], [attachment_type], [localConfig], [deadline], [submitted_date], [approved_date], [approved_cost], [estimation_type], [total_cost], [owner_admin_id]) VALUES ('139', '5', NULL, 'MISC', '#1', 'Caldim', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Y', 'Imperial', NULL, NULL, NULL, NULL, 'NEW', '2026-04-20 10:50:14', '2026-04-20 10:50:14', NULL, NULL, NULL, 0, 0, 0, 0, 0, NULL, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 5, NULL, NULL, NULL, 'Y', 0, 0, NULL, 1, NULL, 'new', 0, NULL, NULL, NULL, NULL, 1, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '5');
 INSERT INTO [projects] ([id], [userId], [project_number], [projectName], [projectNumber], [customer_name], [project_location], [architect], [engineer], [eor], [gc_name], [detailer], [vendor_name], [aisc_certified], [units], [notes], [stairs], [guardRails], [customRailValues], [status], [created_at], [updatedAt], [assignedEngineer], [enquiryDate], [submissionDeadline], [materialRate], [shopLaborRate], [fieldLaborRate], [overheadPercent], [profitPercent], [scope], [totalRevenue], [totalCost], [marginPercent], [metadata], [engineerId], [assignedAt], [dueDate], [submittedAt], [modules], [createdBy], [projectLocation], [gcName], [vendorName], [aiscCertified], [isPinned], [isArchived], [estimationResult], [customer_id], [assigned_engineer_id], [workflow_status], [revision_number], [review_comment], [submitted_at], [sent_to_client_at], [sent_to_email], [company_id], [totalWeight], [reviewer_id], [reviewer_email], [review_count], [push_back_reason], [sent_to_cc], [sent_at], [sent_by], [send_message], [attachment_type], [localConfig], [deadline], [submitted_date], [approved_date], [approved_cost], [estimation_type], [total_cost], [owner_admin_id]) VALUES ('140', '5', NULL, 'MISC', '#123', 'Caldim', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Y', 'Imperial', NULL, NULL, NULL, NULL, 'NEW', '2026-04-20 13:02:51', '2026-04-20 13:02:51', NULL, NULL, NULL, 0, 0, 0, 0, 0, NULL, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 5, NULL, NULL, NULL, 'Y', 0, 0, NULL, 1, NULL, 'new', 0, NULL, NULL, NULL, NULL, 1, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '5');
@@ -530,19 +862,70 @@ INSERT INTO [projects] ([id], [userId], [project_number], [projectName], [projec
 INSERT INTO [projects] ([id], [userId], [project_number], [projectName], [projectNumber], [customer_name], [project_location], [architect], [engineer], [eor], [gc_name], [detailer], [vendor_name], [aisc_certified], [units], [notes], [stairs], [guardRails], [customRailValues], [status], [created_at], [updatedAt], [assignedEngineer], [enquiryDate], [submissionDeadline], [materialRate], [shopLaborRate], [fieldLaborRate], [overheadPercent], [profitPercent], [scope], [totalRevenue], [totalCost], [marginPercent], [metadata], [engineerId], [assignedAt], [dueDate], [submittedAt], [modules], [createdBy], [projectLocation], [gcName], [vendorName], [aiscCertified], [isPinned], [isArchived], [estimationResult], [customer_id], [assigned_engineer_id], [workflow_status], [revision_number], [review_comment], [submitted_at], [sent_to_client_at], [sent_to_email], [company_id], [totalWeight], [reviewer_id], [reviewer_email], [review_count], [push_back_reason], [sent_to_cc], [sent_at], [sent_by], [send_message], [attachment_type], [localConfig], [deadline], [submitted_date], [approved_date], [approved_cost], [estimation_type], [total_cost], [owner_admin_id]) VALUES ('146', '3', NULL, 'MISC', '@1234', 'Caldim', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Y', 'Imperial', NULL, NULL, NULL, NULL, 'NEW', '2026-04-27 17:25:34', '2026-04-27 17:25:34', NULL, NULL, NULL, 0, 0, 0, 0, 0, NULL, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, 'Y', 0, 0, NULL, 1, NULL, 'new', 0, NULL, NULL, NULL, NULL, 3, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL);
 INSERT INTO [projects] ([id], [userId], [project_number], [projectName], [projectNumber], [customer_name], [project_location], [architect], [engineer], [eor], [gc_name], [detailer], [vendor_name], [aisc_certified], [units], [notes], [stairs], [guardRails], [customRailValues], [status], [created_at], [updatedAt], [assignedEngineer], [enquiryDate], [submissionDeadline], [materialRate], [shopLaborRate], [fieldLaborRate], [overheadPercent], [profitPercent], [scope], [totalRevenue], [totalCost], [marginPercent], [metadata], [engineerId], [assignedAt], [dueDate], [submittedAt], [modules], [createdBy], [projectLocation], [gcName], [vendorName], [aiscCertified], [isPinned], [isArchived], [estimationResult], [customer_id], [assigned_engineer_id], [workflow_status], [revision_number], [review_comment], [submitted_at], [sent_to_client_at], [sent_to_email], [company_id], [totalWeight], [reviewer_id], [reviewer_email], [review_count], [push_back_reason], [sent_to_cc], [sent_at], [sent_by], [send_message], [attachment_type], [localConfig], [deadline], [submitted_date], [approved_date], [approved_cost], [estimation_type], [total_cost], [owner_admin_id]) VALUES ('147', '3', NULL, 'MISC', 'L', 'Caldim', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Y', 'Imperial', NULL, NULL, NULL, NULL, 'NEW', '2026-04-27 17:25:48', '2026-04-27 17:30:24', NULL, NULL, NULL, 0, 0, 0, 0, 0, NULL, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, 'Y', 0, 0, NULL, 1, NULL, 'new', 0, NULL, NULL, NULL, NULL, 3, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL);
 SET IDENTITY_INSERT [projects] OFF;
+GO
 
--- [estimates] (0 rows)
-DELETE FROM [estimates];
+-- [estimates] Structure
+IF OBJECT_ID('[estimates]', 'U') IS NOT NULL DROP TABLE [estimates];
+CREATE TABLE [estimates] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [project_id] BIGINT NOT NULL,
+  [version] INT NULL,
+  [status] NVARCHAR(40) NULL,
+  [total_steel_weight] DECIMAL(15,6) NULL,
+  [total_shop_labor_hours] DECIMAL(15,6) NULL,
+  [total_field_labor_hours] DECIMAL(15,6) NULL,
+  [total_material_cost] DECIMAL(15,6) NULL,
+  [total_labor_cost] DECIMAL(15,6) NULL,
+  [total_estimated_cost] DECIMAL(15,6) NULL,
+  [created_at] DATETIME NULL,
+  [updated_at] DATETIME NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [estimates] Data (0 rows)
+GO
 
--- [project_notes] (2 rows)
-DELETE FROM [project_notes];
+-- [project_notes] Structure
+IF OBJECT_ID('[project_notes]', 'U') IS NOT NULL DROP TABLE [project_notes];
+CREATE TABLE [project_notes] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [projectId] BIGINT NOT NULL,
+  [userId] BIGINT NOT NULL,
+  [title] NVARCHAR(510) NULL,
+  [content] NVARCHAR(MAX) NULL,
+  [note_type] NVARCHAR(100) NULL,
+  [pos_x] FLOAT NULL,
+  [pos_y] FLOAT NULL,
+  [isPinned] BIT NULL,
+  [color] NVARCHAR(40) NULL,
+  [mentions] NVARCHAR(MAX) NULL,
+  [createdAt] DATETIME NULL,
+  [updatedAt] DATETIME NULL,
+  [is_deleted] BIT NULL,
+  [deleted_at] DATETIME NULL,
+  [is_locked] BIT NULL,
+  [context_type] NVARCHAR(200) NULL,
+  [context_id] NVARCHAR(200) NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [project_notes] Data (2 rows)
 SET IDENTITY_INSERT [project_notes] ON;
 INSERT INTO [project_notes] ([id], [projectId], [userId], [title], [content], [note_type], [pos_x], [pos_y], [isPinned], [color], [mentions], [createdAt], [updatedAt], [is_deleted], [deleted_at], [is_locked], [context_type], [context_id], [company_id], [owner_admin_id]) VALUES ('258', '146', '3', 'New Note', '', 'personal', 485, 943, 1, '#e0f7fa', '[]', '2026-04-27 17:25:53', '2026-04-27 17:26:38', 0, NULL, 0, 'global', NULL, 3, '3');
 INSERT INTO [project_notes] ([id], [projectId], [userId], [title], [content], [note_type], [pos_x], [pos_y], [isPinned], [color], [mentions], [createdAt], [updatedAt], [is_deleted], [deleted_at], [is_locked], [context_type], [context_id], [company_id], [owner_admin_id]) VALUES ('259', '147', '3', 'New Note', 'MASS', 'personal', 765, 625, 1, '#e0f7fa', '[]', '2026-04-27 17:30:28', '2026-04-27 18:51:45', 1, '2026-04-27 18:51:45', 0, 'global', NULL, 3, '3');
 SET IDENTITY_INSERT [project_notes] OFF;
+GO
 
--- [galvanized_labor] (61 rows)
-DELETE FROM [galvanized_labor];
+-- [galvanized_labor] Structure
+IF OBJECT_ID('[galvanized_labor]', 'U') IS NOT NULL DROP TABLE [galvanized_labor];
+CREATE TABLE [galvanized_labor] (
+  [id] INT IDENTITY(1,1) NOT NULL,
+  [category] NVARCHAR(100) NOT NULL,
+  [label] NVARCHAR(510) NOT NULL,
+  [shop_mh_per_lf] DECIMAL(10,4) NULL,
+  [field_mh_per_lf] DECIMAL(10,4) NULL
+);
+-- [galvanized_labor] Data (61 rows)
 SET IDENTITY_INSERT [galvanized_labor] ON;
 INSERT INTO [galvanized_labor] ([id], [category], [label], [shop_mh_per_lf], [field_mh_per_lf]) VALUES (1, 'guardRail_type', '1-Line Handrailing on Guardrail - 1 1/4" SCH 40 pipe', 0.25, 0.25);
 INSERT INTO [galvanized_labor] ([id], [category], [label], [shop_mh_per_lf], [field_mh_per_lf]) VALUES (2, 'guardRail_type', '1-Line Handrailing on Guardrail - 1 1/2" SCH 40 pipe', 0.25, 0.25);
@@ -606,12 +989,41 @@ INSERT INTO [galvanized_labor] ([id], [category], [label], [shop_mh_per_lf], [fi
 INSERT INTO [galvanized_labor] ([id], [category], [label], [shop_mh_per_lf], [field_mh_per_lf]) VALUES (60, 'stringer_size', 'Std. 5''-0" wide 14''-0 - 19''-0" span grating tread stairs/MC 12 X 14.3', 0.15, 0.1);
 INSERT INTO [galvanized_labor] ([id], [category], [label], [shop_mh_per_lf], [field_mh_per_lf]) VALUES (61, 'stringer_size', 'Std. 5''-0" wide > 19''-0" span grating tread stairs', 0.15, 0.1);
 SET IDENTITY_INSERT [galvanized_labor] OFF;
+GO
 
--- [takeoff_items] (0 rows)
-DELETE FROM [takeoff_items];
+-- [takeoff_items] Structure
+IF OBJECT_ID('[takeoff_items]', 'U') IS NOT NULL DROP TABLE [takeoff_items];
+CREATE TABLE [takeoff_items] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [estimate_id] BIGINT NOT NULL,
+  [category_id] INT NOT NULL,
+  [item_type_id] BIGINT NULL,
+  [description] NVARCHAR(1000) NULL,
+  [length] DECIMAL(15,6) NULL,
+  [width] DECIMAL(15,6) NULL,
+  [height] DECIMAL(15,6) NULL,
+  [quantity] INT NULL,
+  [spacing] DECIMAL(15,6) NULL,
+  [rise] DECIMAL(15,6) NULL,
+  [run] DECIMAL(15,6) NULL,
+  [raw_input] NVARCHAR(MAX) NULL,
+  [created_at] DATETIME NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [takeoff_items] Data (0 rows)
+GO
 
--- [agent_chats] (30 rows)
-DELETE FROM [agent_chats];
+-- [agent_chats] Structure
+IF OBJECT_ID('[agent_chats]', 'U') IS NOT NULL DROP TABLE [agent_chats];
+CREATE TABLE [agent_chats] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [userId] BIGINT NOT NULL,
+  [title] NVARCHAR(510) NULL,
+  [createdAt] DATETIME NULL,
+  [updatedAt] DATETIME NULL
+);
+-- [agent_chats] Data (30 rows)
 SET IDENTITY_INSERT [agent_chats] ON;
 INSERT INTO [agent_chats] ([id], [userId], [title], [createdAt], [updatedAt]) VALUES ('1', '5', 'How is scrap factor calculated for stairs?', '2026-04-21 18:34:23', '2026-04-21 18:34:42');
 INSERT INTO [agent_chats] ([id], [userId], [title], [createdAt], [updatedAt]) VALUES ('7', '5', 'Good morning', '2026-04-21 18:38:52', '2026-04-21 18:38:52');
@@ -644,12 +1056,40 @@ INSERT INTO [agent_chats] ([id], [userId], [title], [createdAt], [updatedAt]) VA
 INSERT INTO [agent_chats] ([id], [userId], [title], [createdAt], [updatedAt]) VALUES ('39', '3', 'Calculate stair weight for 500 lbs', '2026-04-27 18:57:04', '2026-04-27 18:57:04');
 INSERT INTO [agent_chats] ([id], [userId], [title], [createdAt], [updatedAt]) VALUES ('40', '3', 'what is the news in india today?', '2026-04-27 18:58:00', '2026-04-27 18:58:00');
 SET IDENTITY_INSERT [agent_chats] OFF;
+GO
 
--- [estimate_results] (0 rows)
-DELETE FROM [estimate_results];
+-- [estimate_results] Structure
+IF OBJECT_ID('[estimate_results]', 'U') IS NOT NULL DROP TABLE [estimate_results];
+CREATE TABLE [estimate_results] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [estimate_id] BIGINT NOT NULL,
+  [takeoff_item_id] BIGINT NULL,
+  [steel_weight] DECIMAL(15,6) NULL,
+  [shop_labor_hours] DECIMAL(15,6) NULL,
+  [field_labor_hours] DECIMAL(15,6) NULL,
+  [material_cost] DECIMAL(15,6) NULL,
+  [labor_cost] DECIMAL(15,6) NULL,
+  [total_cost] DECIMAL(15,6) NULL,
+  [created_at] DATETIME NULL,
+  [company_id] INT NULL,
+  [owner_admin_id] BIGINT NULL
+);
+-- [estimate_results] Data (0 rows)
+GO
 
--- [agent_chat_messages] (292 rows)
-DELETE FROM [agent_chat_messages];
+-- [agent_chat_messages] Structure
+IF OBJECT_ID('[agent_chat_messages]', 'U') IS NOT NULL DROP TABLE [agent_chat_messages];
+CREATE TABLE [agent_chat_messages] (
+  [id] BIGINT IDENTITY(1,1) NOT NULL,
+  [chatId] BIGINT NOT NULL,
+  [role] NVARCHAR(100) NOT NULL,
+  [content] NVARCHAR(MAX) NOT NULL,
+  [tool] NVARCHAR(510) NULL,
+  [source] NVARCHAR(510) NULL,
+  [intent] NVARCHAR(100) NULL,
+  [createdAt] DATETIME NULL
+);
+-- [agent_chat_messages] Data (292 rows)
 SET IDENTITY_INSERT [agent_chat_messages] ON;
 INSERT INTO [agent_chat_messages] ([id], [chatId], [role], [content], [tool], [source], [intent], [createdAt]) VALUES ('1', '1', 'user', 'How is scrap factor calculated for stairs?', NULL, NULL, NULL, '2026-04-21 18:34:23');
 INSERT INTO [agent_chat_messages] ([id], [chatId], [role], [content], [tool], [source], [intent], [createdAt]) VALUES ('2', '1', 'assistant', 'To calculate **calculates extra material accounting for cutting or wastage.**, I need a few more details:
@@ -2288,6 +2728,6 @@ INSERT INTO [agent_chat_messages] ([id], [chatId], [role], [content], [tool], [s
 • The suggestion engine for guard rails
 • User roles and permissions', NULL, NULL, 'STATIC', '2026-04-27 18:58:00');
 SET IDENTITY_INSERT [agent_chat_messages] OFF;
+GO
 
--- Re-enable all constraints
 EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL";
