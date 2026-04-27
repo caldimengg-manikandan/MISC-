@@ -55,11 +55,7 @@ export default function ProjectHistory() {
 
   const handleSelectProject = (project) => {
     // Save to local storage for estimation module
-    // 🔄 FIX: Use a relative path check to ensure the key matches regardless of /misc prefix
-    const targetPath = '/estimate/stair-railings';
-    const currentBase = window.location.pathname.includes('/misc') ? '/misc' : '';
-    const modulePath = `${currentBase}${targetPath}`;
-
+    const modulePath = '/estimate/stair-railings';
     localStorage.setItem(`steelProjectInfo_${modulePath}`, JSON.stringify({
       id: project.id,
       projectName: project.projectName,

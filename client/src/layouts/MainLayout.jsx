@@ -522,7 +522,9 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
   // Helper to get module-specific context key
   const getContextKey = (path = location.pathname) => {
     const base = path.split('?')[0];
-    return `steelProjectInfo_${base}`;
+    // 🔄 FIX: Normalize key to be prefix-agnostic (strips /misc if present)
+    const normalized = base.includes('/estimate/') ? '/estimate/' + base.split('/estimate/')[1] : base;
+    return `steelProjectInfo_${normalized}`;
   };
 
   const handleNavWithDraftCheck = (path) => {

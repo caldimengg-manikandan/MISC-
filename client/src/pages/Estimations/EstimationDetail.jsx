@@ -311,11 +311,7 @@ export default function EstimationDetail() {
       }
 
       // Write project info to localStorage for the estimation module
-      // 🔄 FIX: Use a relative path check to ensure the key matches regardless of /misc prefix
-      const targetPath = '/estimate/stair-railings';
-      const currentBase = window.location.pathname.includes('/misc') ? '/misc' : '';
-      const modulePath = `${currentBase}${targetPath}`;
-      
+      const modulePath = '/estimate/stair-railings';
       const contextKey = `steelProjectInfo_${modulePath}`;
       localStorage.setItem(contextKey, JSON.stringify({
         id: resolvedId,

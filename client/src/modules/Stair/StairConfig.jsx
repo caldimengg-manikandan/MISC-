@@ -881,7 +881,13 @@ export default function StairEstimation() {
   stairsRef.current = stairs;
 
   // Helper to get module-specific context key
-  const getContextKey = () => `steelProjectInfo_${window.location.pathname.split('?')[0]}`;
+  // Helper to get module-specific context key
+  const getContextKey = () => {
+    const path = window.location.pathname.split('?')[0];
+    // 🔄 FIX: Strip any deployment prefix (like /misc) so the key is always 'steelProjectInfo_/estimate/...'
+    const normalized = path.includes('/estimate/') ? '/estimate/' + path.split('/estimate/')[1] : path;
+    return `steelProjectInfo_${normalized}`;
+  };
 
   const handleDisconnectProject = () => {
     if (window.confirm("Disconnect this estimation from the project and return to Draft Mode?")) {
