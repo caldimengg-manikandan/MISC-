@@ -1,20 +1,15 @@
-import axios from 'axios';
-import API_BASE_URL from '../config/api';
-
-const getAuthHeaders = () => {
-    const token = localStorage.getItem('steel_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// client/src/api/notes.api.js
+import api from '../services/api';
 
 const notesApi = {
-  getProjectNotes: (projectId) => axios.get(`${API_BASE_URL}/api/notes/project/${projectId}`, { headers: getAuthHeaders() }),
-  getTrashNotes: (projectId) => axios.get(`${API_BASE_URL}/api/notes/trash/${projectId}`, { headers: getAuthHeaders() }),
-  createNote: (data) => axios.post(`${API_BASE_URL}/api/notes`, data, { headers: getAuthHeaders() }),
-  updateNote: (id, data) => axios.put(`${API_BASE_URL}/api/notes/${id}`, data, { headers: getAuthHeaders() }),
-  updatePosition: (id, pos) => axios.patch(`${API_BASE_URL}/api/notes/${id}/position`, pos, { headers: getAuthHeaders() }),
-  restoreNote: (id) => axios.post(`${API_BASE_URL}/api/notes/restore/${id}`, {}, { headers: getAuthHeaders() }),
-  deleteNote: (id) => axios.delete(`${API_BASE_URL}/api/notes/${id}`, { headers: getAuthHeaders() }),
-  permanentlyDeleteNote: (id) => axios.delete(`${API_BASE_URL}/api/notes/${id}/permanent`, { headers: getAuthHeaders() })
+  getProjectNotes: (projectId) => api.get(`/notes/project/${projectId}`),
+  getTrashNotes: (projectId) => api.get(`/notes/trash/${projectId}`),
+  createNote: (data) => api.post('/notes', data),
+  updateNote: (id, data) => api.put(`/notes/${id}`, data),
+  updatePosition: (id, pos) => api.patch(`/notes/${id}/position`, pos),
+  restoreNote: (id) => api.post(`/notes/restore/${id}`, {}),
+  deleteNote: (id) => api.delete(`/notes/${id}`),
+  permanentlyDeleteNote: (id) => api.delete(`/notes/${id}/permanent`)
 };
 
 export default notesApi;

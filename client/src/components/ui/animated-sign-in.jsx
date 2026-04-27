@@ -18,6 +18,7 @@ const LoginPage = () => {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+  const [localError, setLocalError] = useState("");
 
   const { login, register, forgotPassword, verifyOTP, resetPassword, sendSignupOTP, verifySignupOTP, signup, loading } = useAuth();
   
@@ -152,6 +153,7 @@ const LoginPage = () => {
   // Handle email change
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
+    setLocalError(""); // Clear error when user types
     if (e.target.value) {
       setIsEmailValid(validateEmail(e.target.value));
     } else {
@@ -171,11 +173,19 @@ const LoginPage = () => {
     if (isSignUpMode) {
       handleSignupSubmit(e);
     } else {
-      login(email, password, rememberMe)
+      login(email, password)
         .then((result) => {
           if (result.success) {
-            navigate(from, { replace: true });
+            // Success might mean navigated to OTP or Home
+            // If it required OTP, AuthContext already navigated there.
+            // If it was a direct login, it also already navigated.
+          } else {
+            setLocalError(result.error || "Invalid email or password. Please try again.");
           }
+        })
+        .catch((err) => {
+          console.error("Login component error:", err);
+          toast.error("An unexpected error occurred. Please try again.");
         });
     }
   };
@@ -383,7 +393,16 @@ const LoginPage = () => {
               )}
             </div>
           ) : (
-            <form className="asl-login-form" onSubmit={handleSubmit}>
+            <>
+              {/* Error Message Section */}
+              {localError && (
+                <div className="asl-internal-error-banner">
+                  <span className="asl-error-icon">⚠️</span>
+                  <p>{localError}</p>
+                </div>
+              )}
+
+              <form className="asl-login-form" onSubmit={handleSubmit}>
               {isSignUpMode && (
                 <>
                   <div className={`asl-form-field ${fullName ? "asl-active" : ""}`}>
@@ -474,7 +493,10 @@ const LoginPage = () => {
                   type={showPassword ? "text" : "password"}
                   id="asl-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setLocalError(""); // Clear error when user types
+                  }}
                   onFocus={() => setIsPasswordFocused(true)}
                   onBlur={() => setIsPasswordFocused(false)}
                   required
@@ -524,12 +546,13 @@ const LoginPage = () => {
                   isSignUpMode ? "Create Account" : "Sign In"
                 )}
               </button>
-            </form>
+              </form>
+            </>
           )}
 
 
 
-          <p className="asl-signup-prompt">
+          {/* <p className="asl-signup-prompt">
             {isSignUpMode ? "Already have an account? " : "Don't have an account? "}
             <a href="#" onClick={(e) => { 
                 e.preventDefault(); 
@@ -537,7 +560,7 @@ const LoginPage = () => {
             }}>
               {isSignUpMode ? "Sign In" : "Sign Up"}
             </a>
-          </p>
+          </p> */}
         </div>
       </div>
     </div>

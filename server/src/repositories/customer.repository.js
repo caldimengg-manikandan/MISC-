@@ -1,109 +1,90 @@
 // server/src/repositories/customer.repository.js
+// Isolation switched from company_id → owner_admin_id
+// SuperAdmin (ownerAdminId = null) sees all records
+
 const db = require('../config/mssql');
 
 class CustomerRepository {
-    async findAll(filters = {}, companyId = null) {
-        // NULL company = no data access
-        if (companyId === null || companyId === undefined) return [];
+  _scopeWhere(ownerAdminId) {
+    if (ownerAdminId === null || ownerAdminId === undefined) return ''; // superadmin — no filter
+    return ` AND owner_admin_id = ${parseInt(ownerAdminId)}`;
+  }
 
-        let query = 'SELECT * FROM customers WHERE company_id = ?';
-        let params = [companyId];
+  async findAll(filters = {}, ownerAdminId = null) {
+    const scope = this._scopeWhere(ownerAdminId);
+    let query = `SELECT * FROM customers WHERE status != 'deleted'${scope}`;
+    const params = [];
+    if (filters.status) { query += ' AND status = ?'; params.push(filters.status); }
+    query += ' ORDER BY companyName ASC';
+    const [rows] = await db.query(query, params);
+    return rows;
+  }
 
-        if (filters.status) {
-            query += ' AND status = ?';
-            params.push(filters.status);
-        }
+  async findById(id, ownerAdminId = null) {
+    const scope = this._scopeWhere(ownerAdminId);
+    const [rows] = await db.query(
+      `SELECT * FROM customers WHERE id = ?${scope}`,
+      [id]
+    );
+    return rows[0] || null;
+  }
 
-        query += ' ORDER BY companyName ASC';
-        const [rows] = await db.query(query, params);
-        return rows;
+  async create(data) {
+    const { companyName, contactPerson, email, phone, street, city, state, zip, notes, createdBy, ownerAdminId } = data;
+    const [result] = await db.query(`
+      INSERT INTO customers (companyName, contactPerson, email, phone, street, city, state, zip, status, notes, owner_admin_id, createdBy, updatedBy, createdAt, updatedAt)
+      OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, GETDATE(), GETDATE())
+    `, [companyName, contactPerson, email, phone, street, city, state, zip, notes, ownerAdminId || null, createdBy, createdBy]);
+    return result[0].id;
+  }
+
+  async update(id, data) {
+    const { companyName, contactPerson, email, phone, street, city, state, zip, status, notes, updatedBy, ownerAdminId } = data;
+    const sets = ['updatedAt = GETDATE()'];
+    const params = [];
+    const addField = (col, val) => { if (val !== undefined) { sets.push(`${col} = ?`); params.push(val === '' ? null : val); } };
+    addField('companyName', companyName); addField('contactPerson', contactPerson);
+    addField('email', email); addField('phone', phone); addField('street', street);
+    addField('city', city); addField('state', state); addField('zip', zip);
+    addField('status', status); addField('notes', notes); addField('updatedBy', updatedBy);
+
+    let where = 'id = ?';
+    params.push(id);
+    if (ownerAdminId !== null && ownerAdminId !== undefined) {
+      where += ' AND owner_admin_id = ?';
+      params.push(ownerAdminId);
     }
+    return await db.query(`UPDATE customers SET ${sets.join(', ')} WHERE ${where}`, params);
+  }
 
-    async findById(id, companyId = null) {
-        if (companyId === null || companyId === undefined) return null;
-        const [rows] = await db.query('SELECT * FROM customers WHERE id = ? AND company_id = ?', [id, companyId]);
-        return rows[0] || null;
+  async updateStatus(id, status, updatedBy, ownerAdminId = null) {
+    let query = 'UPDATE customers SET status = ?, updatedBy = ?, updatedAt = GETDATE() WHERE id = ?';
+    const params = [status, updatedBy, id];
+    if (ownerAdminId !== null && ownerAdminId !== undefined) {
+      query += ' AND owner_admin_id = ?';
+      params.push(ownerAdminId);
     }
+    return await db.query(query, params);
+  }
 
-    async create(data) {
-        const { 
-            companyName, contactPerson, email, phone, 
-            street, city, state, zip, notes, createdBy, companyId
-        } = data;
-        
-        const [result] = await db.query(`
-            INSERT INTO customers (
-                companyName, contactPerson, email, phone, 
-                street, city, state, zip, status, notes, 
-                company_id, createdBy, updatedBy, createdAt, updatedAt
-            )
-            OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, GETDATE(), GETDATE())
-        `, [
-            companyName, contactPerson, email, phone, 
-            street, city, state, zip, notes, companyId || null, createdBy, createdBy
-        ]);
-        
-        return result[0].id;
+  async search(searchTerm, ownerAdminId = null) {
+    const scope = this._scopeWhere(ownerAdminId);
+    const [rows] = await db.query(
+      `SELECT * FROM customers WHERE status = 'active'${scope} AND companyName LIKE ? ORDER BY companyName ASC`,
+      [`%${searchTerm}%`]
+    );
+    return rows;
+  }
+
+  async delete(id, ownerAdminId = null) {
+    let query = `UPDATE customers SET status = 'deleted', updatedAt = GETDATE() WHERE id = ?`;
+    const params = [id];
+    if (ownerAdminId !== null && ownerAdminId !== undefined) {
+      query += ' AND owner_admin_id = ?';
+      params.push(ownerAdminId);
     }
-
-    async update(id, data) {
-        const { 
-            companyName, contactPerson, email, phone, 
-            street, city, state, zip, status, notes, updatedBy, companyId
-        } = data;
-
-        const sets = ['updatedAt = GETDATE()'];
-        const params = [];
-
-        const addField = (col, val) => {
-            if (val !== undefined) {
-                sets.push(`${col} = ?`);
-                params.push(val === '' ? null : val);
-            }
-        };
-
-        addField('companyName', companyName);
-        addField('contactPerson', contactPerson);
-        addField('email', email);
-        addField('phone', phone);
-        addField('street', street);
-        addField('city', city);
-        addField('state', state);
-        addField('zip', zip);
-        addField('status', status);
-        addField('notes', notes);
-        addField('updatedBy', updatedBy);
-
-        let whereClause = 'id = ?';
-        params.push(id);
-        if (companyId !== null) {
-            whereClause += ' AND company_id = ?';
-            params.push(companyId);
-        }
-
-        const query = `UPDATE customers SET ${sets.join(', ')} WHERE ${whereClause}`;
-        return await db.query(query, params);
-    }
-
-    async updateStatus(id, status, updatedBy, companyId = null) {
-        let query = 'UPDATE customers SET status = ?, updatedBy = ?, updatedAt = GETDATE() WHERE id = ?';
-        let params = [status, updatedBy, id];
-        if (companyId !== null) {
-            query += ' AND company_id = ?';
-            params.push(companyId);
-        }
-        return await db.query(query, params);
-    }
-
-    async search(searchTerm, companyId = null) {
-        if (companyId === null || companyId === undefined) return [];
-        let query = "SELECT * FROM customers WHERE status = 'active' AND company_id = ? AND companyName LIKE ?";
-        let params = [companyId, `%${searchTerm}%`];
-        query += ' ORDER BY companyName ASC';
-        const [rows] = await db.query(query, params);
-        return rows;
-    }
+    return await db.query(query, params);
+  }
 }
 
 module.exports = new CustomerRepository();

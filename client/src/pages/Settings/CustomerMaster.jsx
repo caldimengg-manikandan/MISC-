@@ -44,7 +44,7 @@ export default function CustomerMaster() {
   const fetchCustomers = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.get(`${API_BASE_URL}/api/customers?status=active`, {
+      const res = await axios.get(`${API_BASE_URL}/api/customers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -130,6 +130,26 @@ export default function CustomerMaster() {
       }
     } catch (err) {
       toast.error("Status update failed", { id: t });
+    }
+  };
+
+  const handleDelete = async (customer) => {
+    if (!window.confirm(`Are you sure you want to permanently delete "${customer.companyName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    const t = toast.loading("Deleting customer...");
+    try {
+      const token = localStorage.getItem('steel_token');
+      const res = await axios.delete(`${API_BASE_URL}/api/customers/${customer.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        toast.success("Customer deleted", { id: t });
+        fetchCustomers();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Deletion failed", { id: t });
     }
   };
 
@@ -223,6 +243,13 @@ export default function CustomerMaster() {
                           onClick={() => toggleStatus(customer)}
                         >
                           {customer.status === 'active' ? <XCircle size={14} /> : <CheckCircle size={14} />}
+                        </button>
+                        <button 
+                          className="cm-action-icon danger" 
+                          title="Delete Permanently"
+                          onClick={() => handleDelete(customer)}
+                        >
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>

@@ -5,6 +5,7 @@ const db = require('../config/mssql');
 const auth = require('../middleware/auth');
 const dashboardService = require('../services/DashboardService');
 const notif = require('../services/NotificationService');
+const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 
 const tryParseJson = (val) => {
   if (typeof val !== 'string') return val;
@@ -33,22 +34,22 @@ const removeEmptyGeometries = (geometries) => {
 // Get all projects for user (admin sees ALL in company, estimator sees own)
 router.get('/', auth, async (req, res) => {
   try {
-    const isAdmin = req.userRole === 'admin';
-    const cid = req.companyId;
-
-    // Users with no company affiliation see nothing
-    if (!cid) return res.json({ success: true, projects: [] });
+    const ownerAdminId = await resolveOwnerAdminId(req);
 
     let query, params;
-    if (isAdmin) {
-      query = 'SELECT * FROM projects WHERE company_id = ? ORDER BY updatedAt DESC';
-      params = [cid];
+    if (ownerAdminId === null) {
+      // superadmin — sees everything
+      query = 'SELECT * FROM projects ORDER BY updatedAt DESC';
+      params = [];
+    } else if (req.userRole === 'admin') {
+      query = 'SELECT * FROM projects WHERE owner_admin_id = ? ORDER BY updatedAt DESC';
+      params = [ownerAdminId];
     } else {
       query = `SELECT * FROM projects
-               WHERE company_id = ?
+               WHERE owner_admin_id = ?
                AND (userId = ? OR createdBy = ? OR engineerId = ?)
                ORDER BY updatedAt DESC`;
-      params = [cid, req.userId, req.userId, req.userId];
+      params = [ownerAdminId, req.userId, req.userId, req.userId];
     }
 
     const [projects] = await db.query(query, params);
@@ -68,51 +69,47 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Lookup projects by name or number (exact or pattern)
+// Lookup projects by name or number
 router.get('/lookup/name', auth, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) return res.json({ success: true, projects: [] });
-
-    const cid = req.companyId;
-    const isAdmin = req.userRole === 'admin';
+    const ownerAdminId = await resolveOwnerAdminId(req);
 
     let query, params;
-    // We want to find exact or partial matches to help the user avoid duplicates or reuse templates
-    if (isAdmin) {
-      query = `SELECT id, projectNumber, projectName, customer_name, customer_id, 
-                      project_location, architect, eor, gc_name, detailer, vendor_name, 
+    if (ownerAdminId === null) {
+      query = `SELECT id, projectNumber, projectName, customer_name, customer_id,
+                      project_location, architect, eor, gc_name, detailer, vendor_name,
                       aisc_certified as aiscCertified, units, status, createdAt
-               FROM projects 
-               WHERE company_id = ? AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
+               FROM projects WHERE (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
                ORDER BY createdAt DESC`;
-      params = [cid, q, `%${q}%`, q];
-    } else {
-      query = `SELECT id, projectNumber, projectName, customer_name, customer_id, 
-                      project_location, architect, eor, gc_name, detailer, vendor_name, 
+      params = [q, `%${q}%`, q];
+    } else if (req.userRole === 'admin') {
+      query = `SELECT id, projectNumber, projectName, customer_name, customer_id,
+                      project_location, architect, eor, gc_name, detailer, vendor_name,
                       aisc_certified as aiscCertified, units, status, createdAt
-               FROM projects 
-               WHERE company_id = ? 
-               AND (userId = ? OR createdBy = ? OR engineerId = ?) 
+               FROM projects
+               WHERE owner_admin_id = ? AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
+               ORDER BY createdAt DESC`;
+      params = [ownerAdminId, q, `%${q}%`, q];
+    } else {
+      query = `SELECT id, projectNumber, projectName, customer_name, customer_id,
+                      project_location, architect, eor, gc_name, detailer, vendor_name,
+                      aisc_certified as aiscCertified, units, status, createdAt
+               FROM projects
+               WHERE owner_admin_id = ?
+               AND (userId = ? OR createdBy = ? OR engineerId = ?)
                AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
                ORDER BY createdAt DESC`;
-      params = [cid, req.userId, req.userId, req.userId, q, `%${q}%`, q];
+      params = [ownerAdminId, req.userId, req.userId, req.userId, q, `%${q}%`, q];
     }
 
     const [projects] = await db.query(query, params);
-    
-    // Normalize field names if they were snake_case in DB
     const normalized = projects.map(p => ({
-      ...p,
-      projectName: p.projectName,
-      projectNumber: p.projectNumber,
-      customerName: p.customer_name,
-      customerId: p.customer_id,
-      projectLocation: p.project_location,
-      gcName: p.gc_name,
-      vendorName: p.vendor_name
+      ...p, projectName: p.projectName, projectNumber: p.projectNumber,
+      customerName: p.customer_name, customerId: p.customer_id,
+      projectLocation: p.project_location, gcName: p.gc_name, vendorName: p.vendor_name
     }));
-
     res.json({ success: true, projects: normalized });
   } catch (error) {
     console.error('Error in project lookup:', error);
@@ -120,116 +117,62 @@ router.get('/lookup/name', auth, async (req, res) => {
   }
 });
 
-// Check for duplicate project name/number and return history
+
+// Check for duplicate project name/number
 router.get('/check-duplicate', auth, async (req, res) => {
   try {
     const { projectName, projectNumber, excludeId } = req.query;
-    const cid = req.companyId;
+    if (!projectName && !projectNumber) return res.json({ success: true, exists: false, history: [] });
+    const ownerAdminId = await resolveOwnerAdminId(req);
 
-    if (!projectName && !projectNumber) {
-      return res.json({ success: true, exists: false, history: [] });
-    }
-
-    // Check for history (projects with same name or number)
-    // We EXCLUDE the current projectId if provided (e.g. when editing)
-    let query = `
-      SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email 
-      FROM projects p
-      LEFT JOIN users u ON p.engineerId = u.id 
-      WHERE p.company_id = ? 
-      AND (p.projectName LIKE ? OR p.projectNumber LIKE ?)
-    `;
-    let params = [cid, `%${projectName || '___NONE___'}%`, `%${projectNumber || '___NONE___'}%` ];
-
-    if (excludeId && excludeId !== 'null' && excludeId !== 'undefined' && excludeId !== '') {
-      query += " AND p.id != ?";
-      params.push(excludeId);
-    }
-
-    query += " ORDER BY p.updatedAt DESC";
+    let query = `SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email
+      FROM projects p LEFT JOIN users u ON p.engineerId = u.id
+      WHERE (p.projectName LIKE ? OR p.projectNumber LIKE ?)`;
+    let params = [`%${projectName || '___NONE___'}%`, `%${projectNumber || '___NONE___'}%`];
+    if (ownerAdminId !== null) { query += ' AND p.owner_admin_id = ?'; params.push(ownerAdminId); }
+    if (excludeId && excludeId !== 'null') { query += ' AND p.id != ?'; params.push(excludeId); }
+    query += ' ORDER BY p.updatedAt DESC';
 
     const [history] = await db.query(query, params);
-
-    // If history is not an array for some reason, default to empty
     const results = Array.isArray(history) ? history : [];
-
-    const exists = results.length > 0;
-    
-    // Safety check for case-insensitive matching
     const targetName = (projectName || '').toLowerCase();
-    const targetNum = (projectNumber || '').toLowerCase();
-
-    const exactMatch = results.some(p => 
-      (p.projectName || '').toLowerCase() === targetName && 
-      (p.projectNumber || '').toLowerCase() === targetNum
-    );
-
-    const numberCollision = results.some(p => 
-      (p.projectNumber || '').toLowerCase() === targetNum &&
-      (p.projectName || '').toLowerCase() !== targetName
-    );
-
-    // Normalize results for frontend (camelCase)
-    const nameHistory = results.map(p => ({
-        ...p,
-        customerName: p.customer_name,
-        customerId: p.customer_id,
-        projectLocation: p.project_location,
-        gcName: p.gc_name,
-        vendorName: p.vendor_name,
-        aiscCertified: p.aisc_certified
-      }));
-
-    res.json({
-      success: true,
-      exists,
-      exactMatch,
-      numberCollision,
-      history: nameHistory,
-      latestProject: nameHistory.length > 0 ? nameHistory[0] : null
-    });
+    const targetNum  = (projectNumber || '').toLowerCase();
+    const nameHistory = results.map(p => ({ ...p, customerName: p.customer_name, customerId: p.customer_id, projectLocation: p.project_location, gcName: p.gc_name, vendorName: p.vendor_name, aiscCertified: p.aisc_certified }));
+    res.json({ success: true, exists: results.length > 0, exactMatch: results.some(p => (p.projectName||'').toLowerCase()===targetName&&(p.projectNumber||'').toLowerCase()===targetNum), numberCollision: results.some(p => (p.projectNumber||'').toLowerCase()===targetNum&&(p.projectName||'').toLowerCase()!==targetName), history: nameHistory, latestProject: nameHistory[0]||null });
   } catch (err) {
     console.error('Error in check-duplicate:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get Dashboard Metrics — scoped by company_id and role (W3)
+
+// Get Dashboard Metrics — scoped by owner_admin_id
 router.get('/dashboard-metrics', auth, async (req, res) => {
   try {
-    const isAdmin = req.userRole === 'admin';
-    const cid = req.companyId;
+    const ownerAdminId = await resolveOwnerAdminId(req);
     const uid = req.userId;
 
-    // Users with no company affiliation see empty metrics
-    if (!cid) {
-      const { metrics, projects } = dashboardService.computeMetrics([]);
-      return res.json({ success: true, metrics, projects });
-    }
-
     let query, params;
-    if (isAdmin) {
-      query = `SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status,
-               enquiryDate, submissionDeadline, updatedAt, createdAt
-               FROM projects WHERE company_id = ?`;
-      params = [cid];
+    if (ownerAdminId === null) {
+      query = `SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status, enquiryDate, submissionDeadline, updatedAt, createdAt FROM projects`;
+      params = [];
+    } else if (req.userRole === 'admin') {
+      query = `SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status, enquiryDate, submissionDeadline, updatedAt, createdAt FROM projects WHERE owner_admin_id = ?`;
+      params = [ownerAdminId];
     } else {
-      query = `SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status,
-               enquiryDate, submissionDeadline, updatedAt, createdAt
-               FROM projects
-               WHERE company_id = ? AND (userId = ? OR engineerId = ?)`;
-      params = [cid, uid, uid];
+      query = `SELECT id, projectNumber, projectName, customer_name, assignedEngineer, status, enquiryDate, submissionDeadline, updatedAt, createdAt FROM projects WHERE owner_admin_id = ? AND (userId = ? OR engineerId = ?)`;
+      params = [ownerAdminId, uid, uid];
     }
 
     const [rows] = await db.query(query, params);
     const { metrics, projects } = dashboardService.computeMetrics(rows);
-
     res.json({ success: true, metrics, projects });
   } catch (error) {
     console.error('Error fetching metrics:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // Create or update a project for the authenticated user
 router.post('/upsert', auth, async (req, res) => {
@@ -319,17 +262,18 @@ router.post('/upsert', auth, async (req, res) => {
         WHERE p.id = ?`, [id]);
       res.json({ success: true, projectId: id, project: updated[0] });
     } else {
-      // Insert new project — stamp company_id
+      // Insert new project — stamp owner_admin_id
+      const ownerAdminId = await resolveOwnerAdminId(req);
       const [rows] = await db.query(
-        `INSERT INTO projects 
-          (projectNumber, projectName, userId, createdBy, company_id, customer_name, customer_id, project_location, 
-           architect, eor, gc_name, detailer, vendor_name, aisc_certified, units, 
-           notes, stairs, guardRails, customRailValues, localConfig, status, workflow_status, 
-           assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline) 
+        `INSERT INTO projects
+          (projectNumber, projectName, userId, createdBy, owner_admin_id, customer_name, customer_id, project_location,
+           architect, eor, gc_name, detailer, vendor_name, aisc_certified, units,
+           notes, stairs, guardRails, customRailValues, localConfig, status, workflow_status,
+           assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline)
         OUTPUT INSERTED.id
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, ?, ?)`,
         [
-          projectNumber, projectName, userId, userId, req.companyId, customerName || '', customerId || null, projectLocation || '',
+          projectNumber, projectName, userId, userId, ownerAdminId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
           stairsJson, guardRailsJson, customRailValuesJson, localConfigJson, status || 'Project Created',
@@ -411,23 +355,26 @@ router.post('/:projectId/save-flight-geometry', auth, async (req, res) => {
   }
 });
 
-// Get project by ID — must belong to user's company
+// Get project by ID — scoped by owner_admin_id
 router.get('/:projectId', auth, async (req, res) => {
   try {
-    const isAdmin = req.userRole === 'admin';
-    const cid = req.companyId;
+    const ownerAdminId = await resolveOwnerAdminId(req);
 
-    let whereClause = 'p.id = ? AND p.company_id = ?';
-    let params = [req.params.projectId, cid];
-    if (!isAdmin) {
-      whereClause += ' AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ?)';
-      params.push(req.userId, req.userId, req.userId);
+    let whereClause = 'p.id = ?';
+    let params = [req.params.projectId];
+    if (ownerAdminId !== null) {
+      whereClause += ' AND p.owner_admin_id = ?';
+      params.push(ownerAdminId);
+      if (req.userRole === 'estimator') {
+        whereClause += ' AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ?)';
+        params.push(req.userId, req.userId, req.userId);
+      }
     }
 
     const [rows] = await db.query(`
       SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
              c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip,
-             COALESCE(u.full_name, creator.full_name) as assigned_engineer_name, 
+             COALESCE(u.full_name, creator.full_name) as assigned_engineer_name,
              COALESCE(u.email, creator.email) as assigned_engineer_email
       FROM projects p
       LEFT JOIN customers c ON p.customer_id = c.id
@@ -435,24 +382,23 @@ router.get('/:projectId', auth, async (req, res) => {
       LEFT JOIN users creator ON p.userId = creator.id
       WHERE ${whereClause}
     `, params);
-    
+
     const project = rows[0];
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found' });
-    }
-    
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
     project.stairs = tryParseJson(project.stairs);
     project.guardRails = tryParseJson(project.guardRails);
     project.customRailValues = tryParseJson(project.customRailValues);
     project.estimationResult = tryParseJson(project.estimationResult);
     project.localConfig = tryParseJson(project.localConfig);
-    
+
     res.json({ success: true, project });
   } catch (error) {
     console.error('Error fetching project:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // Update project (re-using upsert logic essentially)
 router.put('/:projectId', auth, async (req, res) => {
@@ -495,15 +441,18 @@ router.put('/:projectId', auth, async (req, res) => {
     
     if (setClause.length > 0) {
       setClause.push('updatedAt = GETDATE()');
-      // Scope update to company + ownership (I3: only real columns)
-      const isAdmin = req.userRole === 'admin';
-      if (isAdmin) {
-        queryParams.push(projectId, req.companyId);
-        await db.query(`UPDATE projects SET ${setClause.join(', ')} WHERE id = ? AND company_id = ?`, queryParams);
-      } else {
-        queryParams.push(projectId, req.companyId, req.userId, req.userId, req.userId);
+      const ownerAdminId = await resolveOwnerAdminId(req);
+      if (ownerAdminId === null || req.userRole === 'admin') {
+        queryParams.push(projectId);
+        if (ownerAdminId !== null) queryParams.push(ownerAdminId);
         await db.query(
-          `UPDATE projects SET ${setClause.join(', ')} WHERE id = ? AND company_id = ? AND (userId = ? OR createdBy = ? OR engineerId = ?)`,
+          `UPDATE projects SET ${setClause.join(', ')} WHERE id = ?${ownerAdminId !== null ? ' AND owner_admin_id = ?' : ''}`,
+          queryParams
+        );
+      } else {
+        queryParams.push(projectId, ownerAdminId, req.userId, req.userId, req.userId);
+        await db.query(
+          `UPDATE projects SET ${setClause.join(', ')} WHERE id = ? AND owner_admin_id = ? AND (userId = ? OR createdBy = ? OR engineerId = ?)`,
           queryParams
         );
       }

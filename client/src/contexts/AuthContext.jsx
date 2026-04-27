@@ -2,8 +2,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import api from '../services/api';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
+
 
 const API_URL = `${API_BASE_URL}/api`;
 
@@ -53,40 +55,80 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // LOGIN
-  const login = async (email, password, isOwner = false, redirectTo = '/home') => {
+  const login = async (email, password) => {
     try {
       setLoading(true);
+      const response = await api.post('/auth/login', { email, password });
+      const data = response.data;
 
-      const endpoint = isOwner
-        ? `${API_BASE_URL}/api/auth/owner-login`
-        : `${API_BASE_URL}/api/auth/login`;
+      if (data.requiresOTP) {
+        // Redirect to OTP verification page
+        navigate('/otp-verify', { state: { userId: data.userId, email } });
+        return { success: true, requiresOTP: true };
+      }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      if (data.token) {
         localStorage.setItem('steel_token', data.token);
         localStorage.setItem('steel_user', JSON.stringify(data.user));
-
         setUser(data.user);
         setIsAuthenticated(true);
 
-        toast.success(isOwner ? 'Owner login successful!' : 'Login successful!');
-        navigate(redirectTo);
-
-        return { success: true, user: data.user };
-      } else {
-        toast.error(data.error || 'Login failed');
-        return { success: false };
+        if (data.mustChangePassword) {
+          toast.success('Login successful! Please update your password.');
+          navigate('/profile'); 
+        } else {
+          toast.success('Login successful!');
+          navigate(data.user.role === 'superadmin' ? '/superadmin/dashboard' : '/dashboard');
+        }
+        return { success: true };
       }
     } catch (error) {
-      toast.error('Network error. Please try again.');
-      return { success: false };
+      // Error handled by interceptor or custom here
+      const msg = error.response?.data?.error || 'Login failed';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // VERIFY LOGIN OTP (New Device)
+  const verifyLoginOTP = async (userId, otp) => {
+    try {
+      setLoading(true);
+      const response = await api.post('/auth/verify-login-otp', { userId, otp });
+      const data = response.data;
+
+      if (data.token) {
+        localStorage.setItem('steel_token', data.token);
+        localStorage.setItem('steel_user', JSON.stringify(data.user));
+        setUser(data.user);
+        setIsAuthenticated(true);
+        toast.success('Verification successful!');
+        navigate(data.user.role === 'superadmin' ? '/superadmin/dashboard' : '/home');
+        return { success: true };
+      }
+    } catch (error) {
+      const msg = error.response?.data?.error || 'Verification failed';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ACTIVATE ACCOUNT (Invite Link)
+  const activateAccount = async (token, password) => {
+    try {
+      setLoading(true);
+      const response = await api.post('/auth/activate', { token, password });
+      toast.success(response.data.message || 'Account activated successfully!');
+      navigate('/login');
+      return { success: true };
+    } catch (error) {
+      const msg = error.response?.data?.error || 'Activation failed';
+      toast.error(msg);
+      return { success: false, error: msg };
     } finally {
       setLoading(false);
     }
@@ -139,7 +181,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   // LOGOUT
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      // Ignore logout errors, just clear local state
+    }
     localStorage.removeItem('steel_token');
     localStorage.removeItem('steel_user');
     setUser(null);
@@ -342,6 +389,8 @@ export const AuthProvider = ({ children }) => {
         checkTrialStatus,
         updateUser,
         forgotPassword,
+        verifyLoginOTP,
+        activateAccount,
         verifyOTP,
         resetPassword,
         sendSignupOTP,

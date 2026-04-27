@@ -43,20 +43,37 @@ router.get('/project/:projectId', auth, async (req, res) => {
 // Create a new note
 router.post('/', auth, async (req, res) => {
   try {
-    const { projectId, title, content, note_type, pos_x, pos_y, color, mentions, context_type, context_id, is_locked } = req.body;
+    const { title, content, note_type, pos_x, pos_y, color, mentions, context_type, context_id, is_locked } = req.body;
+    const projectId = parseInt(req.body.projectId);
     const userId = req.userId;
+    const companyId = req.companyId || req.user.company_id;
+    const ownerAdminId = req.user.admin_owner_id || req.user.id;
     const lockedBit = is_locked ? 1 : 0;
 
+    if (!projectId || isNaN(projectId)) {
+      return res.status(400).json({ success: false, message: 'Valid projectId is required' });
+    }
+
+    // Verify project existence and ownership
+    const [projectCheck] = await db.query('SELECT id FROM projects WHERE id = ? AND company_id = ?', [projectId, companyId]);
+    if (projectCheck.length === 0) {
+      return res.status(404).json({ success: false, message: 'Project not found or access denied', projectId, companyId });
+    }
+
     const [result] = await db.query(
-      `INSERT INTO project_notes (projectId, userId, title, content, note_type, pos_x, pos_y, isPinned, color, mentions, context_type, context_id)
+      `INSERT INTO project_notes (projectId, userId, title, content, note_type, pos_x, pos_y, isPinned, color, mentions, context_type, context_id, company_id, owner_admin_id)
        OUTPUT INSERTED.id
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         projectId, userId, title || '', content || '', note_type || 'personal',
         pos_x || 100, pos_y || 100, lockedBit, color || '#e0f7fa', JSON.stringify(mentions || []),
-        context_type || 'global', context_id || null
+        context_type || 'global', context_id || null, companyId, ownerAdminId
       ]
     );
+
+    if (!result || result.length === 0) {
+      throw new Error('Database failed to return the new note ID');
+    }
 
     const newId = result[0].id;
     const [newNote] = await db.query('SELECT * FROM project_notes WHERE id = ?', [newId]);
@@ -71,7 +88,14 @@ router.post('/', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating note:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Request Body:', req.body);
+    console.error('User ID:', req.userId);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error', 
+      details: error.message,
+      code: error.code
+    });
   }
 });
 

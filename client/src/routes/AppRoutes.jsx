@@ -15,7 +15,11 @@ import SystemSettings from '../pages/Settings/SystemSettings';
 import PersonalizationSettings from '../pages/Settings/PersonalizationSettings';
 import ProfileSettings from '../pages/Settings/ProfileSettings';
 import CustomerMaster from '../pages/Settings/CustomerMaster';
+import LicenseSettings from '../pages/Settings/LicenseSettings';
+import TeamManagement from '../pages/Settings/TeamManagement';
 import SupportCenter from '../pages/Support/SupportCenter';
+
+
 
 // Modules
 import StairConfig from '../modules/Stair/StairConfig';
@@ -23,6 +27,16 @@ import RailingsConfig from '../modules/Rail/RailingsConfig';
 
 // Common
 import Placeholder from '../components/common/PlaceholderModule';
+import SuperAdminRoute from '../components/common/SuperAdminRoute';
+
+// SuperAdmin
+import SuperAdminLayout from '../pages/SuperAdmin/SuperAdminLayout';
+import SuperAdminDashboard from '../pages/SuperAdmin/SuperAdminDashboard';
+import LicenseManagement from '../pages/SuperAdmin/LicenseManagement';
+import UserManagement from '../pages/SuperAdmin/UserManagement';
+import ActivityLogs from '../pages/SuperAdmin/ActivityLogs';
+
+
 
 const EngRoute = ({ element }) => (
   <PrivateRoute>
@@ -30,6 +44,14 @@ const EngRoute = ({ element }) => (
       {element}
     </MainLayout>
   </PrivateRoute>
+);
+
+const SaEngRoute = ({ element }) => (
+  <SuperAdminRoute>
+    <MainLayout>
+      {element}
+    </MainLayout>
+  </SuperAdminRoute>
 );
 
 const AppRoutes = () => {
@@ -45,7 +67,11 @@ const AppRoutes = () => {
       <Route path="/settings/system" element={<EngRoute element={<SystemSettings />} />} />
       <Route path="/settings/personalization" element={<EngRoute element={<PersonalizationSettings />} />} />
       <Route path="/settings/customers" element={<EngRoute element={<CustomerMaster />} />} />
+      <Route path="/settings/license" element={<EngRoute element={<LicenseSettings />} />} />
+      <Route path="/settings/team" element={<EngRoute element={<TeamManagement />} />} />
       <Route path="/profile" element={<EngRoute element={<ProfileSettings />} />} />
+
+
       <Route path="/support" element={<EngRoute element={<SupportCenter />} />} />
       
       {/* Estimation Modules */}
@@ -55,8 +81,17 @@ const AppRoutes = () => {
       <Route path="/estimate/bollards" element={<EngRoute element={<Placeholder type="Bollards" />} />} />
       <Route path="/estimate/gates" element={<EngRoute element={<Placeholder type="Gates" />} />} />
 
+      <Route path="/superadmin/dashboard" element={<SaEngRoute element={<SuperAdminDashboard />} />} />
+      <Route path="/superadmin/licenses" element={<SaEngRoute element={<LicenseManagement />} />} />
+      <Route path="/superadmin/users" element={<SaEngRoute element={<UserManagement />} />} />
+      <Route path="/superadmin/logs" element={<SaEngRoute element={<ActivityLogs />} />} />
+      <Route path="/superadmin/config" element={<SaEngRoute element={<Placeholder type="SuperAdmin System Config" />} />} />
+      <Route path="/superadmin" element={<Navigate to="/superadmin/dashboard" replace />} />
+
+
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
     </Routes>
   );
 };

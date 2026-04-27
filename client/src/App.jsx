@@ -6,6 +6,9 @@ import AppRoutes from './routes/AppRoutes';
 import LoginPage from './components/ui/animated-sign-in';
 import LandingPage from './pages/Landing/LandingPage';
 import ProductsPage from './pages/Landing/ProductsPage';
+import OTPVerifyPage from './pages/auth/OTPVerifyPage';
+import ActivateAccountPage from './pages/auth/ActivateAccountPage';
+
 
 import './styles/globals.css';
 
@@ -14,9 +17,16 @@ function App() {
     <>
       <Toaster
         position="top-right"
+        containerStyle={{
+          zIndex: 100000,
+        }}
         toastOptions={{
           duration: 4000,
-          style: { background: '#363636', color: '#fff' },
+          style: { 
+            background: '#363636', 
+            color: '#fff',
+            zIndex: 100001
+          },
         }}
       />
 
@@ -26,6 +36,9 @@ function App() {
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/otp-verify" element={<OTPVerifyPage />} />
+        <Route path="/activate" element={<ActivateAccountPage />} />
+
 
         {/* PROTECTED ROUTES / APP FLOW */}
         <Route path="/*" element={<AppRoutes />} />

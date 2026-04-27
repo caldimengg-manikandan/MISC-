@@ -9,7 +9,7 @@ import {
   PanelLeftOpen, PanelLeftClose, PenLine, Search,
   Box, Database, ArrowUpDown, ChevronDown, Settings,
   HelpCircle, Share2, Save, Pin, DollarSign,
-  Zap, Users, Printer, FileSpreadsheet, Trash2
+  Zap, Users, Printer, FileSpreadsheet, Trash2, Key, ShieldAlert, History
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
@@ -62,10 +62,25 @@ const NAV_ITEMS = [
     children: [
       { id: 'pricing', label: 'Pricing Rates', icon: <DollarSign size={13} />, path: '/settings/pricing', adminOnly: true },
       { id: 'customers', label: 'Customer Master', icon: <Users size={13} />, path: '/settings/customers', adminOnly: true },
+      { id: 'team', label: 'Team Management', icon: <Users size={13} />, path: '/settings/team', adminOnly: true },
       { id: 'system', label: 'System Admin', icon: <Database size={13} />, path: '/settings/system', adminOnly: true },
+      { id: 'license', label: 'License & Usage', icon: <Key size={13} />, path: '/settings/license', adminOnly: true },
       { id: 'personalization', label: 'Personalization', icon: <Zap size={13} />, path: '/settings/personalization', adminOnly: false },
     ]
   },
+  {
+    id: 'superadmin_panel',
+    label: 'SuperAdmin Panel',
+    icon: <ShieldAlert size={16} className="text-indigo-400" />,
+    path: null,
+    superAdminOnly: true,
+    children: [
+      { id: 'sa_dashboard', label: 'Overview', icon: <LayoutDashboard size={13} />, path: '/superadmin/dashboard' },
+      { id: 'sa_licenses', label: 'Licenses', icon: <Key size={13} />, path: '/superadmin/licenses' },
+      { id: 'sa_users', label: 'Users', icon: <Users size={13} />, path: '/superadmin/users' },
+      { id: 'sa_logs', label: 'Activity Logs', icon: <History size={13} />, path: '/superadmin/logs' },
+    ]
+  }
 ];
 
 // ── SubMenu ───────────────────────────────────────────────────────────────────
@@ -242,6 +257,7 @@ export default function MainLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  console.log('DEBUG: User Role:', user?.role);
   const { estimations, fetchEstimations, notes, fetchNotes, selectedEstimation, setSelectedEstimation, activeContext } = useEstimation();
 
   const [collapsed, setCollapsed] = useState(
@@ -249,6 +265,12 @@ export default function MainLayout({ children }) {
   );
   const [estimateOpen, setEstimateOpen] = useState(
     location.pathname.startsWith('/estimate')
+  );
+  const [settingsOpen, setSettingsOpen] = useState(
+    location.pathname.startsWith('/settings')
+  );
+  const [superAdminOpen, setSuperAdminOpen] = useState(
+    location.pathname.startsWith('/superadmin')
   );
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting]   = useState(false);
@@ -717,6 +739,8 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
           <div className="sidebar-section-title">Navigation</div>
 
           {NAV_ITEMS.map(item => {
+            if (item.superAdminOnly && user?.role !== 'superadmin') return null;
+
             if (item.children) {
               const isChildActive = item.children.some(c => activePath === c.path);
               return (
@@ -724,7 +748,10 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                   <button
                     className={`sidebar-item ${isChildActive ? 'active' : ''}`}
                     onClick={() => {
-                      setEstimateOpen(o => !o);
+                      if (item.id === 'estimate') setEstimateOpen(o => !o);
+                      else if (item.id === 'settings') setSettingsOpen(o => !o);
+                      else if (item.id === 'superadmin_panel') setSuperAdminOpen(o => !o);
+                      
                       if (item.path) navigate(item.path);
                     }}
                   >
@@ -732,13 +759,23 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                     <span className="sidebar-item-label">{item.label}</span>
                     <ChevronRight
                       size={14}
-                      className={`sidebar-item-chevron ${estimateOpen ? 'open' : ''}`}
+                      className={`sidebar-item-chevron ${
+                        (item.id === 'estimate' && estimateOpen) || 
+                        (item.id === 'settings' && settingsOpen) || 
+                        (item.id === 'superadmin_panel' && superAdminOpen) ? 'open' : ''
+                      }`}
                     />
                   </button>
                   <AnimatePresence>
-                    {estimateOpen && (
-                      <SubMenu
-                        items={item.children.filter(c => !c.adminOnly || user?.role === 'admin')}
+                    {((item.id === 'estimate' && estimateOpen) || 
+                      (item.id === 'settings' && settingsOpen) || 
+                      (item.id === 'superadmin_panel' && superAdminOpen)) && (
+                       <SubMenu
+                        items={item.children.filter(c => {
+                          if (c.superAdminOnly) return user?.role === 'superadmin';
+                          if (c.adminOnly) return user?.role === 'admin' || user?.role === 'superadmin';
+                          return true;
+                        })}
                         activePath={activePath}
                         onNavigate={handleNavWithDraftCheck}
                       />

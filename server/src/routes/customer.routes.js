@@ -13,5 +13,6 @@ router.get('/:id', customerController.getById);
 router.post('/', customerController.create);
 router.put('/:id', customerController.update);
 router.patch('/:id/status', customerController.updateStatus);
+router.delete('/:id', customerController.delete);
 
 module.exports = router;

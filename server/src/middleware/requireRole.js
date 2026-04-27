@@ -1,12 +1,24 @@
 // server/src/middleware/requireRole.js
-// Role-based access control middleware for workflow endpoints
+// Role-based access control middleware
 
 /**
- * Require the user to have admin role.
- * Returns 403 if the authenticated user is not an admin.
+ * Require superadmin role only.
+ */
+const requireSuperAdmin = (req, res, next) => {
+  if (req.userRole !== 'superadmin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. SuperAdmin privileges required.'
+    });
+  }
+  next();
+};
+
+/**
+ * Require admin role (or superadmin — superadmin can do everything admin can).
  */
 const requireAdmin = (req, res, next) => {
-  if (req.userRole !== 'admin') {
+  if (!['admin', 'superadmin'].includes(req.userRole)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Admin privileges required.'
@@ -16,11 +28,10 @@ const requireAdmin = (req, res, next) => {
 };
 
 /**
- * Require the user to be an estimator or admin.
- * Returns 403 for unauthenticated or unknown roles.
+ * Require at least estimator access (any authenticated role).
  */
 const requireEstimator = (req, res, next) => {
-  if (!['estimator', 'admin', 'user', 'owner'].includes(req.userRole)) {
+  if (!['estimator', 'admin', 'superadmin'].includes(req.userRole)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied.'
@@ -29,4 +40,4 @@ const requireEstimator = (req, res, next) => {
   next();
 };
 
-module.exports = { requireAdmin, requireEstimator };
+module.exports = { requireSuperAdmin, requireAdmin, requireEstimator };

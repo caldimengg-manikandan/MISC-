@@ -328,7 +328,26 @@
   border-color: var(--gpt-text-primary);
 }
 
-.ems-table-wrap { overflow-x: auto; }
+.ems-table-wrap { 
+  overflow-x: auto; 
+  max-height: 380px; 
+  overflow-y: auto; 
+}
+
+/* Custom scrollbar for ems-table-wrap */
+.ems-table-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+.ems-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ems-table-wrap::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+.ems-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
 
 .ems-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .ems-table th {

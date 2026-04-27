@@ -26,33 +26,35 @@ const logger = require('./src/utils/logger');
 const { initCron } = require('./src/utils/cron');
 
 // Import routes
-
-const projectRoutes = require('./src/routes/projects');
+const projectRoutes     = require('./src/routes/projects');
 const estimationsRoutes = require('./src/routes/estimations');
-const dictionaryRoutes = require('./src/routes/dictionary');
+const dictionaryRoutes  = require('./src/routes/dictionary');
 
 // Import secure routes
-const priceRoutes = require('./src/routes/priceRoutes');
-const excelRoutes = require('./src/routes/excelRoutes');
-const adminRoutes = require('./src/routes/adminRoutes');
-// Import auth routes ✅
-const authRoutes = require('./src/routes/authRoutes');
-// Import workflow & notification routes ✅
-const workflowRoutes = require('./src/routes/workflowRoutes');
+const priceRoutes      = require('./src/routes/priceRoutes');
+const excelRoutes      = require('./src/routes/excelRoutes');
+const adminRoutes      = require('./src/routes/adminRoutes');
+const authRoutes       = require('./src/routes/authRoutes');
+const workflowRoutes   = require('./src/routes/workflowRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
+const debugRoutes      = require('./src/routes/debug');
+const noteRoutes       = require('./src/routes/notes');
+const customerRoutes   = require('./src/routes/customer.routes');
+const reportRoutes     = require('./src/routes/reportRoutes');
+const agentRoutes      = require('./src/routes/agentRoutes');
 
-// Import debug routes
-const debugRoutes = require('./src/routes/debug');
-const noteRoutes = require('./src/routes/notes');
-const customerRoutes = require('./src/routes/customer.routes');
-const reportRoutes = require('./src/routes/reportRoutes');
-const agentRoutes  = require('./src/routes/agentRoutes');
-// Remove duplicate import: const excelDebugRoutes = require('./src/routes/excelDebugRoutes');
+// New Phase 4+5 routes
+const superadminRoutes = require('./src/routes/superadminRoutes');
+const adminUserRoutes  = require('./src/routes/adminUserRoutes');
+
 
 console.log('🚀 SERVER READY - BULK DELETE RECONFIGURED');
 
-// Import authentication middleware
-const authMiddleware = require('./src/middleware/auth');
+// Import middleware
+const authMiddleware  = require('./src/middleware/auth');
+const licenseCheck    = require('./src/middleware/licenseCheck');
+const cookieParser    = require('cookie-parser');
+
 
 // Create necessary directories
 const createDirectories = () => {
@@ -206,6 +208,10 @@ const authLimiter = rateLimit({
 app.use('/api/auth', authLimiter);
 app.use('/api', apiLimiter);
 
+// Cookie parser (W5/C7: needed for device_id cookie)
+app.use(cookieParser());
+
+
 // Body parsing with enhanced limits and validation
 app.use(express.json({
   limit: '10mb',
@@ -305,25 +311,30 @@ app.get('/api/docs', (req, res) => {
 });
 
 // Public routes
-
-
 // Protected routes with authentication
 app.use('/api/auth', authRoutes);
-app.use('/api/projects', authMiddleware, projectRoutes);
-app.use('/api/projects', authMiddleware, workflowRoutes);  // workflow state transitions
-app.use('/api/notifications', authMiddleware, notificationRoutes); // in-app notifications
-app.use('/api/estimations', authMiddleware, estimationsRoutes);
-app.use('/api/dictionary', dictionaryRoutes);
-app.use('/api/debug', authMiddleware, debugRoutes);
 
-// Secure routes
-app.use('/api/secure/prices', authMiddleware, priceRoutes);
-app.use('/api/secure/excel', authMiddleware, excelRoutes);
-app.use('/api/notes', authMiddleware, noteRoutes);
-app.use('/api/customers', authMiddleware, customerRoutes);
-app.use('/api/admin', authMiddleware, adminRoutes);
-app.use('/api/reports', authMiddleware, reportRoutes);
-app.use('/api/agent',   authMiddleware, agentRoutes);
+// Protected routes — auth + license check (I4)
+app.use('/api/projects',      authMiddleware, licenseCheck, projectRoutes);
+app.use('/api/projects',      authMiddleware, licenseCheck, workflowRoutes);
+app.use('/api/notifications', authMiddleware, notificationRoutes);
+app.use('/api/estimations',   authMiddleware, licenseCheck, estimationsRoutes);
+app.use('/api/dictionary',    dictionaryRoutes);
+app.use('/api/debug',         authMiddleware, debugRoutes);
+app.use('/api/secure/prices', authMiddleware, licenseCheck, priceRoutes);
+app.use('/api/secure/excel',  authMiddleware, licenseCheck, excelRoutes);
+app.use('/api/notes',         authMiddleware, licenseCheck, noteRoutes);
+app.use('/api/customers',     authMiddleware, licenseCheck, customerRoutes);
+app.use('/api/reports',       authMiddleware, licenseCheck, reportRoutes);
+app.use('/api/agent',         authMiddleware, licenseCheck, agentRoutes);
+
+// Admin management routes (licenseCheck excluded — managing users is not a licensed action)
+app.use('/api/admin/users',   authMiddleware, adminUserRoutes);
+app.use('/api/admin',         authMiddleware, adminRoutes);
+
+// SuperAdmin routes (license check not applicable — superadmin has no license)
+app.use('/api/superadmin',    authMiddleware, superadminRoutes);
+
 
 // ================ SERVE CLIENT (VPS READY) ================
 

@@ -1,3 +1,8 @@
+// server/src/middleware/auth.js
+// Authenticates JWT + validates session_token (single-session enforcement)
+// I3: Session check applies to ALL roles — superadmin is NOT exempt
+// I6: Always fetches user fresh from DB so admin_owner_id is always up-to-date
+
 const jwt = require('jsonwebtoken');
 const db = require('../config/mssql');
 
@@ -5,7 +10,7 @@ module.exports = async (req, res, next) => {
   try {
     let token = '';
     const authHeader = req.header('Authorization');
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.replace('Bearer ', '').trim();
     } else if (req.query.token) {
@@ -16,10 +21,10 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({ error: 'No authentication token' });
     }
 
-    // Verify token
+    // Verify JWT signature
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch user from DB to get latest info (including company_id)
+    // Always fetch fresh from DB — ensures admin_owner_id is never stale (I6 fix)
     const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [decoded.userId]);
     const user = rows[0];
 
@@ -27,12 +32,21 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    // Attach user to request (removing sensitive fields)
+    // ── Single Session Enforcement (I3: applies to ALL roles including superadmin) ──
+    // If a session_token is set in DB and the JWT carries a sessionToken, they must match.
+    // Old JWTs without sessionToken are allowed through (backward compat) until next login.
+    if (decoded.sessionToken && user.session_token && decoded.sessionToken !== user.session_token) {
+      return res.status(401).json({
+        sessionKicked: true,
+        message: 'You were signed out because you logged in on another device.'
+      });
+    }
+
+    // Attach user to request (strip password)
     const { password, ...userWithoutPassword } = user;
-    req.user = userWithoutPassword;
+    req.user = userWithoutPassword; // includes admin_owner_id from DB (I6 fix)
     req.userId = user.id;
     req.userRole = user.role;
-    // companyId: prefer DB value (always latest), fall back to JWT
     req.companyId = user.company_id || decoded.companyId || null;
 
     next();
@@ -41,4 +55,3 @@ module.exports = async (req, res, next) => {
     res.status(401).json({ error: 'Invalid authentication token' });
   }
 };
-
