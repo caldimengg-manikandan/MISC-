@@ -3,29 +3,32 @@ const db = require('../config/mssql');
 
 class EstimationRepository {
     async getStats(companyId = null) {
-        // NULL company = no access
-        if (companyId === null || companyId === undefined) {
-            return [];
+        let query = 'SELECT status, COUNT(*) as count FROM projects';
+        let params = [];
+        
+        if (companyId !== null && companyId !== undefined) {
+            query += ' WHERE company_id = ?';
+            params.push(companyId);
         }
-        const [rows] = await db.query(
-            'SELECT status, COUNT(*) as count FROM projects WHERE company_id = ? GROUP BY status',
-            [companyId]
-        );
+        
+        query += ' GROUP BY status';
+        const [rows] = await db.query(query, params);
         return rows;
     }
 
     async findAll(filters = {}, companyId = null) {
-        // NULL company = no access
-        if (companyId === null || companyId === undefined) {
-            return [];
-        }
         let query = `
             SELECT p.*, c.companyName as customer_name, c.contactPerson, c.email, c.phone
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
-            WHERE p.company_id = ?
+            WHERE 1=1
         `;
-        let params = [companyId];
+        let params = [];
+
+        if (companyId !== null && companyId !== undefined) {
+            query += ' AND p.company_id = ?';
+            params.push(companyId);
+        }
 
         if (filters.status) {
             query += ' AND p.status = ?';
@@ -42,17 +45,21 @@ class EstimationRepository {
     }
 
     async findById(id, companyId = null) {
-        // NULL company = no access
-        if (companyId === null || companyId === undefined) {
-            return null;
-        }
-        const [rows] = await db.query(`
+        let query = `
             SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
                    c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
-            WHERE p.id = ? AND p.company_id = ?
-        `, [id, companyId]);
+            WHERE p.id = ?
+        `;
+        let params = [id];
+
+        if (companyId !== null && companyId !== undefined) {
+            query += ' AND p.company_id = ?';
+            params.push(companyId);
+        }
+
+        const [rows] = await db.query(query, params);
         return rows[0] || null;
     }
 
