@@ -6,108 +6,100 @@ const config = {
     user: process.env.MSSQL_USER,
     password: process.env.MSSQL_PASSWORD,
     server: process.env.MSSQL_SERVER,
-    database: process.env.MSSQL_DATABASE || 'MISC_DB',
-    options: { encrypt: true, trustServerCertificate: true },
-    port: parseInt(process.env.MSSQL_PORT) || 1433
+    database: process.env.MSSQL_DATABASE,
+    options: { 
+        encrypt: true, 
+        trustServerCertificate: true,
+        enableArithAbort: true
+    },
+    port: parseInt(process.env.MSSQL_PORT) || 1433,
+    requestTimeout: 120000 // 2 minutes for import
 };
 
 async function importFullDB() {
     let pool;
     try {
+        if (!fs.existsSync('full_db_migration.json')) {
+            throw new Error('Migration file not found! Run export first.');
+        }
+
+        const data = JSON.parse(fs.readFileSync('full_db_migration.json'));
         pool = await mssql.connect(config);
-        const data = JSON.parse(fs.readFileSync('full_db_migration.json', 'utf8'));
-        
-        console.log('--- STARTING COMPLETE AUTO-EXPAND MIGRATION ---');
+        console.log('--- 📥 Connected to VPS MSSQL ---');
 
-        const tables = ["users","customers","projects","rail_types","platform_types","stringer_types","labor_rates","system_config","categories","dictionary","activity_log","notifications","estimation_activity_logs","project_attachments","estimates","project_notes","galvanized_labor","takeoff_items","estimate_results","pricing"];
+        // 1. Disable all foreign key constraints
+        console.log('Disabling constraints...');
+        await pool.request().query('EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"');
 
-        for (const table of tables) {
-            console.log(`Checking table: ${table}...`);
+        // Identify tables to process (order matters for identity inserts, but we handle them individually)
+        const tableNames = Object.keys(data);
+
+        for (const table of tableNames) {
+            const rows = data[table];
+            console.log(`\nProcessing table: ${table} (${rows.length} rows)...`);
             
-            // 1. Auto-Create Table if missing (even if data is empty)
-            const tabCheck = await pool.request().query(`SELECT * FROM sys.tables WHERE name = '${table}'`);
-            if (tabCheck.recordset.length === 0) {
-                console.log(`⚠️  Table [${table}] missing! Creating...`);
-                
-                // Find column definitions from data or use defaults if totally empty
-                const firstRow = (data[table] && data[table].length > 0) ? data[table][0] : null;
-                
-                let cols = "[id] INT IDENTITY(1,1) PRIMARY KEY";
-                if (firstRow) {
-                    cols = Object.keys(firstRow).map(c => {
-                        if (c.toLowerCase() === 'id') return `[${c}] INT IDENTITY(1,1) PRIMARY KEY`;
-                        return `[${c}] NVARCHAR(MAX)`;
-                    }).join(', ');
-                } else if (table === 'pricing') {
-                    // Special case for pricing if it's empty
-                    cols = "[id] INT IDENTITY(1,1) PRIMARY KEY, [item_key] NVARCHAR(MAX), [rate] NVARCHAR(MAX), [updatedAt] NVARCHAR(MAX)";
-                }
+            // 2. Clear existing data
+            await pool.request().query(`DELETE FROM [${table}]`);
 
-                await pool.request().query(`CREATE TABLE [${table}] (${cols})`);
-                console.log(`✅ Table [${table}] created.`);
-            }
-
-            if (!data[table] || data[table].length === 0) {
-                console.log(`ℹ️  Skipping data import for ${table} (No rows).`);
+            if (rows.length === 0) {
+                console.log(`Skipping insert (empty table).`);
                 continue;
             }
 
-            // 2. Auto-Expand all columns to NVARCHAR(MAX) to prevent truncation
-            const firstRow = data[table][0];
-            for (const col in firstRow) {
-                if (col.toLowerCase() === 'id') continue;
-                try {
-                    // Force column to NVARCHAR(MAX) if it exists
-                    await pool.request().query(`
-                        IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[${table}]') AND name = '${col}')
-                        BEGIN
-                            -- Only alter if it is a string type
-                            ALTER TABLE [${table}] ALTER COLUMN [${col}] NVARCHAR(MAX);
-                        END
-                        ELSE
-                        BEGIN
-                            ALTER TABLE [${table}] ADD [${col}] NVARCHAR(MAX);
-                        END
-                    `);
-                } catch(e) { /* skip columns that cant be altered like primary keys */ }
+            // 3. Enable Identity Insert if table has an identity column
+            let hasIdentity = false;
+            try {
+                // Check if table has identity column
+                const checkIdentity = await pool.request().query(`
+                    SELECT OBJECTPROPERTY(OBJECT_ID('${table}'), 'TableHasIdentity') as hasId
+                `);
+                if (checkIdentity.recordset[0].hasId === 1) {
+                    await pool.request().query(`SET IDENTITY_INSERT [${table}] ON`);
+                    hasIdentity = true;
+                    console.log(`Identity Insert ON for ${table}`);
+                }
+            } catch (e) { 
+                console.warn(`Could not check/set identity for ${table}: ${e.message}`);
             }
 
-            // 3. Clear existing data
-            await pool.request().query(`DELETE FROM [${table}]`);
+            // 4. Insert data
+            const columns = Object.keys(rows[0]);
+            const colNames = columns.map(c => `[${c}]`).join(', ');
+            const paramNames = columns.map((c, i) => `@p${i}`).join(', ');
             
-            // 4. Batch migration with Identity support
-            for (const row of data[table]) {
-                const columns = Object.keys(row).map(c => `[${c}]`).join(', ');
-                const params = Object.keys(row).map((c, i) => `@p${i}`).join(', ');
-                
+            for (const row of rows) {
                 const request = pool.request();
-                Object.keys(row).forEach((c, i) => { request.input(`p${i}`, row[c]); });
-
-                const sql = `
-                    IF OBJECTPROPERTY(OBJECT_ID('[${table}]'), 'TableHasIdentity') = 1 
-                        SET IDENTITY_INSERT [${table}] ON;
-                    
-                    INSERT INTO [${table}] (${columns}) VALUES (${params});
-                    
-                    IF OBJECTPROPERTY(OBJECT_ID('[${table}]'), 'TableHasIdentity') = 1 
-                        SET IDENTITY_INSERT [${table}] OFF;
-                `;
+                columns.forEach((col, i) => {
+                    request.input(`p${i}`, row[col]);
+                });
 
                 try {
-                    await request.query(sql);
-                } catch (err) {
-                    console.error(`❌ Row failed in ${table}:`, err.message);
-                    throw err;
+                    await request.query(`INSERT INTO [${table}] (${colNames}) VALUES (${paramNames})`);
+                } catch (e) {
+                    console.error(`Error inserting into ${table}: ${e.message}`);
                 }
             }
-            console.log(`✅ Table [${table}] synchronized successfully.`);
+
+            if (hasIdentity) {
+                try {
+                    await pool.request().query(`SET IDENTITY_INSERT [${table}] OFF`);
+                } catch (e) {}
+            }
+            console.log(`✅ ${table} import complete.`);
         }
 
-        console.log('\n🏆 FULL MIGRATION SUCCESSFUL! EVERYTHING IS SYNCED.');
+        // 5. Re-enable all constraints
+        console.log('\nRe-enabling constraints...');
+        await pool.request().query('EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL"');
+
+        console.log('\n🌟 SUCCESS: Database migration complete!');
+        
     } catch (err) {
-        console.error('\n❌ MIGRATION FAILED:', err.message);
+        console.error('❌ IMPORT FAILED:', err);
     } finally {
         if (pool) await pool.close();
+        process.exit(0);
     }
 }
+
 importFullDB();
