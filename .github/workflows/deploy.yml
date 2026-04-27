@@ -1,0 +1,50 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & Build Client
+        run: |
+          cd client
+          npm install
+          CI=false npm run build
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/misc
+            
+            # 1. Pull latest code
+            git pull origin master
+            
+            # 2. Update server dependencies
+            cd server
+            npm install --production
+            
+            # 3. Copy new frontend build (assuming we build on VPS for now to be safe, 
+            # or we can sync files. Building on VPS is safer if SSH keys for sync aren't set)
+            cd ../client
+            npm install
+            npm run build
+            
+            # 4. Restart the backend
+            cd ../server
+            pm2 restart misc-automation || pm2 start server.js --name misc-automation
+            pm2 save
