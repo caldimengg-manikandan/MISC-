@@ -18,7 +18,7 @@ const config = {
 async function generateFullSyncSQL() {
     try {
         const pool = await mssql.connect(config);
-        console.log('Connected to Local DB. Generating Full Schema + Data dump...');
+        console.log('Connected to Local DB. Generating FIXED Sync dump...');
 
         const tableQuery = await pool.request().query(`
             SELECT name, object_id FROM sys.tables 
@@ -27,11 +27,16 @@ async function generateFullSyncSQL() {
         const tables = tableQuery.recordset;
 
         let sqlDump = "/**************************************************\n";
-        sqlDump += " * MISC FULL DATABASE SYNC (SCHEMA + DATA)\n";
+        sqlDump += " * MISC FINAL FIXED DATABASE SYNC\n";
         sqlDump += " * Generated at: " + new Date().toLocaleString() + "\n";
         sqlDump += " **************************************************/\n\n";
 
-        sqlDump += "EXEC sp_MSforeachtable \"ALTER TABLE ? NOCHECK CONSTRAINT ALL\";\n\n";
+        sqlDump += "-- STEP 1: Kill all Foreign Keys\n";
+        sqlDump += "DECLARE @sql NVARCHAR(MAX) = N'';\n";
+        sqlDump += "SELECT @sql += 'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(parent_object_id)) + \n";
+        sqlDump += " ' DROP CONSTRAINT ' + QUOTENAME(name) + ';' FROM sys.foreign_keys;\n";
+        sqlDump += "EXEC sp_executesql @sql;\n";
+        sqlDump += "GO\n\n";
 
         for (const tableObj of tables) {
             const table = tableObj.name;
@@ -39,7 +44,7 @@ async function generateFullSyncSQL() {
             console.log(`Processing ${table}...`);
 
             // 1. Generate Drop and Create Table
-            sqlDump += `-- [${table}] Structure\n`;
+            sqlDump += `-- [${table}] Recreate Structure\n`;
             sqlDump += `IF OBJECT_ID('[${table}]', 'U') IS NOT NULL DROP TABLE [${table}];\n`;
             sqlDump += `CREATE TABLE [${table}] (\n`;
 
@@ -65,11 +70,12 @@ async function generateFullSyncSQL() {
                 return def;
             });
             sqlDump += colDefs.join(",\n") + "\n);\n";
+            sqlDump += "GO\n\n"; // IMPORTANT: MUST HAVE GO HERE
 
             // 2. Export Data
             const dataResult = await pool.request().query(`SELECT * FROM [${table}]`);
             const rows = dataResult.recordset;
-            sqlDump += `-- [${table}] Data (${rows.length} rows)\n`;
+            sqlDump += `-- Data for [${table}]\n`;
 
             if (rows.length > 0) {
                 if (colQuery.recordset.some(c => c.is_identity)) {
@@ -95,14 +101,12 @@ async function generateFullSyncSQL() {
                 if (colQuery.recordset.some(c => c.is_identity)) {
                     sqlDump += `SET IDENTITY_INSERT [${table}] OFF;\n`;
                 }
+                sqlDump += "GO\n\n"; // Batch data inserts
             }
-            sqlDump += "GO\n\n";
         }
 
-        sqlDump += "EXEC sp_MSforeachtable \"ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL\";\n";
-
         fs.writeFileSync('vps_migration.sql', sqlDump);
-        console.log('\n🌟 SUCCESS: Full Sync SQL generated!');
+        console.log('\n🌟 SUCCESS: Fixed Sync SQL generated!');
         await pool.close();
     } catch (err) {
         console.error('❌ SYNC GENERATION FAILED:', err.message);
