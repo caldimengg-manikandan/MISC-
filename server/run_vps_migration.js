@@ -26,7 +26,20 @@ async function runMigration() {
         }
 
         console.log(`Reading ${sqlFile}...`);
-        const content = fs.readFileSync(sqlFile, 'utf8');
+        let content = fs.readFileSync(sqlFile, 'utf8');
+        
+        // Check for UTF-16 encoding (common in SSMS exports)
+        // If it looks like UTF-16 (null characters between letters), convert it
+        if (content.includes('\u0000')) {
+            console.log('Detected UTF-16 encoding. Converting to UTF-8...');
+            const buffer = fs.readFileSync(sqlFile);
+            // Try to detect if it's LE or BE, or just strip nulls if it's simple
+            content = buffer.toString('utf16le').replace(/^\uFEFF/, ''); 
+            // If it's still messy, fallback to stripping nulls
+            if (content.includes('\u0000')) {
+                content = buffer.toString('utf8').replace(/\u0000/g, '');
+            }
+        }
         
         // SSMS scripts often use 'GO' to separate batches. 
         // Tedious/mssql-node doesn't support 'GO', so we split the file into batches.
