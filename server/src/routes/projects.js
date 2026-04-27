@@ -201,7 +201,9 @@ router.post('/upsert', auth, async (req, res) => {
       enquiryDate,
       submissionDeadline,
       status,
-      localConfig
+      localConfig,
+      isPinned,
+      isArchived
     } = req.body;
     
     if (!projectNumber || !projectName) {
@@ -232,6 +234,10 @@ router.post('/upsert', auth, async (req, res) => {
     const customRailValuesJson = JSON.stringify(customRailValues || {});
     const localConfigJson = JSON.stringify(localConfig || {});
 
+    // Normalize boolean/numeric inputs for BIT columns
+    const pinnedVal = isPinned !== undefined ? (isPinned ? 1 : 0) : (existingProject ? (existingProject.isPinned ? 1 : 0) : 0);
+    const archivedVal = isArchived !== undefined ? (isArchived ? 1 : 0) : (existingProject ? (existingProject.isArchived ? 1 : 0) : 0);
+
     if (existingProject) {
       // Update existing
       await db.query(
@@ -240,7 +246,7 @@ router.post('/upsert', auth, async (req, res) => {
           architect = ?, eor = ?, gc_name = ?, detailer = ?, vendor_name = ?, 
           aisc_certified = ?, units = ?, notes = ?, stairs = ?, guardRails = ?, 
           customRailValues = ?, localConfig = ?, assignedEngineer = ?, assigned_engineer_id = ?, engineerId = ?, 
-          enquiryDate = ?, submissionDeadline = ?, status = ?, updatedAt = GETDATE() 
+          enquiryDate = ?, submissionDeadline = ?, status = ?, isPinned = ?, isArchived = ?, updatedAt = GETDATE() 
         WHERE id = ? AND company_id = ? AND (userId = ? OR createdBy = ? OR engineerId = ?)`,
         [
           projectNumber, projectName, customerName || '', customerId || null, projectLocation || '',
@@ -251,6 +257,7 @@ router.post('/upsert', auth, async (req, res) => {
           assigned_engineer_id || null, // set assigned_engineer_id
           assigned_engineer_id || null, // set engineerId
           enquiryDate || null, submissionDeadline || null, status || 'Project Created',
+          pinnedVal, archivedVal,
           id, req.companyId, userId, userId, userId
         ]
       );
@@ -269,9 +276,10 @@ router.post('/upsert', auth, async (req, res) => {
           (projectNumber, projectName, userId, createdBy, owner_admin_id, customer_name, customer_id, project_location,
            architect, eor, gc_name, detailer, vendor_name, aisc_certified, units,
            notes, stairs, guardRails, customRailValues, localConfig, status, workflow_status,
-           assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline)
+           assignedEngineer, assigned_engineer_id, engineerId, enquiryDate, submissionDeadline,
+           isPinned, isArchived)
         OUTPUT INSERTED.id
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned', ?, ?, ?, ?, ?, ?, ?)`,
         [
           projectNumber, projectName, userId, userId, ownerAdminId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
@@ -280,7 +288,8 @@ router.post('/upsert', auth, async (req, res) => {
           assignedEngineer || assigned_engineer_name || null,
           assigned_engineer_id || userId,
           assigned_engineer_id || userId,
-          enquiryDate || new Date(), submissionDeadline || null
+          enquiryDate || new Date(), submissionDeadline || null,
+          pinnedVal, archivedVal
         ]
       );
       
@@ -416,7 +425,8 @@ router.put('/:projectId', auth, async (req, res) => {
       'architect', 'eor', 'gcName', 'detailer', 'vendorName', 
       'aiscCertified', 'units', 'notes', 'stairs', 'guardRails', 
       'customRailValues', 'status', 'totalWeight', 'totalCost',
-      'assignedEngineer', 'enquiryDate', 'submissionDeadline', 'estimationResult'
+      'assignedEngineer', 'enquiryDate', 'submissionDeadline', 'estimationResult',
+      'isPinned', 'isArchived'
     ];
     
     let setClause = [];

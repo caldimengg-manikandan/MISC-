@@ -59,9 +59,9 @@ class EstimationRepository {
     async create(data) {
         const { projectName, customer_name, customer_id, dueDate, createdBy, companyId } = data;
         const [result] = await db.query(`
-            INSERT INTO projects (projectName, customer_name, customer_id, dueDate, status, userId, createdBy, company_id, created_at, updatedAt)
+            INSERT INTO projects (projectName, customer_name, customer_id, dueDate, status, userId, createdBy, company_id, isPinned, isArchived, created_at, updatedAt)
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, 'NEW', ?, ?, ?, GETDATE(), GETDATE())
+            VALUES (?, ?, ?, ?, 'NEW', ?, ?, ?, 0, 0, GETDATE(), GETDATE())
         `, [projectName, customer_name, customer_id ? customer_id : null, dueDate ? dueDate : null, createdBy, createdBy, companyId || null]);
         return result[0].id;
     }
