@@ -4,6 +4,9 @@ const { upload, scanFile } = require('../middleware/upload');
 const excelService = require('../services/excelService');
 const db = require('../config/mssql');
 const logger = require('../utils/logger');
+const { requireSuperAdmin } = require('../middleware/requireRole');
+
+router.use(requireSuperAdmin);
 
 // Upload Excel file with prices
 router.post('/upload', upload.single('excelFile'), scanFile, async (req, res) => {

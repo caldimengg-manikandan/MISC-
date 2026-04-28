@@ -59,10 +59,10 @@ const Dashboard: React.FC = () => {
       try {
         setLoading(true);
         const [metricsRes, alertsRes, pipelineRes, moduleRes] = await Promise.all([
-          fetch('/api/dashboard/metrics'),
-          fetch('/api/dashboard/alerts'),
-          fetch('/api/dashboard/pipeline'),
-          fetch('/api/dashboard/module-health'),
+          fetch('/api/v1/dashboard/metrics'),
+          fetch('/api/v1/dashboard/alerts'),
+          fetch('/api/v1/dashboard/pipeline'),
+          fetch('/api/v1/dashboard/module-health'),
         ]);
 
         if (!metricsRes.ok || !alertsRes.ok || !pipelineRes.ok || !moduleRes.ok) {
@@ -337,3 +337,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+

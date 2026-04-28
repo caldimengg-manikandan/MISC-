@@ -12,7 +12,7 @@ class ConfigManager {
     if (!token) return; // Skip fetch on public pages to avoid 401 noise
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -35,3 +35,4 @@ class ConfigManager {
 
 const configManager = new ConfigManager();
 export default configManager;
+

@@ -156,3 +156,4 @@ export default function SendToClientModal({ isOpen, onClose, onConfirm, project,
     </AnimatePresence>
   );
 }
+

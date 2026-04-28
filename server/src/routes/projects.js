@@ -42,14 +42,16 @@ router.get('/', auth, async (req, res) => {
       query = 'SELECT * FROM projects ORDER BY updatedAt DESC';
       params = [];
     } else if (req.userRole === 'admin') {
-      query = 'SELECT * FROM projects WHERE owner_admin_id = ? ORDER BY updatedAt DESC';
-      params = [ownerAdminId];
+      // Admin sees all projects they own OR created directly (legacy projects have NULL owner_admin_id)
+      query = 'SELECT * FROM projects WHERE (owner_admin_id = ? OR company_id = ? OR userId = ? OR createdBy = ?) ORDER BY updatedAt DESC';
+      params = [ownerAdminId, ownerAdminId, req.userId, req.userId];
     } else {
+      // Estimator: must be assigned to or have created the project
       query = `SELECT * FROM projects
-               WHERE owner_admin_id = ?
+               WHERE (owner_admin_id = ? OR company_id = ?)
                AND (userId = ? OR createdBy = ? OR engineerId = ?)
                ORDER BY updatedAt DESC`;
-      params = [ownerAdminId, req.userId, req.userId, req.userId];
+      params = [ownerAdminId, ownerAdminId, req.userId, req.userId, req.userId];
     }
 
     const [projects] = await db.query(query, params);
@@ -214,7 +216,11 @@ router.post('/upsert', auth, async (req, res) => {
 
     let existingProject = null;
     if (id) {
-      const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)', [id, userId, userId]);
+      // Check ownership — allow legacy projects (NULL owner_admin_id) via userId
+      const [rows] = await db.query(
+        'SELECT * FROM projects WHERE id = ? AND (userId = ? OR createdBy = ? OR assigned_engineer_id = ?)',
+        [id, userId, userId, userId]
+      );
       existingProject = rows[0];
       if (!existingProject) {
         return res.status(404).json({ success: false, message: 'Project not found' });
@@ -271,6 +277,7 @@ router.post('/upsert', auth, async (req, res) => {
     } else {
       // Insert new project — stamp owner_admin_id
       const ownerAdminId = await resolveOwnerAdminId(req);
+      const defaultStairs = JSON.stringify([{ label: "Stair 1", flights: [], landings: [], rails: [] }]);
       const [rows] = await db.query(
         `INSERT INTO projects
           (projectNumber, projectName, userId, createdBy, owner_admin_id, customer_name, customer_id, project_location,
@@ -284,7 +291,7 @@ router.post('/upsert', auth, async (req, res) => {
           projectNumber, projectName, userId, userId, ownerAdminId, customerName || '', customerId || null, projectLocation || '',
           architect || '', eor || '', gcName || '', detailer || '', vendorName || '',
           aiscCertified || 'Yes', units || 'Imperial', notes || '',
-          stairsJson, guardRailsJson, customRailValuesJson, localConfigJson, status || 'Project Created',
+          defaultStairs, guardRailsJson, customRailValuesJson, localConfigJson, status || 'Project Created',
           assignedEngineer || assigned_engineer_name || null,
           assigned_engineer_id || userId,
           assigned_engineer_id || userId,
@@ -372,8 +379,9 @@ router.get('/:projectId', auth, async (req, res) => {
     let whereClause = 'p.id = ?';
     let params = [req.params.projectId];
     if (ownerAdminId !== null) {
-      whereClause += ' AND p.owner_admin_id = ?';
-      params.push(ownerAdminId);
+      // Allow access if: scoped by owner_admin_id/company_id OR the user created it directly (legacy projects)
+      whereClause += ' AND (p.owner_admin_id = ? OR p.company_id = ? OR p.userId = ? OR p.createdBy = ?)';
+      params.push(ownerAdminId, ownerAdminId, req.userId, req.userId);
       if (req.userRole === 'estimator') {
         whereClause += ' AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ?)';
         params.push(req.userId, req.userId, req.userId);
@@ -395,10 +403,12 @@ router.get('/:projectId', auth, async (req, res) => {
     const project = rows[0];
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
 
-    project.stairs = tryParseJson(project.stairs);
+    // 🛡️ HYDRATION GUARD: Ensure default estimation data exists
+    project.stairs = tryParseJson(project.stairs) || [{ label: "Stair 1", flights: [], landings: [], rails: [] }];
+    project.estimationResult = tryParseJson(project.estimationResult) || { totalWeight: 0, totalCost: 0 };
+    
     project.guardRails = tryParseJson(project.guardRails);
     project.customRailValues = tryParseJson(project.customRailValues);
-    project.estimationResult = tryParseJson(project.estimationResult);
     project.localConfig = tryParseJson(project.localConfig);
 
     res.json({ success: true, project });
@@ -414,10 +424,23 @@ router.put('/:projectId', auth, async (req, res) => {
   try {
     const { projectId } = req.params;
     const updates = req.body;
+    const ownerAdminId = await resolveOwnerAdminId(req);
+    let checkQuery = 'SELECT * FROM projects WHERE id = ?';
+    let checkParams = [projectId];
     
-    const [rows] = await db.query('SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)', [projectId, req.userId, req.userId]);
+    if (ownerAdminId !== null) {
+      // Allow access if: scoped by owner_admin_id/company_id OR the user created it directly (legacy projects)
+      checkQuery += ' AND (owner_admin_id = ? OR company_id = ? OR userId = ? OR createdBy = ?)';
+      checkParams.push(ownerAdminId, ownerAdminId, req.userId, req.userId);
+      if (req.userRole === 'estimator') {
+        checkQuery += ' AND (userId = ? OR createdBy = ? OR engineerId = ? OR assigned_engineer_id = ?)';
+        checkParams.push(req.userId, req.userId, req.userId, req.userId);
+      }
+    }
+
+    const [rows] = await db.query(checkQuery, checkParams);
     if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Project not found' });
+      return res.status(404).json({ success: false, message: 'Project not found or access denied' });
     }
     
     const allowedFields = [

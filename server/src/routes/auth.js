@@ -4,6 +4,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/mssql');
+const { enforcePasswordPolicy } = require('../utils/passwordPolicy');
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -27,6 +28,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email already registered' });
     }
 
+    if (!enforcePasswordPolicy(password, res)) return;
     const hashedPassword = await bcrypt.hash(password, 12);
     const trialStart = new Date();
     const trialEnd = new Date();
@@ -85,6 +87,12 @@ router.post('/login', async (req, res) => {
     // Update last login
     await db.query('UPDATE users SET lastLogin = GETDATE() WHERE id = ?', [user.id]);
 
+    /* MFA Check removed per user request
+    if (user.mfa_enabled) {
+      ...
+    }
+    */
+
     const token = generateToken(user);
     const daysRemaining = Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / (1000 * 60 * 60 * 24)));
 
@@ -116,6 +124,7 @@ router.post('/register-owner', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email already registered' });
     }
 
+    if (!enforcePasswordPolicy(password, res)) return;
     const hashedPassword = await bcrypt.hash(password, 12);
     const [rows] = await db.query(
       'INSERT INTO users (email, [password], company, phone, [role], [plan], isPaid, subscriptionStatus) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?)',

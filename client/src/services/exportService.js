@@ -486,3 +486,4 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   if (returnBlob) return blob;
   saveAs(blob, `${projectData.projectName || 'Project'}_Estimate_BOM.xlsx`);
 };
+

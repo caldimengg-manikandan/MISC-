@@ -26,12 +26,13 @@ const PrivateRoute = ({ children, requireOwner = false, requireAdmin = false }) 
     return <Navigate to="/home" replace />;
   }
 
-  // If admin access required but user is not admin or owner
-  if (requireAdmin && user?.role !== 'admin' && user?.role !== 'owner') {
-    return <Navigate to="/home" replace />;
+  // If admin access required but user is not admin, owner, or superadmin
+  if (requireAdmin && !['admin', 'owner', 'superadmin'].includes(user?.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
 };
 
 export default PrivateRoute;
+

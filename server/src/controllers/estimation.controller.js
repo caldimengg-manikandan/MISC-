@@ -2,6 +2,7 @@
 const estimationRepository = require('../repositories/estimation.repository');
 const statusService = require('../services/EstimationStatusService');
 const { STATUS, STATUS_ACTIONS } = require('../constants/status.constants');
+const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 
 class EstimationController {
     async getDashboardStats(req, res) {
@@ -56,10 +57,13 @@ class EstimationController {
     async create(req, res) {
         try {
             const { projectName, customer_name, customer_id, dueDate } = req.body;
+            const ownerAdminId = await resolveOwnerAdminId(req);
+            
             const id = await estimationRepository.create({ 
                 projectName, customer_name, customer_id, dueDate, 
                 createdBy: req.userId,
-                companyId: req.companyId
+                companyId: req.companyId,
+                ownerAdminId: ownerAdminId
             });
             
             await estimationRepository.updateData(id, req.body);

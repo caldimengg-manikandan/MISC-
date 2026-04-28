@@ -17,6 +17,9 @@ const {
   deleteThread 
 } = require('../ai/agent/agent');
 const authMiddleware = require('../middleware/auth');
+const { requireEstimator } = require('../middleware/requireRole');
+
+router.use(requireEstimator);
 
 /**
  * POST /api/agent/chat

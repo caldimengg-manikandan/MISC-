@@ -508,3 +508,4 @@ function ToolIcon({ icon: Icon, tip, dot }) {
     </button>
   );
 }
+

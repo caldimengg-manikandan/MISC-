@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { X, Save, User, Building2, Phone, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
-import API_BASE_URL from '../../config/api';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
@@ -27,7 +26,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
     setSaving(true);
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.post(`${API_BASE_URL}/api/customers`, formData, {
+      const res = await api.post('/customers', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -133,7 +132,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
         <div className="sc-modal-backdrop" style={{ zIndex: 2000 }}>
           <motion.div 
             className="sc-modal-panel"
-            style={{ maxWidth: '450px' }}
+            style={{ maxWidth: '550px' }}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -237,3 +236,4 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
 };
 
 export default QuickAddCustomerModal;
+

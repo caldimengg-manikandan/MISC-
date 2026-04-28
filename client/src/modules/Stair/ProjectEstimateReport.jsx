@@ -29,7 +29,7 @@ export default function EstimateReport({ data, onBack }) {
     async function fetchPricing() {
       try {
         const token = localStorage.getItem('steel_token');
-        const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
           headers: { Authorization: `Bearer ${token}` }
         });
         const d = await res.json();
@@ -580,3 +580,4 @@ export default function EstimateReport({ data, onBack }) {
     </div>
   );
 }
+

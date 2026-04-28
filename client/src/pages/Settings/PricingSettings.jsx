@@ -117,7 +117,7 @@ export default function PricingSettings() {
   const fetchConfig = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -136,7 +136,7 @@ export default function PricingSettings() {
     const t = toast.loading("Propagating global pricing...");
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -413,4 +413,5 @@ export default function PricingSettings() {
     </div>
   );
 }
+
 

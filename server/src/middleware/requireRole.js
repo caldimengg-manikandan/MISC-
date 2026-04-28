@@ -18,7 +18,7 @@ const requireSuperAdmin = (req, res, next) => {
  * Require admin role (or superadmin — superadmin can do everything admin can).
  */
 const requireAdmin = (req, res, next) => {
-  if (!['admin', 'superadmin'].includes(req.userRole)) {
+  if (!['admin', 'superadmin', 'owner'].includes(req.userRole)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Admin privileges required.'
@@ -31,7 +31,7 @@ const requireAdmin = (req, res, next) => {
  * Require at least estimator access (any authenticated role).
  */
 const requireEstimator = (req, res, next) => {
-  if (!['estimator', 'admin', 'superadmin'].includes(req.userRole)) {
+  if (!['estimator', 'admin', 'superadmin', 'owner'].includes(req.userRole)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied.'

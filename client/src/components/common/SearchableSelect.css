@@ -89,7 +89,9 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  right: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 480px;
   background: #ffffff;
   border: 1px solid var(--input-border, #CBD5E1);
   border-radius: 8px;

@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import QuickManageModal from '../../components/common/QuickManageModal';
 import { calculateStairGeometry, debounce } from '../../services/estimationService';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput } from '../../utils/mathUtils';
+import toast from 'react-hot-toast';
 
 // Fallback hardcoded lists (used while loading or if API fails)
 const DEFAULT_STAIR_TYPES = [
@@ -109,7 +110,7 @@ const ConnBlock = ({ label, propName, value, options, onChange, style = {} }) =>
 
 export default function StairConfig({ stair = {}, onChange = () => {}, isFlightMode = false, onFocus = () => {} }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'superadmin';
 
   const [dropdowns, setDropdowns] = useState({
     stairTypes: DEFAULT_STAIR_TYPES,
@@ -126,7 +127,11 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
   const loadAll = useCallback(async () => {
     const fetchList = async (category) => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dictionary/${category}`);
+        const token = localStorage.getItem('steel_token');
+        const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, { credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include'
+        });
         return (await res.json()).data || [];
       } catch (e) { return []; }
     };
@@ -167,10 +172,10 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     stairType:       stair.stairType     || 'pan-concrete', 
     panPlThk:        stair.panPlThk      || { value: '0', unit: 'IN' },
     gratingType:     stair.gratingType   || '',
-    stairWidth:      stair.stairWidth    || { value: '', unit: 'FT' },
+    stairWidth:      (stair.stairWidth && typeof stair.stairWidth === 'object') ? stair.stairWidth : { value: stair.stairWidth || '', unit: 'FT' },
     run:             stair.run           || { value: '', unit: 'IN' },
     rise:            stair.rise          || { value: '', unit: 'IN' },
-    totalHeight:     stair.totalHeight   || { value: '', unit: 'FT' },
+    totalHeight:     (stair.totalHeight && typeof stair.totalHeight === 'object') ? stair.totalHeight : { value: stair.totalHeight || '', unit: 'FT' },
     numRisers:       stair.numRisers     || '',
     slope:           stair.slope         || '',
     angle:           stair.angle         || '',
@@ -179,17 +184,17 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     steelGrade:      stair.steelGrade    || 'A36',
     plateThk:        stair.plateThk      || '',
     plateWidth:      stair.plateWidth    || '',
-    nsStringerBot:   stair.nsStringerBot || { value: '', unit: 'FT' },
+    nsStringerBot:   (stair.nsStringerBot && typeof stair.nsStringerBot === 'object') ? stair.nsStringerBot : { value: stair.nsStringerBot || '', unit: 'FT' },
     nsStringerConnBot: stair.nsStringerConnBot || 'Welded',
-    fsStringerBot:   stair.fsStringerBot || { value: '', unit: 'FT' },
+    fsStringerBot:   (stair.fsStringerBot && typeof stair.fsStringerBot === 'object') ? stair.fsStringerBot : { value: stair.fsStringerBot || '', unit: 'FT' },
     fsStringerConnBot: stair.fsStringerConnBot || 'Welded',
-    nsStringerTop:   stair.nsStringerTop || { value: '', unit: 'FT' },
+    nsStringerTop:   (stair.nsStringerTop && typeof stair.nsStringerTop === 'object') ? stair.nsStringerTop : { value: stair.nsStringerTop || '', unit: 'FT' },
     nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
-    fsStringerTop:   stair.fsStringerTop || { value: '', unit: 'FT' },
+    fsStringerTop:   (stair.fsStringerTop && typeof stair.fsStringerTop === 'object') ? stair.fsStringerTop : { value: stair.fsStringerTop || '', unit: 'FT' },
     fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
     finish:          stair.finish         || 'Primer',
     mountingType:    stair.mountingType   || '',
-    selectionSource: stair.selectionSource || (stair.stringerSize ? 'manual' : 'auto'),
+    selectionSource: (stair.selectionSource) || (stair.stringerSize && stair.stringerSize !== '' ? 'manual' : 'auto'),
 
     ...stair
   });
@@ -265,9 +270,14 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     
     // CASE A: User has NOT manually overridden. Silently update to match new geometry.
     if (form.selectionSource === 'auto' && form.stringerSize !== recommendedStringerStr) {
-      set('stringerSize', recommendedStringerStr);
+      console.log("🛠️ Auto-applying recommended stringer:", recommendedStringerStr);
+      setForm(f => ({ ...f, stringerSize: recommendedStringerStr }));
+      // We don't call onChange here to avoid infinite loops, 
+      // but the next render/user action will pick it up.
+      // Actually, it's better to call it to sync with parent.
+      onChange({ ...form, stringerSize: recommendedStringerStr });
     }
-  }, [recommendedStringerStr, form.selectionSource, form.stringerSize]);
+  }, [recommendedStringerStr, form.selectionSource]); // Removed form.stringerSize to avoid oscillation
 
   let stringerWarning = null;
   let stringerWarningType = 'info';
@@ -728,16 +738,25 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                   border: `1px solid ${stringerWarningType === 'success' ? '#A7F3D0' : '#FDE68A'}`
                 }}>
                   <div style={{ whiteSpace: 'pre-line' }}>{stringerWarning}</div>
-                  {stringerWarningType === 'warning' && bestMatch && form.selectionSource === 'manual' && (
+                  {stringerWarningType === 'warning' && bestMatch && form.stringerSize !== recommendedStringerStr && (
                     <button 
                       onClick={(e) => { 
                         e.preventDefault(); 
                         const updated = { ...form, stringerSize: recommendedStringerStr, selectionSource: 'auto' };
                         setForm(updated);
                         onChange(updated);
+                        toast.success(`Applied ${recommendedStringerStr}`);
                       }}
-                      style={{ background: '#F59E0B', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
-                      Apply
+                      style={{ 
+                        background: '#3B82F6', color: 'white', border: 'none', 
+                        padding: '6px 12px', borderRadius: '6px', cursor: 'pointer',
+                        fontSize: '11px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#2563EB'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#3B82F6'}
+                    >
+                      Apply Recommendation
                     </button>
                   )}
                 </div>
@@ -860,3 +879,4 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     </div>
   );
 }
+

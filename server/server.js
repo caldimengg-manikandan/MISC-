@@ -42,6 +42,7 @@ const noteRoutes       = require('./src/routes/notes');
 const customerRoutes   = require('./src/routes/customer.routes');
 const reportRoutes     = require('./src/routes/reportRoutes');
 const agentRoutes      = require('./src/routes/agentRoutes');
+const mfaRoutes        = require('./src/routes/mfaRoutes');
 
 // New Phase 4+5 routes
 const superadminRoutes = require('./src/routes/superadminRoutes');
@@ -53,6 +54,7 @@ console.log('🚀 SERVER READY - BULK DELETE RECONFIGURED');
 // Import middleware
 const authMiddleware  = require('./src/middleware/auth');
 const licenseCheck    = require('./src/middleware/licenseCheck');
+const { requireSuperAdmin, requireEstimator } = require('./src/middleware/requireRole');
 const cookieParser    = require('cookie-parser');
 
 
@@ -111,8 +113,19 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin" },
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  frameguard: { action: 'deny' },
+  xssFilter: true,
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  permissionsPolicy: { features: { camera: [], microphone: [], geolocation: [] } }
 }));
+
+// Cache-Control: no-store on all API responses
+app.use('/api/', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  next();
+});
 
 // Enhanced CORS configuration
 const corsOptions = {
@@ -196,8 +209,8 @@ const apiLimiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100, // Increased for development (Original: 20)
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Max 10 attempts per minute
   message: {
     success: false,
     error: 'Too many authentication attempts, please try again later.'
@@ -205,7 +218,7 @@ const authLimiter = rateLimit({
 });
 
 // Apply rate limiting
-app.use('/api/auth', authLimiter);
+app.use('/api/v1/auth/login', authLimiter);
 app.use('/api', apiLimiter);
 
 // Cookie parser (W5/C7: needed for device_id cookie)
@@ -214,7 +227,7 @@ app.use(cookieParser());
 
 // Body parsing with enhanced limits and validation
 app.use(express.json({
-  limit: '10mb',
+  limit: '1mb',
   verify: (req, res, buf) => {
     try {
       JSON.parse(buf);
@@ -226,7 +239,7 @@ app.use(express.json({
 
 app.use(express.urlencoded({
   extended: true,
-  limit: '10mb',
+  limit: '1mb',
   parameterLimit: 100 // Limit number of parameters
 }));
 
@@ -273,8 +286,8 @@ app.use('/templates', express.static(path.join(__dirname, 'templates')));
 
 const calculationRoutes = require('./src/routes/calculationRoutes');
 // ================ ROUTES ================
-app.use('/api/calculate', calculationRoutes);
-app.use('/api/mysql', calculationRoutes); // Alias for backward compatibility
+app.use('/api/v1/calculate', authMiddleware, licenseCheck, requireEstimator, calculationRoutes);
+app.use('/api/v1/mysql',     authMiddleware, licenseCheck, requireEstimator, calculationRoutes); // Alias for backward compatibility
 
 // Health check (public) with detailed info
 app.get('/api/health', (req, res) => {
@@ -310,30 +323,33 @@ app.get('/api/docs', (req, res) => {
   });
 });
 
-// Public routes
 // Protected routes with authentication
-app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth/mfa', mfaRoutes);
 
 // Protected routes — auth + license check (I4)
-app.use('/api/projects',      authMiddleware, licenseCheck, projectRoutes);
-app.use('/api/projects',      authMiddleware, licenseCheck, workflowRoutes);
-app.use('/api/notifications', authMiddleware, notificationRoutes);
-app.use('/api/estimations',   authMiddleware, licenseCheck, estimationsRoutes);
-app.use('/api/dictionary',    dictionaryRoutes);
-app.use('/api/debug',         authMiddleware, debugRoutes);
-app.use('/api/secure/prices', authMiddleware, licenseCheck, priceRoutes);
-app.use('/api/secure/excel',  authMiddleware, licenseCheck, excelRoutes);
-app.use('/api/notes',         authMiddleware, licenseCheck, noteRoutes);
-app.use('/api/customers',     authMiddleware, licenseCheck, customerRoutes);
-app.use('/api/reports',       authMiddleware, licenseCheck, reportRoutes);
-app.use('/api/agent',         authMiddleware, licenseCheck, agentRoutes);
+app.use('/api/v1/projects',      authMiddleware, licenseCheck, projectRoutes);
+app.use('/api/v1/projects',      authMiddleware, licenseCheck, workflowRoutes);
+app.use('/api/v1/notifications', authMiddleware, notificationRoutes);
+app.use('/api/v1/estimations',   authMiddleware, licenseCheck, estimationsRoutes);
+app.use('/api/v1/dictionary',    authMiddleware, licenseCheck, dictionaryRoutes);
+app.use('/api/v1/debug',         authMiddleware, requireSuperAdmin, debugRoutes);
+app.use('/api/v1/secure/prices', authMiddleware, licenseCheck, priceRoutes);
+app.use('/api/v1/secure/excel',  authMiddleware, licenseCheck, excelRoutes);
+app.use('/api/v1/notes',         authMiddleware, licenseCheck, (req, res, next) => {
+  logger.info(`Notes API Hit: ${req.method} ${req.url}`);
+  next();
+}, noteRoutes);
+app.use('/api/v1/customers',     authMiddleware, licenseCheck, customerRoutes);
+app.use('/api/v1/reports',       authMiddleware, licenseCheck, reportRoutes);
+app.use('/api/v1/agent',         authMiddleware, licenseCheck, agentRoutes);
 
 // Admin management routes (licenseCheck excluded — managing users is not a licensed action)
-app.use('/api/admin/users',   authMiddleware, adminUserRoutes);
-app.use('/api/admin',         authMiddleware, adminRoutes);
+app.use('/api/v1/admin/users',   authMiddleware, adminUserRoutes);
+app.use('/api/v1/admin',         authMiddleware, adminRoutes);
 
 // SuperAdmin routes (license check not applicable — superadmin has no license)
-app.use('/api/superadmin',    authMiddleware, superadminRoutes);
+app.use('/api/v1/superadmin',    authMiddleware, superadminRoutes);
 
 
 // ================ SERVE CLIENT (VPS READY) ================

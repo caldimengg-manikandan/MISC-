@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, X, FileText, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../../../config/api';
 import SearchableSelect from '../../../components/common/SearchableSelect';
+import QuickAddCustomerModal from '../../../components/project/QuickAddCustomerModal';
 import toast from 'react-hot-toast';
+import { Building2, X, FileText, CheckCircle2, Plus } from 'lucide-react';
 
 export default function AllocateProjectModal({ isOpen, onClose, onAllocate, initialData = {} }) {
   const [projectName, setProjectName] = useState(initialData.projectName || '');
@@ -13,6 +14,7 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [customersLoading, setCustomersLoading] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -26,7 +28,7 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
     setCustomersLoading(true);
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.get(`${API_BASE_URL}/api/customers?status=active`, {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/customers?status=active`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -56,6 +58,7 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
       
       // 1. Create the project
       const projectPayload = {
+        ...initialData, // Spread existing draft data (stairs, rails, etc.)
         projectName,
         projectNumber,
         customer_id: customerId,
@@ -65,7 +68,7 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
         units: 'Imperial'
       };
 
-      const res = await axios.post(`${API_BASE_URL}/api/estimations`, projectPayload, {
+      const res = await axios.post(`${API_BASE_URL}/api/v1/estimations`, projectPayload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -87,7 +90,8 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
                 state: selectedCustomer?.state
             }
         });
-        onClose();
+        // 🚀 FORCE REDIRECT to the new 1:1 path
+        window.location.href = `/project/${newProjectId}/estimate/stair-railings`;
       } else {
         toast.error(res.data.message || 'Failed to create project');
       }
@@ -102,6 +106,7 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
   if (!isOpen) return null;
 
   return (
+    <>
     <div style={{
       position: 'fixed', inset: 0, zIndex: 10000,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -154,7 +159,23 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
             </div>
             
             <div className="ed-field">
-              <label className="ed-label">Customer *</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label className="ed-label" style={{ margin: 0 }}>Customer *</label>
+                <button 
+                  type="button"
+                  onClick={() => setShowQuickAdd(true)}
+                  style={{ 
+                    background: 'none', border: 'none', color: '#3b82f6', 
+                    fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    padding: '2px 4px', borderRadius: '4px'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <Plus size={12} /> Add New
+                </button>
+              </div>
               <SearchableSelect 
                 options={customers}
                 valueKey="id"
@@ -202,5 +223,17 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
         </div>
       </motion.div>
     </div>
+    
+    <QuickAddCustomerModal 
+      isOpen={showQuickAdd}
+      onClose={() => setShowQuickAdd(false)}
+      onCustomerAdded={(newCustomer) => {
+        setCustomers(prev => [newCustomer, ...prev]);
+        setCustomerId(newCustomer.id);
+        setShowQuickAdd(false);
+      }}
+    />
+    </>
   );
 }
+

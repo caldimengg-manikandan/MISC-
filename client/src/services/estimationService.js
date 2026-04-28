@@ -8,7 +8,7 @@
 
 import API_BASE_URL from '../config/api';
 
-const FULL_CALC_ENDPOINT = `${API_BASE_URL}/api/calculate/full`;
+const FULL_CALC_ENDPOINT = `${API_BASE_URL}/api/v1/calculate/full`;
 
 /**
  * Enhanced Debounce Utility
@@ -40,9 +40,14 @@ export async function calculateFull(payload, debug = false) {
     
     if (debug) url.searchParams.append('debug', 'true');
 
+    const token = localStorage.getItem('steel_token');
     const response = await fetch(url.toString(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include',
       body: JSON.stringify(payload)
     });
 
@@ -93,3 +98,4 @@ export async function calculateFull(payload, debug = false) {
     };
   }
 }
+

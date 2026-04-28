@@ -55,9 +55,26 @@ router.post('/', auth, async (req, res) => {
     }
 
     // Verify project existence and ownership
-    const [projectCheck] = await db.query('SELECT id FROM projects WHERE id = ? AND company_id = ?', [projectId, companyId]);
-    if (projectCheck.length === 0) {
-      return res.status(404).json({ success: false, message: 'Project not found or access denied', projectId, companyId });
+    let projectQuery = 'SELECT id, company_id FROM projects WHERE id = ?';
+    let queryParams = [projectId];
+
+    // C2: Superadmin bypasses company check
+    if (req.userRole !== 'superadmin') {
+      projectQuery += ' AND (company_id = ? OR userId = ?)';
+      queryParams.push(companyId, userId);
+    }
+
+    const [projectCheck] = await db.query(projectQuery, queryParams);
+    
+    if (!projectCheck || projectCheck.length === 0) {
+      console.warn(`Note Creation Denied: Project ${projectId} not found or access denied. Checked Query: ${projectQuery} with Params: ${JSON.stringify(queryParams)}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Project not found or access denied', 
+        projectId, 
+        companyId,
+        role: req.userRole 
+      });
     }
 
     const [result] = await db.query(

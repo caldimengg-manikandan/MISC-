@@ -85,6 +85,40 @@ function initCron() {
             console.error('❌ Error in Deadline Reminder Cron:', err);
         }
     });
+ 
+    // ── 3. Secret Rotation Check — 9 AM daily ───────────────────────────
+    cron.schedule('0 9 * * *', async () => {
+        console.log('🛡️ Running Secret Rotation Check...');
+        try {
+            const rotationDateStr = process.env.SECRETS_LAST_ROTATED;
+            if (!rotationDateStr) {
+                console.warn('⚠️ SECRETS_LAST_ROTATED not set in .env');
+                return;
+            }
+
+            const lastRotation = new Date(rotationDateStr);
+            const now = new Date();
+            const daysSinceRotation = Math.floor((now - lastRotation) / (1000 * 60 * 60 * 24));
+
+            if (daysSinceRotation >= 90) {
+                console.warn(`🚨 SECURITY ALERT: Secrets are ${daysSinceRotation} days old. Rotation required.`);
+                
+                // Find superadmins to notify
+                const [superadmins] = await db.query("SELECT id FROM users WHERE role = 'superadmin'");
+                
+                for (const sa of superadmins) {
+                    await db.query(`
+                        INSERT INTO notifications (user_id, type, title, message, priority, created_at)
+                        VALUES (?, 'SECURITY_ALERT', 'Secret Rotation Required', 
+                        'System secrets (JWT, DB) have not been rotated in ${daysSinceRotation} days. Please rotate them immediately for compliance.', 
+                        'high', GETDATE())
+                    `, [sa.id]);
+                }
+            }
+        } catch (err) {
+            console.error('❌ Error in Secret Rotation Cron:', err);
+        }
+    });
 
     console.log('🚀 Cron Jobs Initialized.');
 }

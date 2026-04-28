@@ -127,7 +127,7 @@ export default function SupportCenter() {
     const t = toast.loading("Fetching Master Template...");
     try {
       const token = localStorage.getItem('steel_token');
-      const response = await fetch(`${API_BASE_URL}/api/admin/templates/download`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/templates/download`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -231,4 +231,5 @@ export default function SupportCenter() {
     </motion.div>
   );
 }
+
 

@@ -16,3 +16,4 @@ const SuperAdminRoute = ({ children }) => {
 };
 
 export default SuperAdminRoute;
+

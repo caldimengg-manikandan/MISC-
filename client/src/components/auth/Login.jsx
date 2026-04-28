@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import MFAModal from './MFAModal';
+import MFASetup from './MFASetup';
 
 // 3D Stair Component
 const Stair3DModel = ({ assemblyProgress }) => {
@@ -297,7 +299,7 @@ const Login3D = () => {
     specialty: ''
   });
   const [daysRemaining, setDaysRemaining] = useState(30);
-  const { login, register, forgotPassword, verifyOTP, resetPassword, loading } = useAuth();
+  const { login, register, forgotPassword, verifyOTP, resetPassword, loginMFA, loading } = useAuth();
 
   // Forgot Password State
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -307,6 +309,12 @@ const Login3D = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
   const [isResending, setIsResending] = useState(false);
+
+  // MFA State
+  const [showMfaModal, setShowMfaModal] = useState(false);
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+  const [mfaToken, setMfaToken] = useState('');
+  const [setupToken, setSetupToken] = useState('');
 
   useEffect(() => {
     let interval;
@@ -440,10 +448,19 @@ const Login3D = () => {
     e.preventDefault();
 
     try {
+      let result;
       if (isLogin) {
-        await login(formData.email, formData.password, isOwnerLogin, from);
+        result = await login(formData.email, formData.password, isOwnerLogin, from);
       } else {
-        await register(formData, isOwnerLogin, from);
+        result = await register(formData, isOwnerLogin, from);
+      }
+
+      if (result?.requiresMfa) {
+        setMfaToken(result.mfaToken);
+        setShowMfaModal(true);
+      } else if (result?.requiresMfaSetup) {
+        setSetupToken(result.setupToken);
+        setShowMfaSetup(true);
       }
     } catch (error) {
       toast.error(error.message || 'Authentication failed');
@@ -1102,8 +1119,34 @@ const Login3D = () => {
           </div>
         </div>
       </div>
+
+      {showMfaModal && (
+        <MFAModal 
+          mfaToken={mfaToken} 
+          onComplete={() => {
+            setShowMfaModal(false);
+          }}
+          onCancel={() => setShowMfaModal(false)}
+        />
+      )}
+
+      {showMfaSetup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-md my-8">
+            <MFASetup 
+              setupToken={setupToken}
+              onComplete={() => {
+                setShowMfaSetup(false);
+                toast.success('MFA Setup complete! Please log in again.');
+                setIsLogin(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Login3D;
+

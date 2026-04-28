@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Mail, Shield, Clock, Phone, Globe, 
-  Save, Edit3, Camera, Building, Target, Activity 
+  Save, Edit3, Camera, Building, Target, Activity, X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import API_BASE_URL from '../../config/api';
@@ -35,7 +35,7 @@ export default function ProfileSettings() {
   const [stats, setStats] = useState({ totalProjects: 0, totalEstimations: 0 });
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(!!user?.mfa_enabled);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -45,6 +45,11 @@ export default function ProfileSettings() {
     phone: user?.phone || '',
     avatar: user?.avatar || ''
   });
+  const [mfaSetupData, setMfaSetupData] = useState(null);
+  const [isMfaModalOpen, setIsMfaModalOpen] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [isDisableMfaModalOpen, setIsDisableMfaModalOpen] = useState(false);
+  const { setupMFA, verifyMFASetup, disableMFA } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -56,6 +61,7 @@ export default function ProfileSettings() {
         phone: user.phone || '',
         avatar: user.avatar || ''
       });
+      setIs2FAEnabled(!!user.mfa_enabled);
       fetchStats();
     }
   }, [user]);
@@ -63,7 +69,7 @@ export default function ProfileSettings() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/projects`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/projects`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -112,7 +118,7 @@ export default function ProfileSettings() {
     const t = toast.loading("Updating password...");
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/change-password`, { credentials: 'include',
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -127,6 +133,54 @@ export default function ProfileSettings() {
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
         toast.error(data.error || "Update failed", { id: t });
+      }
+    } catch (err) {
+      toast.error("Network error", { id: t });
+    }
+  };
+
+  const handleStartMFASetup = async () => {
+    const t = toast.loading("Initializing security...");
+    try {
+      const res = await setupMFA();
+      if (res.success) {
+        setMfaSetupData(res);
+        setIsMfaModalOpen(true);
+        toast.dismiss(t);
+      } else {
+        toast.error(res.error || "MFA Setup failed", { id: t });
+      }
+    } catch (err) {
+      toast.error("Failed to start MFA setup", { id: t });
+    }
+  };
+
+  const handleVerifyMFASetup = async () => {
+    const t = toast.loading("Verifying code...");
+    try {
+      const res = await verifyMFASetup(mfaCode);
+      if (res.success) {
+        toast.success("MFA successfully enabled!", { id: t });
+        setIsMfaModalOpen(false);
+        setIs2FAEnabled(true);
+      } else {
+        toast.error(res.error || "Invalid code", { id: t });
+      }
+    } catch (err) {
+      toast.error("Verification error", { id: t });
+    }
+  };
+
+  const handleDisableMFA = async () => {
+    if (mfaCode.length !== 6) return toast.error("Enter a 6-digit code");
+    const t = toast.loading("Disabling 2FA...");
+    try {
+      const res = await disableMFA(mfaCode);
+      if (res.success) {
+        setIsDisableMfaModalOpen(false);
+        setIs2FAEnabled(false);
+        setMfaCode('');
+        toast.dismiss(t);
       }
     } catch (err) {
       toast.error("Network error", { id: t });
@@ -266,9 +320,23 @@ export default function ProfileSettings() {
                         {is2FAEnabled ? "2FA is active." : "Add an extra layer of security using an authenticator app."}
                       </p>
                    </div>
-                   <button onClick={() => { setIs2FAEnabled(!is2FAEnabled); toast.success(is2FAEnabled ? "2FA Disabled" : "2FA Enabled (Simulated)"); }} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${is2FAEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white border border-slate-200 text-slate-800'}`}>
-                      {is2FAEnabled ? "Disable" : "Configure 2FA"}
-                   </button>
+                    <div className="flex gap-2">
+                      {is2FAEnabled ? (
+                        <button 
+                          onClick={() => setIsDisableMfaModalOpen(true)}
+                          className="px-6 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-all"
+                        >
+                          Disable 2FA
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={handleStartMFASetup} 
+                          className="px-6 py-2.5 bg-white border border-slate-200 text-slate-800 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all"
+                        >
+                          Configure 2FA
+                        </button>
+                      )}
+                    </div>
                 </div>
 
                 <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col md:flex-row items-center gap-6">
@@ -311,7 +379,87 @@ export default function ProfileSettings() {
             </motion.div>
           </div>
         )}
+
+        {isMfaModalOpen && (
+          <div className="fixed inset-0 z-[12000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black text-slate-900">Configure 2FA</h2>
+                <button onClick={() => setIsMfaModalOpen(false)} className="p-2 hover:bg-slate-50 rounded-full"><X size={20} /></button>
+              </div>
+              
+              <div className="text-center space-y-6">
+                <p className="text-slate-500 text-sm">Scan this QR code with Google Authenticator or Authy to secure your account.</p>
+                
+                {mfaSetupData?.qrCodeUrl && (
+                  <div className="bg-white p-4 inline-block rounded-2xl border-2 border-slate-50 shadow-inner mx-auto">
+                    <img src={mfaSetupData.qrCodeUrl} alt="MFA QR Code" className="w-48 h-48" />
+                  </div>
+                )}
+                
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Backup Code</div>
+                  <code className="text-slate-800 font-mono font-bold text-lg select-all">{mfaSetupData?.secret}</code>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <label className="block text-xs font-bold text-slate-400 uppercase text-left">Enter 6-digit verification code</label>
+                  <input 
+                    type="text" 
+                    placeholder="000 000"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full text-center text-3xl tracking-[0.5em] font-black border-2 border-slate-200 rounded-2xl p-4 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" 
+                  />
+                  <button 
+                    onClick={handleVerifyMFASetup}
+                    disabled={mfaCode.length !== 6}
+                    className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Enable 2FA
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {isDisableMfaModalOpen && (
+          <div className="fixed inset-0 z-[12000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white w-full max-w-md p-8 rounded-[2rem] shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black text-slate-900">Disable 2FA</h2>
+                <button onClick={() => setIsDisableMfaModalOpen(false)} className="p-2 hover:bg-slate-50 rounded-full"><X size={20} /></button>
+              </div>
+              
+              <div className="space-y-6">
+                <p className="text-slate-500 text-sm">To disable Two-Factor Authentication, please enter the current 6-digit code from your authenticator app.</p>
+                
+                <div className="space-y-3 pt-4">
+                  <label className="block text-xs font-bold text-slate-400 uppercase text-left">Verification Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="000 000"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full text-center text-3xl tracking-[0.5em] font-black border-2 border-slate-200 rounded-2xl p-4 focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none transition-all" 
+                  />
+                  <button 
+                    onClick={handleDisableMFA}
+                    disabled={mfaCode.length !== 6}
+                    className="w-full py-4 bg-red-600 text-white font-bold rounded-2xl shadow-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Confirm Disable
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </motion.div>
   );
 }
+

@@ -57,3 +57,4 @@ export default function WorkflowStatusBadge({ status, size = 'md' }) {
     </span>
   );
 }
+

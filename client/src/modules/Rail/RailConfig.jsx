@@ -4,10 +4,13 @@ import { motion } from 'framer-motion';
 import EstimationPreviewCard from '../../components/common/EstimationPreviewCard';
 import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import QuickManageModal from '../../components/common/QuickManageModal';
 import { GUARD_RAIL_DRAWINGS } from '../../config/guardRailDrawings';
 
 const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv+Painted', 'Powder Coated'];
+const DEFAULT_STEEL_GRADES = ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'];
+const DEFAULT_MOUNTING_OPTIONS = ['Bolted to Stringer', 'Welded to Stringer', 'Side Mounted Bolted', 'Side Mounted Welded', 'Embedded', 'Anchored'];
 
 const RAIL_CONFIGS = {
   guardRail: {
@@ -119,7 +122,7 @@ const scoreMatch = (railAttrs, filters) => {
 };
 
 
-const DEFAULT_MOUNTING_OPTIONS = ['Bolted to Stringer', 'Welded to Stringer', 'Side Mounted Bolted', 'Side Mounted Welded', 'Embedded', 'Anchored'];
+
 
 // ── Unit Input Helper (Consistent with StairConfig) ─────────
 const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
@@ -154,7 +157,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
 
 export default function RailConfig({ type = 'guardRail', data, onChange, onFocus }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'superadmin';
 
   const [dropdowns, setDropdowns] = useState({
     steelGrades: ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'],
@@ -173,7 +176,10 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
   const load = useCallback(async () => {
     const fetchList = async (category) => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dictionary/${category}`);
+        const token = localStorage.getItem('steel_token');
+        const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         return (await res.json()).data || [];
       } catch (e) { return []; }
     };
@@ -185,7 +191,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       fetchList('wallRail_type'),
       fetchList('grabRail_type'),
       fetchList('caneRail_type'),
-      fetchList('steel_grade_rail')
+      fetchList('steel_grade_stair')
     ]);
 
     setDropdowns({
@@ -195,7 +201,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       wallRailTypes: wrt.length > 0 ? wrt.map(i => i.label) : RAIL_CONFIGS.wallRail.types,
       grabRailTypes: gbt.length > 0 ? gbt.map(i => i.label) : RAIL_CONFIGS.grabRail.types,
       caneRailTypes: crt.length > 0 ? crt.map(i => i.label) : RAIL_CONFIGS.caneRail.types,
-      steelGrades: sg.length > 0 ? sg.map(i => i.label) : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
+      steelGrades: sg.length > 0 ? sg.map(i => i.label) : DEFAULT_STEEL_GRADES
     });
   }, []);
 
@@ -232,11 +238,12 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
   useEffect(() => {
     // Cache parsed attributes for the guard rail types
     const cache = {};
-    (dropdowns.guardRailTypes || []).forEach(label => {
+    const allTypes = [...(dropdowns.guardRailTypes || []), ...(dropdowns.caneRailTypes || [])];
+    allTypes.forEach(label => {
       cache[label] = parseRailAttributes(label);
     });
     setParsedTypes(cache);
-  }, [dropdowns.guardRailTypes]);
+  }, [dropdowns.guardRailTypes, dropdowns.caneRailTypes]);
 
   // Initial page load / save project restore fix
   useEffect(() => {
@@ -274,10 +281,11 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
   // Suggestion Engine Logic
   const getBestMatch = useCallback(() => {
-    if (type !== 'guardRail') return null;
+    if (type !== 'guardRail' && type !== 'caneRail') return null;
     let best = null;
 
-    (dropdowns.guardRailTypes || []).forEach(label => {
+    const typesList = dropdowns[`${type}Types`] || [];
+    typesList.forEach(label => {
       const attrs = parsedTypes[label];
       const score = scoreMatch(attrs, form.filters);
       if (score === 2 && !best) {
@@ -285,10 +293,10 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       }
     });
     return best;
-  }, [type, dropdowns.guardRailTypes, parsedTypes, form.filters]);
+  }, [type, dropdowns.guardRailTypes, dropdowns.caneRailTypes, parsedTypes, form.filters]);
 
   useEffect(() => {
-    if (type !== 'guardRail') return;
+    if (type !== 'guardRail' && type !== 'caneRail') return;
     const bestMatch = getBestMatch();
 
     // null -> 'auto'
@@ -309,7 +317,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
   const prevRailTypeRef = React.useRef(form.railType);
 
   useEffect(() => {
-    if (type === 'guardRail' && form.railType && parsedTypes[form.railType]) {
+    if ((type === 'guardRail' || type === 'caneRail') && form.railType && parsedTypes[form.railType]) {
       const attrs = parsedTypes[form.railType];
       const typeChanged = prevRailTypeRef.current !== form.railType;
       prevRailTypeRef.current = form.railType;
@@ -358,7 +366,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
         </div>
 
         {/* Suggestion Filters - OPTION B */}
-        {type === 'guardRail' && (
+        {(type === 'guardRail' || type === 'caneRail') && (
           <div className="suggestion-filters-box">
             <div className="filters-header">
               <span className="filters-title">Suggestion Filters</span>
@@ -444,7 +452,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
                 if (onChange) onChange(updated);
               }}
             >
-              Use Suggested
+              Apply
             </button>
           </div>
         )}
@@ -457,7 +465,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
         {/* Primary Inputs Grid */}
         <div className="rail-specs-grid">
-          <div className="form-field">
+          <div className="form-field" style={{ gridColumn: 'span 2' }}>
             <label className="form-label">
               {type === 'guardRail' ? 'Guard Rail Type' : 'Rail Type'} <span className="required">*</span>
               {isAdmin && (
@@ -470,28 +478,23 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
                 </button>
               )}
             </label>
-            <select
-              className="form-select"
-              id={`${type}-type`}
-              value={form.railType}
-              onChange={e => handleManualSelection(e.target.value)}
-            >
-              <option value="">— Select Type —</option>
-              {(dropdowns[`${type}Types`] || config.types).map(t => {
+            <SearchableSelect
+              options={(dropdowns[`${type}Types`] || config.types).map(t => {
                 const attrs = parsedTypes[t];
-                const score = type === 'guardRail' ? scoreMatch(attrs, form.filters) : 1;
-                const isRec = type === 'guardRail' && score === 2;
-                return (
-                  <option 
-                    key={t} 
-                    value={t}
-                    style={{ opacity: score === 0 ? 0.4 : 1 }}
-                  >
-                    {t} {isRec ? ' ★ (REC)' : ''}
-                  </option>
-                );
+                const score = (type === 'guardRail' || type === 'caneRail') ? scoreMatch(attrs, form.filters) : 1;
+                const isRec = (type === 'guardRail' || type === 'caneRail') && score === 2;
+                return { 
+                  value: t, 
+                  label: `${t} ${isRec ? ' ★ (REC)' : ''}`,
+                  opacity: score === 0 ? 0.4 : 1
+                };
               })}
-            </select>
+              valueKey="value"
+              displayKey="label"
+              value={form.railType}
+              onSelect={opt => handleManualSelection(opt?.value || '')}
+              placeholder="— Select Type —"
+            />
           </div>
 
           <UnitInput
@@ -504,14 +507,27 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
 
           <div className="form-field">
-            <label className="form-label">Steel Grade</label>
-            <select
-              className="form-select compact-select"
+            <label className="form-label">
+              Steel Grade
+              {isAdmin && (
+                <button
+                  onClick={(e) => openManage('steel_grade_stair', 'Steel Grades', e)}
+                  className="quick-edit-btn"
+                  title="Manage Options"
+                >
+                  <Settings size={12} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.steelGrades.map(sg => ({ value: sg, label: sg }))}
+              valueKey="value"
+              displayKey="label"
               value={form.steelGrade}
-              onChange={e => set('steelGrade', e.target.value)}
-            >
-              {dropdowns.steelGrades.map(sg => <option key={sg} value={sg}>{sg}</option>)}
-            </select>
+              onSelect={opt => set('steelGrade', opt?.value || '')}
+              placeholder="— Select Grade —"
+            />
           </div>
 
           {!config.lbsPerFt && (
@@ -593,18 +609,18 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               placeholder="0"
             />
             {/* Auto-set hint */}
-            {type === 'guardRail' && form.intRailSource !== 'manual' && form.railType && parsedTypes[form.railType]?.lines && (
+            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource !== 'manual' && form.railType && parsedTypes[form.railType]?.lines && (
               <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: 'var(--color-text-tertiary, #94a3b8)', fontStyle: 'italic' }}>
                 Auto: based on {parsedTypes[form.railType].lines}-Line type
               </span>
             )}
             {/* Manual override amber note */}
-            {type === 'guardRail' && form.intRailSource === 'manual' && data?.systemCalc?.intRailDelta !== undefined && data.systemCalc.intRailDelta !== 0 && (
+            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource === 'manual' && data?.systemCalc?.intRailDelta !== undefined && data.systemCalc.intRailDelta !== 0 && (
               <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic', background: '#fffbeb', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
                 Custom count — steel lbs/LF adjusted proportionally
               </span>
             )}
-            {type === 'guardRail' && form.intRailSource === 'manual' && (data?.systemCalc?.intRailDelta === 0 || data?.systemCalc?.intRailDelta === undefined) && form.railType && parsedTypes[form.railType]?.lines && (
+            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource === 'manual' && (data?.systemCalc?.intRailDelta === 0 || data?.systemCalc?.intRailDelta === undefined) && form.railType && parsedTypes[form.railType]?.lines && (
               <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic' }}>
                 Custom count
               </span>
@@ -701,25 +717,27 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
           <div className="form-field">
             <label className={`form-label ${showMountingWarning ? 'text-amber-600 font-bold' : ''}`}>Mounting</label>
-            <select
-              className={`form-select compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
+            <SearchableSelect
+              className={`compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
+              options={dropdowns.mountings.map(m => ({ value: m, label: m }))}
+              valueKey="value"
+              displayKey="label"
               value={form.mountingType}
-              onChange={e => set('mountingType', e.target.value)}
-            >
-              <option value="">— Select —</option>
-              {dropdowns.mountings.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+              onSelect={opt => set('mountingType', opt?.value || '')}
+              placeholder="— Select —"
+            />
           </div>
           <div className="form-field">
             <label className="form-label">Finish Specification</label>
-            <select
-              className="form-select compact-select"
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+              valueKey="value"
+              displayKey="label"
               value={form.finish}
-              onChange={e => set('finish', e.target.value)}
-            >
-              <option value="">— Select Finish —</option>
-              {dropdowns.finishes.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
+              onSelect={opt => set('finish', opt?.value || '')}
+              placeholder="— Select Finish —"
+            />
           </div>
         </div>
       </div>
@@ -943,3 +961,4 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     </div>
   );
 }
+

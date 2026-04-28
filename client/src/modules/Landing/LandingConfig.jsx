@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useEstimation } from '../../contexts/EstimationContext';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import { Settings } from 'lucide-react';
 import EstimationPreviewCard from '../../components/common/EstimationPreviewCard';
 import API_BASE_URL from '../../config/api';
@@ -48,7 +50,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
 
 export default function LandingConfig({ data, parentStairType, onChange, onFocus }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'superadmin';
 
   const [dropdowns, setDropdowns] = useState({
     platformTypes: DEFAULT_PLATFORM_TYPES,
@@ -60,7 +62,10 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
   const load = useCallback(async () => {
     const fetchList = async (category) => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dictionary/${category}`);
+        const token = localStorage.getItem('steel_token');
+        const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         return (await res.json()).data || [];
       } catch (e) { return []; }
     };
@@ -230,35 +235,59 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
               </button>
             )}
           </label>
-          <select
-            className="form-select data-type-string compact-select"
+          <SearchableSelect
+            className="data-type-string compact-select"
+            options={dropdowns.platformTypes.map(pt => ({ value: pt.value || pt.label || pt, label: pt.label || pt.value || pt }))}
+            valueKey="value"
+            displayKey="label"
             value={form.platformType}
-            onChange={e => {
-              const updated = { ...form, platformType: e.target.value, selectionSource: 'manual' };
+            onSelect={opt => {
+              const updated = { ...form, platformType: opt?.value || '', selectionSource: 'manual' };
               setForm(updated);
               if (onChange) onChange(updated);
             }}
-          >
-            <option value="">— Select Type —</option>
-            {dropdowns.platformTypes.map(pt => (
-              <option key={pt.value || pt._id || pt} value={pt.value || pt.label || pt}>
-                {pt.label || pt.value || pt}
-              </option>
-            ))}
-          </select>
+            placeholder="— Select Type —"
+          />
           {platformWarning && (
             <div style={{
-              marginTop: '6px', fontSize: '10.5px', padding: '4px 8px', borderRadius: '4px',
+              marginTop: '6px', fontSize: '10.5px', padding: '8px 12px', borderRadius: '4px',
               backgroundColor: platformWarningType === 'warning' ? '#FEF3C7' : '#D1FAE5',
               color: platformWarningType === 'warning' ? '#92400E' : '#065F46',
               border: `1px solid ${platformWarningType === 'warning' ? '#FDE68A' : '#A7F3D0'}`,
-              display: 'inline-block'
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '12px'
             }}>
-              {platformWarning.split('\n').map((line, i) => (
-                <div key={i} style={{ fontWeight: i === 0 && platformWarningType === 'warning' ? '700' : '500' }}>
-                  {line}
-                </div>
-              ))}
+              <div>
+                {platformWarning.split('\n').map((line, i) => (
+                  <div key={i} style={{ fontWeight: i === 0 && platformWarningType === 'warning' ? '700' : '500' }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+              {platformWarningType === 'warning' && recommendedPlatformType && (
+                <button
+                  onClick={() => {
+                    const updated = { ...form, platformType: recommendedPlatformType, selectionSource: 'auto' };
+                    setForm(updated);
+                    if (onChange) onChange(updated);
+                  }}
+                  style={{
+                    backgroundColor: '#D97706',
+                    color: 'white',
+                    border: 'none',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Apply
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -272,13 +301,15 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
               </button>
             )}
           </label>
-          <select
-            className="form-select data-type-string compact-select"
+          <SearchableSelect
+            className="data-type-string compact-select"
+            options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+            valueKey="value"
+            displayKey="label"
             value={form.finish}
-            onChange={e => set('finish', e.target.value)}
-          >
-            {dropdowns.finishes.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
+            onSelect={opt => set('finish', opt?.value || '')}
+            placeholder="— Select Finish —"
+          />
         </div>
       </div>
 
@@ -325,3 +356,4 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
     </div>
   );
 }
+

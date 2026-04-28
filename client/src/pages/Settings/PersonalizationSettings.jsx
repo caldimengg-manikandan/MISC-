@@ -133,3 +133,4 @@ export default function PersonalizationSettings() {
     </motion.div>
   );
 }
+

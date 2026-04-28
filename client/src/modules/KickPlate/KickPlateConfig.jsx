@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import EstimationPreviewCard from '../../components/common/EstimationPreviewCard';
 import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
+import SearchableSelect from '../../components/common/SearchableSelect';
 import QuickManageModal from '../../components/common/QuickManageModal';
 
 const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv+Painted', 'Powder Coated'];
+const DEFAULT_STEEL_GRADES = ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'];
 
 // ── Unit Input Helper (Consistent with StairConfig) ─────────
 const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
@@ -41,7 +43,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint }) => {
 
 export default function KickPlateConfig({ data, onChange, onFocus }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'superadmin';
 
   const [dropdowns, setDropdowns] = useState({
     steelGrades: ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'],
@@ -53,19 +55,22 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
   const load = useCallback(async () => {
     const fetchList = async (category) => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dictionary/${category}`);
+        const token = localStorage.getItem('steel_token');
+        const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         return (await res.json()).data || [];
       } catch (e) { return []; }
     };
 
     const [fo, sg] = await Promise.all([
       fetchList('finish_option'),
-      fetchList('steel_grade_rail')
+      fetchList('steel_grade_stair')
     ]);
 
     setDropdowns({
       finishes: fo.length > 0 ? fo.map(i => i.label) : DEFAULT_FINISH_OPTIONS,
-      steelGrades: sg.length > 0 ? sg.map(i => i.label) : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
+      steelGrades: sg.length > 0 ? sg.map(i => i.label) : DEFAULT_STEEL_GRADES
     });
   }, []);
 
@@ -135,15 +140,15 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
               />
               <span className="form-input-unit">IN</span>
             </div>
-            <div className="quick-width-options" style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+            <div className="segmented-control" style={{ marginTop: '8px', height: '32px' }}>
                {[3, 4, 6, 8].map(w => (
                  <button 
                   key={w}
-                  className={`width-pill ${form.width == w ? 'active' : ''}`}
+                  className={form.width == w ? 'active' : ''}
                   onClick={() => set('width', w)}
                   type="button"
                  >
-                   {w}"
+                   {w}" Width
                  </button>
                ))}
             </div>
@@ -154,7 +159,7 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
               Steel Grade
               {isAdmin && (
                 <button
-                  onClick={(e) => openManage('steel_grade_rail', 'Steel Grades', e)}
+                  onClick={(e) => openManage('steel_grade_stair', 'Steel Grades', e)}
                   className="quick-edit-btn"
                   title="Manage Options"
                 >
@@ -162,13 +167,15 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
                 </button>
               )}
             </label>
-            <select
-              className="form-select compact-select"
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.steelGrades.map(sg => ({ value: sg, label: sg }))}
+              valueKey="value"
+              displayKey="label"
               value={form.steelGrade}
-              onChange={e => set('steelGrade', e.target.value)}
-            >
-              {dropdowns.steelGrades.map(sg => <option key={sg} value={sg}>{sg}</option>)}
-            </select>
+              onSelect={opt => set('steelGrade', opt?.value || '')}
+              placeholder="— Select Grade —"
+            />
           </div>
 
           <div className="form-field">
@@ -184,14 +191,15 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
                 </button>
               )}
             </label>
-            <select
-              className="form-select compact-select"
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+              valueKey="value"
+              displayKey="label"
               value={form.finish}
-              onChange={e => set('finish', e.target.value)}
-            >
-              <option value="">— Select Finish —</option>
-              {dropdowns.finishes.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
+              onSelect={opt => set('finish', opt?.value || '')}
+              placeholder="— Select Finish —"
+            />
           </div>
         </div>
       </div>
@@ -232,27 +240,43 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
         .quick-edit-btn { margin-left: 4px; border: none; background: none; cursor: pointer; color: #64748b; }
         .quick-edit-btn:hover { color: #1e293b; }
         
-        .width-pill {
+        .segmented-control {
+          display: flex;
           background: #f1f5f9;
+          padding: 4px;
+          border-radius: 8px;
+          gap: 4px;
           border: 1px solid #e2e8f0;
-          color: #64748b;
+          align-items: center;
+        }
+        .segmented-control button {
+          flex: 1;
+          height: 100%;
+          border: none;
+          background: transparent;
+          padding: 0 8px;
           font-size: 10px;
           font-weight: 700;
-          padding: 2px 8px;
-          border-radius: 4px;
+          color: #64748b;
           cursor: pointer;
-          transition: all 0.2s;
+          border-radius: 6px;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .width-pill:hover {
+        .segmented-control button:hover:not(.active) {
           background: #e2e8f0;
           color: #1e293b;
         }
-        .width-pill.active {
-          background: var(--accent-blue);
-          border-color: var(--accent-blue);
-          color: white;
+        .segmented-control button.active {
+          background: #3b82f6;
+          color: #ffffff;
+          box-shadow: 0 2px 4px -1px rgba(59, 130, 246, 0.3);
         }
       `}</style>
     </div>
   );
 }
+

@@ -142,7 +142,7 @@ export default function EstimationDetail() {
     setCustomersLoading(true);
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.get(`${API_BASE_URL}/api/customers?status=active`, {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/customers?status=active`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -168,7 +168,7 @@ export default function EstimationDetail() {
     setCheckingDuplicate(true);
     try {
       const token = localStorage.getItem('steel_token');
-      const url = `${API_BASE_URL}/api/projects/check-duplicate?projectName=${encodeURIComponent(name || '')}&projectNumber=${encodeURIComponent(number || '')}`;
+      const url = `${API_BASE_URL}/api/v1/projects/check-duplicate?projectName=${encodeURIComponent(name || '')}&projectNumber=${encodeURIComponent(number || '')}`;
       
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
@@ -310,17 +310,8 @@ export default function EstimationDetail() {
         }
       }
 
-      // Write project info to localStorage for the estimation module
-      const modulePath = '/estimate/stair-railings';
-      const contextKey = `steelProjectInfo_${modulePath}`;
-      localStorage.setItem(contextKey, JSON.stringify({
-        id: resolvedId,
-        projectName: form.projectName,
-        projectNumber: form.projectNumber,
-        customerName: form.customer_name || '',
-        customerId: form.customer_id || null,
-        projectLocation: form.projectLocation || ''
-      }));
+      // Write project info to localStorage for the estimation module fallback
+      const modulePath = `/project/${resolvedId}/estimate/stair-railings`;
       navigate(modulePath);
     } finally {
       setGoingToEstimation(false);
@@ -751,3 +742,4 @@ export default function EstimationDetail() {
     </div>
   );
 }
+

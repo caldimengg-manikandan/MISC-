@@ -4,6 +4,9 @@ const db = require('../config/mssql');
 const configManager = require('../utils/configManager');
 const path = require('path');
 const fs = require('fs');
+const { requireAdmin } = require('../middleware/requireRole');
+
+router.use(requireAdmin);
 
 // GET all system configurations
 router.get('/config', async (req, res) => {

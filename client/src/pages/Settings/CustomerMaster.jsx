@@ -44,7 +44,7 @@ export default function CustomerMaster() {
   const fetchCustomers = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.get(`${API_BASE_URL}/api/customers`, {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/customers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -97,8 +97,8 @@ export default function CustomerMaster() {
     try {
       const token = localStorage.getItem('steel_token');
       const url = editingCustomer 
-        ? `${API_BASE_URL}/api/customers/${editingCustomer.id}` 
-        : `${API_BASE_URL}/api/customers`;
+        ? `${API_BASE_URL}/api/v1/customers/${editingCustomer.id}` 
+        : `${API_BASE_URL}/api/v1/customers`;
       const method = editingCustomer ? 'put' : 'post';
 
       const res = await axios[method](url, formData, {
@@ -120,7 +120,7 @@ export default function CustomerMaster() {
     const t = toast.loading(`Setting status to ${newStatus}...`);
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.patch(`${API_BASE_URL}/api/customers/${customer.id}/status`, 
+      const res = await axios.patch(`${API_BASE_URL}/api/v1/customers/${customer.id}/status`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -141,7 +141,7 @@ export default function CustomerMaster() {
     const t = toast.loading("Deleting customer...");
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await axios.delete(`${API_BASE_URL}/api/customers/${customer.id}`, {
+      const res = await axios.delete(`${API_BASE_URL}/api/v1/customers/${customer.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -407,3 +407,4 @@ export default function CustomerMaster() {
     </div>
   );
 }
+

@@ -110,7 +110,11 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
   const fetchEntries = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/dictionary/${category}`);
+      const token = localStorage.getItem('steel_token');
+      const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, { credentials: 'include',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include'
+      });
       const data = await res.json();
       if (data.success) {
         setEntries(data.data || []);
@@ -143,7 +147,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
 
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/dictionary`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/dictionary`, { credentials: 'include',
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -189,7 +193,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     if (!window.confirm('Delete this option?')) return;
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/dictionary/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${id}`, { credentials: 'include',
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -226,7 +230,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     if (!editForm.label) return toast.error('Label is required');
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/dictionary/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${id}`, { credentials: 'include',
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -588,3 +592,4 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     </div>
   );
 }
+

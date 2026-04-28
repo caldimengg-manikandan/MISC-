@@ -13,12 +13,12 @@ import './Reports.css';
 
 import { API_BASE_URL } from '../../config/api';
 
-const API_URL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
+const API_URL = `${API_BASE_URL}/api/v1`;
 
 const getToken = () => localStorage.getItem('steel_token');
 
 const apiFetch = (url, opts = {}) =>
-  fetch(`${API_URL}${url}`, {
+  fetch(`${API_URL}${url}`, { credentials: 'include',
     ...opts,
     headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
   });
@@ -750,3 +750,4 @@ export default function Reports() {
     </div>
   );
 }
+

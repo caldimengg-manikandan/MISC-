@@ -29,7 +29,7 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
   const [showAddEngineerModal, setShowAddEngineerModal] = useState(false);
 
   const token = localStorage.getItem('steel_token');
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = ['admin', 'owner', 'superadmin'].includes(user?.role);
   const isCreator = project?.userId === user?.id || project?.user_id === user?.id || !project?.id;
   const canAssign = isAdmin || isCreator;
   const status = (project?.workflow_status || project?.status || 'new').toLowerCase();
@@ -39,7 +39,7 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
   // Load users list for assign dropdown
   useEffect(() => {
     if (canAssign && ['new', 'assigned', 'in_progress'].includes(status)) {
-      fetch(`${API_BASE_URL}/api/projects/users/list`, {
+      fetch(`${API_BASE_URL}/api/v1/projects/users/list`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(r => r.json())
@@ -51,7 +51,7 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
   const call = async (endpoint, method = 'PATCH', body = null) => {
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/projects/${project.id}/${endpoint}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/projects/${project.id}/${endpoint}`, { credentials: 'include',
         method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: body ? JSON.stringify(body) : undefined,
@@ -129,7 +129,7 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
          formData.append('attachments', bomBlob, 'Estimation_BOM.xlsx');
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/projects/${project.id}/send-to-client`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/projects/${project.id}/send-to-client`, { credentials: 'include',
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }, // NO Content-Type allows boundary generation
         body: formData,
@@ -150,7 +150,7 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
   const handleAddEngineer = async ({ email, full_name }) => {
     try {
       setSaving(true);
-      const res = await fetch(`${API_BASE_URL}/api/projects/users/create`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/projects/users/create`, { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email, full_name })
@@ -356,3 +356,4 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
     </>
   );
 }
+

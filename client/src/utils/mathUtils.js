@@ -172,3 +172,4 @@ export const parseToFeet = (input, currentToggleUnit = 'FT') => {
   const parsed = parseArchitecturalInput(val, unit);
   return normalizeToFeet(parsed.value, parsed.unit);
 };
+

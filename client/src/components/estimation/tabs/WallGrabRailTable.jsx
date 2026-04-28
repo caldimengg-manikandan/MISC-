@@ -210,3 +210,4 @@ const WallGrabRailTable = ({
 };
 
 export default WallGrabRailTable;
+

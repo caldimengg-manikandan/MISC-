@@ -65,3 +65,4 @@ export default function JobberCalculatorModal({ isOpen, onClose }) {
     </div>
   );
 }
+

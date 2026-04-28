@@ -7,7 +7,7 @@ import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
 
-const API_URL = `${API_BASE_URL}/api`;
+const API_URL = `${API_BASE_URL}/api/v1`;
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -15,33 +15,38 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authActionLoading, setAuthActionLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
   // Initialize auth on mount
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('steel_token');
       const storedUser = localStorage.getItem('steel_user');
 
-      if (token && storedUser) {
+      if (storedUser) {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
-            headers: { Authorization: `Bearer ${token}` }
+          const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify`, {
+            credentials: 'include'
           });
 
           if (response.ok) {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
-            setIsAuthenticated(true);
+            const data = await response.json();
+            if (data.success && data.user) {
+              localStorage.setItem('steel_user', JSON.stringify(data.user));
+              setUser(data.user);
+              setIsAuthenticated(true);
+            } else {
+              localStorage.removeItem('steel_user');
+              setUser(null);
+              setIsAuthenticated(false);
+            }
           } else {
-            localStorage.removeItem('steel_token');
             localStorage.removeItem('steel_user');
             setUser(null);
             setIsAuthenticated(false);
           }
         } catch (error) {
-          localStorage.removeItem('steel_token');
           localStorage.removeItem('steel_user');
           setUser(null);
           setIsAuthenticated(false);
@@ -58,20 +63,30 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('auth/login', { email, password });
       const data = response.data;
+      console.log('DEBUG AuthContext: Login Response Data:', data);
 
       if (data.requiresOTP) {
-        // Redirect to OTP verification page
         navigate('/otp-verify', { state: { userId: data.userId, email } });
         return { success: true, requiresOTP: true };
       }
 
-      if (data.token) {
-        localStorage.setItem('steel_token', data.token);
+      if (data.requiresMfa) {
+        return { success: true, requiresMfa: true, mfaToken: data.mfaToken };
+      }
+      
+      if (data.requiresMfaSetup) {
+        return { success: true, requiresMfaSetup: true, setupToken: data.setupToken };
+      }
+
+      if (data.user) {
+        if (data.token) localStorage.setItem('steel_token', data.token);
         localStorage.setItem('steel_user', JSON.stringify(data.user));
         setUser(data.user);
         setIsAuthenticated(true);
+
+        if (data.user.mfaWarning) toast('Please set up MFA soon for better security!', { icon: '🛡️' });
 
         if (data.mustChangePassword) {
           toast.success('Login successful! Please update your password.');
@@ -82,6 +97,8 @@ export const AuthProvider = ({ children }) => {
         }
         return { success: true };
       }
+
+      return { success: true, ...data };
     } catch (error) {
       // Error handled by interceptor or custom here
       const msg = error.response?.data?.error || 'Login failed';
@@ -96,14 +113,21 @@ export const AuthProvider = ({ children }) => {
   const verifyLoginOTP = async (userId, otp) => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/verify-login-otp', { userId, otp });
+      const response = await api.post('auth/verify-login-otp', { userId, otp });
       const data = response.data;
 
-      if (data.token) {
-        localStorage.setItem('steel_token', data.token);
+      if (data.requiresMfa) {
+        return { success: true, requiresMfa: true, mfaToken: data.mfaToken };
+      }
+      if (data.requiresMfaSetup) {
+        return { success: true, requiresMfaSetup: true, setupToken: data.setupToken };
+      }
+
+      if (data.user) {
         localStorage.setItem('steel_user', JSON.stringify(data.user));
         setUser(data.user);
         setIsAuthenticated(true);
+        if (data.user.mfaWarning) toast('Please set up MFA soon for better security!', { icon: '🛡️' });
         toast.success('Verification successful!');
         navigate(data.user.role === 'superadmin' ? '/superadmin/dashboard' : '/home');
         return { success: true };
@@ -117,11 +141,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+
+
   // ACTIVATE ACCOUNT (Invite Link)
   const activateAccount = async (token, password) => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/activate', { token, password });
+      const response = await api.post('auth/activate', { token, password });
       toast.success(response.data.message || 'Account activated successfully!');
       navigate('/login');
       return { success: true };
@@ -140,19 +166,20 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       
       const endpoint = isOwner 
-        ? `${API_BASE_URL}/api/auth/register-owner`
-        : `${API_BASE_URL}/api/auth/register`;
+        ? `${API_BASE_URL}/api/v1/auth/register-owner`
+        : `${API_BASE_URL}/api/v1/auth/register`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(endpoint, { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(userData)
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('steel_token', data.token);
+        if (data.token) localStorage.setItem('steel_token', data.token);
         localStorage.setItem('steel_user', JSON.stringify(data.user));
 
         setUser(data.user);
@@ -183,12 +210,12 @@ export const AuthProvider = ({ children }) => {
   // LOGOUT
   const logout = async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post('auth/logout');
     } catch (e) {
       // Ignore logout errors, just clear local state
     }
-    localStorage.removeItem('steel_token');
     localStorage.removeItem('steel_user');
+    localStorage.removeItem('steel_token');
     setUser(null);
     setIsAuthenticated(false);
     toast.success('Logged out successfully');
@@ -200,14 +227,12 @@ export const AuthProvider = ({ children }) => {
     try {
       if (user?.role === 'owner') return true;
 
-      const token = localStorage.getItem('steel_token');
-
-      const response = await fetch(`${API_BASE_URL}/api/trial/check-access`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/trial/check`, { credentials: 'include',
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ feature })
       });
 
@@ -224,9 +249,8 @@ export const AuthProvider = ({ children }) => {
   // TRIAL STATUS
   const checkTrialStatus = async () => {
     try {
-      const token = localStorage.getItem('steel_token');
-      const response = await fetch(`${API_BASE_URL}/api/trial/status`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await fetch(`${API_BASE_URL}/api/v1/trial/status`, {
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -241,14 +265,12 @@ export const AuthProvider = ({ children }) => {
   // UPDATE PROFILE
   const updateUser = async (userData) => {
     try {
-      const token = localStorage.getItem('steel_token');
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/update-profile`, { credentials: 'include',
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(userData)
       });
 
@@ -271,7 +293,7 @@ export const AuthProvider = ({ children }) => {
   const forgotPassword = async (email) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -375,6 +397,107 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isOwner = () => user?.role === 'owner';
+  
+  // MFA SUPPORT
+  const setupMFA = async (setupToken) => {
+    setAuthActionLoading(true);
+    try {
+      const headers = setupToken ? { Authorization: `Bearer ${setupToken}` } : {};
+      const res = await api.get('auth/mfa/setup', { headers });
+      return res.data;
+    } catch (e) {
+      const msg = e.response?.data?.error || 'MFA Setup failed';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setAuthActionLoading(false);
+    }
+  };
+
+  const verifyMFASetup = async (code, setupToken) => {
+    setAuthActionLoading(true);
+    try {
+      const headers = setupToken ? { Authorization: `Bearer ${setupToken}` } : {};
+      const res = await api.post('auth/mfa/verify', { token: code }, { headers });
+      if (res.data.success && res.data.user) {
+        const updatedUser = { ...user, ...res.data.user };
+        localStorage.setItem('steel_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        toast.success('MFA Setup complete!');
+      }
+      return res.data;
+    } catch (e) {
+      const msg = e.response?.data?.error || 'Verification failed';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setAuthActionLoading(false);
+    }
+  };
+
+  const loginMFA = async (mfaToken, code) => {
+    setLoading(true);
+    try {
+      const res = await api.post('auth/mfa/login', { mfaToken, token: code });
+      if (res.data.success && res.data.token) {
+        localStorage.setItem('steel_token', res.data.token);
+        localStorage.setItem('steel_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        setIsAuthenticated(true);
+        toast.success('Login successful!');
+        navigate(res.data.user.role === 'superadmin' ? '/superadmin/dashboard' : '/dashboard');
+      }
+      return res.data;
+    } catch (e) {
+      const msg = e.response?.data?.error || 'Invalid MFA code';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginMFAOnly = async (email, code) => {
+    setLoading(true);
+    try {
+      const res = await api.post('auth/login-mfa', { email, code });
+      if (res.data.success && res.data.token) {
+        localStorage.setItem('steel_token', res.data.token);
+        localStorage.setItem('steel_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        setIsAuthenticated(true);
+        toast.success('Login successful!');
+        navigate(res.data.user.role === 'superadmin' ? '/superadmin/dashboard' : '/dashboard');
+      }
+      return res.data;
+    } catch (e) {
+      const msg = e.response?.data?.error || 'MFA login failed';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const disableMFA = async (code) => {
+    setAuthActionLoading(true);
+    try {
+      const res = await api.post('auth/mfa/disable', { code });
+      if (res.data.success) {
+        const updatedUser = { ...user, mfa_enabled: false };
+        localStorage.setItem('steel_user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        toast.success('2FA has been disabled');
+      }
+      return res.data;
+    } catch (e) {
+      const msg = e.response?.data?.error || 'Failed to disable MFA';
+      toast.error(msg);
+      return { success: false, error: msg };
+    } finally {
+      setAuthActionLoading(false);
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -396,7 +519,13 @@ export const AuthProvider = ({ children }) => {
         sendSignupOTP,
         verifySignupOTP,
         signup,
-        isOwner
+        setupMFA,
+        verifyMFASetup,
+        loginMFA,
+        loginMFAOnly,
+        isOwner,
+        authActionLoading,
+        disableMFA
       }}
     >
       {children}

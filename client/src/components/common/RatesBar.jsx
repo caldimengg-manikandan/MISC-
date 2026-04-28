@@ -44,3 +44,4 @@ const RatesBar = ({ finish }) => {
 };
 
 export default RatesBar;
+

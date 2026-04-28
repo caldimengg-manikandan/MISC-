@@ -7,8 +7,8 @@ class EstimationRepository {
         let params = [];
         
         if (companyId !== null && companyId !== undefined) {
-            query += ' WHERE company_id = ?';
-            params.push(companyId);
+            query += ' WHERE (company_id = ? OR owner_admin_id = ?)';
+            params.push(companyId, companyId);
         }
         
         query += ' GROUP BY status';
@@ -26,8 +26,8 @@ class EstimationRepository {
         let params = [];
 
         if (companyId !== null && companyId !== undefined) {
-            query += ' AND p.company_id = ?';
-            params.push(companyId);
+            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?)';
+            params.push(companyId, companyId);
         }
 
         if (filters.status) {
@@ -55,8 +55,8 @@ class EstimationRepository {
         let params = [id];
 
         if (companyId !== null && companyId !== undefined) {
-            query += ' AND p.company_id = ?';
-            params.push(companyId);
+            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?)';
+            params.push(companyId, companyId);
         }
 
         const [rows] = await db.query(query, params);
@@ -64,12 +64,22 @@ class EstimationRepository {
     }
 
     async create(data) {
-        const { projectName, customer_name, customer_id, dueDate, createdBy, companyId } = data;
+        const { projectName, customer_name, customer_id, dueDate, createdBy, companyId, ownerAdminId } = data;
+        const defaultStairs = JSON.stringify([{ label: "Stair 1", flights: [], landings: [], rails: [] }]);
         const [result] = await db.query(`
-            INSERT INTO projects (projectName, customer_name, customer_id, dueDate, status, workflow_status, revision_number, userId, createdBy, company_id, isPinned, isArchived, created_at, updatedAt)
+            INSERT INTO projects (
+                projectName, customer_name, customer_id, dueDate, status, workflow_status, 
+                revision_number, userId, createdBy, company_id, owner_admin_id, 
+                isPinned, isArchived, created_at, updatedAt, stairs
+            )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, 'NEW', 'new', 0, ?, ?, ?, 0, 0, GETDATE(), GETDATE())
-        `, [projectName, customer_name, customer_id ? customer_id : null, dueDate ? dueDate : null, createdBy, createdBy, companyId || null]);
+            VALUES (?, ?, ?, ?, 'NEW', 'new', 0, ?, ?, ?, ?, 0, 0, GETDATE(), GETDATE(), ?)
+        `, [
+            projectName, customer_name, customer_id ? customer_id : null, 
+            dueDate ? dueDate : null, createdBy, createdBy, 
+            companyId || null, ownerAdminId || companyId || null, 
+            defaultStairs
+        ]);
         return result[0].id;
     }
 
@@ -123,6 +133,10 @@ class EstimationRepository {
         };
 
         addField('estimationResult', estimationResult !== undefined ? (estimationResult ? JSON.stringify(estimationResult) : null) : (data.modules ? JSON.stringify(data.modules) : undefined));
+        addField('stairs',           data.stairs !== undefined ? (data.stairs ? JSON.stringify(data.stairs) : null) : undefined);
+        addField('guardRails',       data.guardRails !== undefined ? (data.guardRails ? JSON.stringify(data.guardRails) : null) : undefined);
+        addField('customRailValues', data.customRailValues !== undefined ? (data.customRailValues ? JSON.stringify(data.customRailValues) : null) : undefined);
+        addField('localConfig',      data.localConfig !== undefined ? (data.localConfig ? JSON.stringify(data.localConfig) : null) : undefined);
         addField('totalWeight',     totalWeight);
         addField('totalCost',       totalCost);
         addField('projectName',     projectName);

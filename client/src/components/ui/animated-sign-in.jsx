@@ -19,8 +19,9 @@ const LoginPage = () => {
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [loginMethod, setLoginMethod] = useState("password"); // "password" or "mfa"
 
-  const { login, register, forgotPassword, verifyOTP, resetPassword, sendSignupOTP, verifySignupOTP, signup, loading } = useAuth();
+  const { login, register, forgotPassword, verifyOTP, resetPassword, sendSignupOTP, verifySignupOTP, signup, loading, loginMFAOnly } = useAuth();
   
   // Signup State
   const [fullName, setFullName] = useState("");
@@ -38,6 +39,11 @@ const LoginPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const [isResending, setIsResending] = useState(false);
+
+  // MFA State
+  const [isMfaStep, setIsMfaStep] = useState(false);
+  const [mfaToken, setMfaToken] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
 
   useEffect(() => {
     let interval;
@@ -172,14 +178,29 @@ const LoginPage = () => {
 
     if (isSignUpMode) {
       handleSignupSubmit(e);
+    } else if (loginMethod === "mfa") {
+      if (mfaCode.length !== 6) return toast.error("Enter a valid 6-digit code");
+      loginMFAOnly(email, mfaCode)
+        .then((result) => {
+          if (!result.success) {
+            setLocalError(result.error || "MFA login failed. Please try again.");
+          }
+        });
     } else {
       login(email, password)
         .then((result) => {
+          console.log("Login result:", result);
           if (result.success) {
-            // Success might mean navigated to OTP or Home
-            // If it required OTP, AuthContext already navigated there.
-            // If it was a direct login, it also already navigated.
+            if (result.requiresMfa) {
+              console.log("Switching to MFA step...");
+              setMfaToken(result.mfaToken);
+              setIsMfaStep(true);
+              toast("Enter the 6-digit code from your authenticator app", { icon: "🛡️" });
+            } else {
+              console.log("Direct login success, result:", result);
+            }
           } else {
+            console.error("Login failed:", result.error);
             setLocalError(result.error || "Invalid email or password. Please try again.");
           }
         })
@@ -187,6 +208,18 @@ const LoginPage = () => {
           console.error("Login component error:", err);
           toast.error("An unexpected error occurred. Please try again.");
         });
+    }
+  };
+
+  // Handle MFA Verification
+  const { loginMFA } = useAuth();
+  const handleMfaSubmit = async (e) => {
+    e.preventDefault();
+    console.log("MFA Form submitted with code:", mfaCode);
+    if (mfaCode.length !== 6) return toast.error("Enter a valid 6-digit code");
+    const result = await loginMFA(mfaToken, mfaCode);
+    if (!result.success) {
+      setLocalError(result.error || "Invalid MFA code");
     }
   };
 
@@ -392,6 +425,49 @@ const LoginPage = () => {
                 </form>
               )}
             </div>
+          ) : isMfaStep ? (
+            <div className="asl-mfa-flow">
+              <div 
+                className="asl-back-link"
+                onClick={() => { setIsMfaStep(false); setMfaCode(""); }}
+              >
+                <span>←</span> Back to Login
+              </div>
+              <div className="asl-login-header">
+                <div className="asl-brand-badge">
+                  <span className="asl-brand-icon">🛡️</span>
+                  <span className="asl-brand-name">Secure Verification</span>
+                </div>
+                <h1>MFA Challenge</h1>
+                <p>Please enter the code from your Authenticator app</p>
+              </div>
+
+              {localError && (
+                <div className="asl-internal-error-banner">
+                  <span className="asl-error-icon">⚠️</span>
+                  <p>{localError}</p>
+                </div>
+              )}
+
+              <form className="asl-login-form" onSubmit={handleMfaSubmit}>
+                <div className="asl-form-field asl-active">
+                  <input
+                    type="text"
+                    className="asl-otp-input"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ""))}
+                    maxLength="6"
+                    required
+                    placeholder=" "
+                    autoFocus
+                  />
+                  <label>MFA Code</label>
+                </div>
+                <button type="submit" className="asl-login-button" disabled={loading || mfaCode.length !== 6}>
+                  {loading ? <span className="asl-spinner"></span> : "Verify & Continue"}
+                </button>
+              </form>
+            </div>
           ) : (
             <>
               {/* Error Message Section */}
@@ -399,6 +475,25 @@ const LoginPage = () => {
                 <div className="asl-internal-error-banner">
                   <span className="asl-error-icon">⚠️</span>
                   <p>{localError}</p>
+                </div>
+              )}
+
+              {!isSignUpMode && (
+                <div className="asl-login-methods">
+                  <button 
+                    type="button"
+                    className={`asl-method-tab ${loginMethod === 'password' ? 'asl-active' : ''}`}
+                    onClick={() => { setLoginMethod('password'); setLocalError(''); }}
+                  >
+                    Password
+                  </button>
+                  <button 
+                    type="button"
+                    className={`asl-method-tab ${loginMethod === 'mfa' ? 'asl-active' : ''}`}
+                    onClick={() => { setLoginMethod('mfa'); setLocalError(''); }}
+                  >
+                    Security Code
+                  </button>
                 </div>
               )}
 
@@ -486,33 +581,79 @@ const LoginPage = () => {
                 </div>
               )}
 
-              <div
-                className={`asl-form-field ${isPasswordFocused || password ? "asl-active" : ""}`}
-              >
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="asl-password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setLocalError(""); // Clear error when user types
-                  }}
-                  onFocus={() => setIsPasswordFocused(true)}
-                  onBlur={() => setIsPasswordFocused(false)}
-                  required
-                  autoComplete="current-password"
-                  placeholder=" "
-                />
-                <label htmlFor="asl-password">Password</label>
-                <button
-                  type="button"
-                  className="asl-toggle-password"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+              {loginMethod === "mfa" && !isSignUpMode && (
+                <div className="asl-form-field asl-active">
+                  <input
+                    type="text"
+                    className="asl-otp-input-small"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ""))}
+                    maxLength="6"
+                    required
+                    placeholder=" "
+                  />
+                  <label>Authenticator Code</label>
+                </div>
+              )}
+
+              {loginMethod === "password" && !isSignUpMode && (
+                <div
+                  className={`asl-form-field ${isPasswordFocused || password ? "asl-active" : ""}`}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="asl-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setLocalError(""); // Clear error when user types
+                    }}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
+                    required
+                    autoComplete="current-password"
+                    placeholder=" "
+                  />
+                  <label htmlFor="asl-password">Password</label>
+                  <button
+                    type="button"
+                    className="asl-toggle-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              )}
+
+              {isSignUpMode && (
+                <div
+                  className={`asl-form-field ${isPasswordFocused || password ? "asl-active" : ""}`}
+                >
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="asl-signup-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setLocalError(""); // Clear error when user types
+                    }}
+                    onFocus={() => setIsPasswordFocused(true)}
+                    onBlur={() => setIsPasswordFocused(false)}
+                    required
+                    autoComplete="new-password"
+                    placeholder=" "
+                  />
+                  <label htmlFor="asl-signup-password">Password</label>
+                  <button
+                    type="button"
+                    className="asl-toggle-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              )}
 
               {!isSignUpMode && (
                 <div className="asl-form-options">
@@ -538,12 +679,12 @@ const LoginPage = () => {
               <button
                 type="submit"
                 className="asl-login-button"
-                disabled={loading || (isFormSubmitted && (!email || !password || !isEmailValid)) || (isSignUpMode && !isEmailVerified)}
+                disabled={loading || (isFormSubmitted && (!email || (loginMethod === 'password' && !password) || (loginMethod === 'mfa' && !mfaCode) || !isEmailValid)) || (isSignUpMode && !isEmailVerified)}
               >
                 {loading ? (
                   <span className="asl-spinner"></span>
                 ) : (
-                  isSignUpMode ? "Create Account" : "Sign In"
+                  isSignUpMode ? "Create Account" : (loginMethod === 'mfa' ? "Verify & Sign In" : "Sign In")
                 )}
               </button>
               </form>
@@ -568,3 +709,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

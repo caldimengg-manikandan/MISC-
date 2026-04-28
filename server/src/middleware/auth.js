@@ -9,10 +9,12 @@ const db = require('../config/mssql');
 module.exports = async (req, res, next) => {
   try {
     let token = '';
-    const authHeader = req.header('Authorization');
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.replace('Bearer ', '').trim();
+    // 1. Read from HttpOnly cookie (preferred — not accessible to JS)
+    if (req.cookies?.auth_token) {
+      token = req.cookies.auth_token;
+    // 2. Fall back to Authorization header (API clients, backward compat during migration)
+    } else if (req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.replace('Bearer ', '').trim();
     } else if (req.query.token) {
       token = req.query.token;
     }

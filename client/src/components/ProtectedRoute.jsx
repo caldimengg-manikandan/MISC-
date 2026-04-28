@@ -18,3 +18,4 @@ const ProtectedRoute = ({ children, requireOwner = false }) => {
 };
 
 export default ProtectedRoute;
+

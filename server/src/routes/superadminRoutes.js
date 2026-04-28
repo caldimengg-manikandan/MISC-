@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { requireSuperAdmin } = require('../middleware/requireRole');
 const EmailService = require('../services/EmailService');
+const { generateLicenseSignature } = require('../utils/cryptoUtils');
 
 router.use(requireSuperAdmin);
 
@@ -92,10 +93,19 @@ router.post('/licenses', async (req, res) => {
     const licenseKey = crypto.randomUUID().replace(/-/g, '').toUpperCase();
     const inviteToken = crypto.randomBytes(48).toString('hex');
 
+    const signature = generateLicenseSignature({
+      license_key: licenseKey,
+      admin_user_id: null,
+      license_type: licenseType,
+      max_estimators: maxEstimators,
+      valid_until: validUntil,
+      is_active: 1
+    });
+
     const [result] = await db.query(
-      `INSERT INTO licenses (license_key, license_type, max_estimators, valid_from, valid_until, is_active, created_by, notes, invite_token, invite_email, invite_sent_at)
-       OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, GETDATE())`,
-      [licenseKey, licenseType, maxEstimators, validFrom, validUntil, req.userId, notes || null, inviteToken, adminEmail.toLowerCase()]
+      `INSERT INTO licenses (license_key, license_type, max_estimators, valid_from, valid_until, is_active, created_by, notes, invite_token, invite_email, invite_sent_at, signature)
+       OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, GETDATE(), ?)`,
+      [licenseKey, licenseType, maxEstimators, validFrom, validUntil, req.userId, notes || null, inviteToken, adminEmail.toLowerCase(), signature]
     );
 
     const licenseId = result[0].id;
@@ -116,14 +126,35 @@ router.patch('/licenses/:id', async (req, res) => {
     const { id } = req.params;
     const { isActive, validUntil, maxEstimators, notes } = req.body;
 
+    const [existing] = await db.query('SELECT * FROM licenses WHERE id = ?', [id]);
+    if (!existing.length) return res.status(404).json({ success: false, error: 'License not found' });
+    const current = existing[0];
+
     const sets = [];
     const params = [];
-    if (isActive !== undefined)    { sets.push('is_active = ?');      params.push(isActive ? 1 : 0); }
-    if (validUntil)                { sets.push('valid_until = ?');    params.push(validUntil); }
-    if (maxEstimators !== undefined){ sets.push('max_estimators = ?'); params.push(maxEstimators); }
+    
+    const newIsActive = isActive !== undefined ? (isActive ? 1 : 0) : current.is_active;
+    const newValidUntil = validUntil || current.valid_until;
+    const newMaxEstimators = maxEstimators !== undefined ? maxEstimators : current.max_estimators;
+
+    if (isActive !== undefined)    { sets.push('is_active = ?');      params.push(newIsActive); }
+    if (validUntil)                { sets.push('valid_until = ?');    params.push(newValidUntil); }
+    if (maxEstimators !== undefined){ sets.push('max_estimators = ?'); params.push(newMaxEstimators); }
     if (notes !== undefined)       { sets.push('notes = ?');          params.push(notes); }
 
     if (!sets.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+
+    const newSignature = generateLicenseSignature({
+      license_key: current.license_key,
+      admin_user_id: current.admin_user_id,
+      license_type: current.license_type,
+      max_estimators: newMaxEstimators,
+      valid_until: newValidUntil,
+      is_active: newIsActive
+    });
+    
+    sets.push('signature = ?');
+    params.push(newSignature);
 
     params.push(id);
     await db.query(`UPDATE licenses SET ${sets.join(', ')} WHERE id = ?`, params);

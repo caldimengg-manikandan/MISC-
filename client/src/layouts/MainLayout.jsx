@@ -9,7 +9,8 @@ import {
   PanelLeftOpen, PanelLeftClose, PenLine, Search,
   Box, Database, ArrowUpDown, ChevronDown, Settings,
   HelpCircle, Share2, Save, Pin, DollarSign,
-  Zap, Users, Printer, FileSpreadsheet, Trash2, Key, ShieldAlert, History
+  Zap, Users, Printer, FileSpreadsheet, Trash2, Key, ShieldAlert, History,
+  AlertTriangle, ArrowRight
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
@@ -260,12 +261,10 @@ export default function MainLayout({ children }) {
   console.log('DEBUG: User Role:', user?.role);
   const { estimations, fetchEstimations, notes, fetchNotes, selectedEstimation, setSelectedEstimation, activeContext } = useEstimation();
 
-  const [collapsed, setCollapsed] = useState(
-    location.pathname.startsWith('/estimate') // Auto-collapse on estimation routes for max space
-  );
-  const [estimateOpen, setEstimateOpen] = useState(
-    location.pathname.startsWith('/estimate')
-  );
+  const isEstimationRoute = (path) => path.startsWith('/estimate') || path.includes('/estimate/');
+
+  const [collapsed, setCollapsed] = useState(isEstimationRoute(location.pathname));
+  const [estimateOpen, setEstimateOpen] = useState(isEstimationRoute(location.pathname));
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.startsWith('/settings')
   );
@@ -276,6 +275,8 @@ export default function MainLayout({ children }) {
   const [exporting, setExporting]   = useState(false);
   const [isSaving, setIsSaving]     = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [showConfirmLeaveModal, setShowConfirmLeaveModal] = useState(false);
+  const [leaveProjectInfo, setLeaveProjectInfo] = useState(null);
   const [pendingNav, setPendingNav] = useState(null);
   const [recentChats, setRecentChats] = useState([]);
   const [showAllRecent, setShowAllRecent] = useState(false);
@@ -311,7 +312,7 @@ export default function MainLayout({ children }) {
     setExporting(true);
     const t = toast.loading('Generating BOM Excel…');
     try {
-      const resp = await fetch(`${API}/api/reports/${currentProjectId}/bom-excel`, {
+      const resp = await fetch(`${API}/api/v1/reports/${currentProjectId}/bom-excel`, { credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (!resp.ok) throw new Error(await resp.text());
@@ -335,7 +336,7 @@ export default function MainLayout({ children }) {
     setExportMenuOpen(false);
     const t = toast.loading('Preparing print preview…');
     try {
-      const resp = await fetch(`${API}/api/reports/${currentProjectId}/live`, {
+      const resp = await fetch(`${API}/api/v1/reports/${currentProjectId}/live`, { credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await resp.json();
@@ -542,16 +543,26 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
             return;
           }
           // 2. If it's a REAL project (has ID)
-          const confirmLeave = window.confirm(`You are currently editing "${parsed.projectName || 'a project'}". \n\nLeave this project and start a NEW estimation?`);
-          if (!confirmLeave) return;
-
-          localStorage.removeItem(getContextKey(path));
-          localStorage.removeItem('stair_draft_global');
-          localStorage.removeItem('railings_draft_global');
-          setSelectedEstimation(null); 
+          setLeaveProjectInfo({ path, projectName: parsed.projectName || 'a project' });
+          setShowConfirmLeaveModal(true);
+          return;
         } catch (e) {}
       }
     }
+    navigate(path);
+  };
+
+  const handleConfirmLeave = () => {
+    if (!leaveProjectInfo) return;
+    const { path } = leaveProjectInfo;
+    
+    localStorage.removeItem(getContextKey(path));
+    localStorage.removeItem('stair_draft_global');
+    localStorage.removeItem('railings_draft_global');
+    setSelectedEstimation(null); 
+    
+    setShowConfirmLeaveModal(false);
+    setLeaveProjectInfo(null);
     navigate(path);
   };
 
@@ -593,7 +604,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
   const fetchRecentChats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/agent/threads`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads`, { credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
@@ -613,7 +624,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
     if (!window.confirm('Are you sure you want to delete this conversation?')) return;
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/agent/threads/${chatId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads/${chatId}`, { credentials: 'include',
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -636,45 +647,57 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
   // Project detection for Notes & Tools
   useEffect(() => {
+    // 1. Extract ID from URL (Priority: Query param ?id=, then Path /project/:id/)
     const queryParams = new URLSearchParams(location.search);
-    const urlId = queryParams.get('id');
+    const queryId = queryParams.get('id');
+    const pathMatch = location.pathname.match(/\/project\/(\d+)\//);
+    const urlId = queryId || (pathMatch ? pathMatch[1] : null);
 
-    // 1. If we have an ID in URL, sync it
+    // 2. Sync Context
     if (urlId) {
       const urlIdNum = Number(urlId);
-      if (Number(selectedEstimation?.id) !== urlIdNum) {
-        fetchNotes(urlId);
-        // We don't have the full object yet, so we just set the ID
-        setSelectedEstimation(prev => (Number(prev?.id) === urlIdNum ? prev : { id: urlIdNum }));
-      }
+      setSelectedEstimation(prev => {
+        if (Number(prev?.id) === urlIdNum) return prev;
+        console.log('MainLayout: Syncing project from URL', urlIdNum);
+        fetchNotes(urlIdNum);
+        // We set the ID first; full object will be hydrated by the component (e.g. StairConfig)
+        return { id: urlIdNum };
+      });
     }
-    // 2. Fallback to localStorage if we are in estimation module
-    else if (location.pathname.startsWith('/estimate')) {
+    // 3. Fallback to localStorage ONLY IF we are in an estimation route but have no ID in URL
+    else if (isEstimationRoute(location.pathname)) {
       const savedInfo = localStorage.getItem(getContextKey());
       if (savedInfo) {
         try {
           const parsed = JSON.parse(savedInfo);
           if (parsed.id) {
-            if (Number(selectedEstimation?.id) !== Number(parsed.id)) {
-              fetchNotes(parsed.id);
-              setSelectedEstimation({ id: Number(parsed.id), ...parsed });
-            }
-            return; // Found real context
+            const parsedId = Number(parsed.id);
+            setSelectedEstimation(prev => {
+              if (Number(prev?.id) === parsedId) return prev;
+              console.log('MainLayout: Syncing project from localStorage fallback', parsedId);
+              fetchNotes(parsedId);
+              return { id: parsedId, ...parsed };
+            });
+            return;
           }
         } catch (e) { }
       }
       
-      // 🚀 DRAFT MODE: If we are in estimation but no project is loaded yet, set a "Draft" context
-      // This ensures ToolsDock (Right Sidebar) and other UI elements render correctly.
-      if (!selectedEstimation || selectedEstimation.id === null) {
-        setSelectedEstimation({ id: 'draft', projectName: 'New Estimation (Draft)', isDraft: true });
-      }
+      setSelectedEstimation(prev => {
+        if (prev?.id === 'draft') return prev;
+        console.log('MainLayout: Setting Draft context');
+        return { id: 'draft', projectName: 'New Estimation (Draft)', isDraft: true };
+      });
     }
-    // 3. NO PROJECT CONTEXT: Clear it (Dashboard, generic Reports, etc.)
-    else if (selectedEstimation !== null) {
-      setSelectedEstimation(null);
+    // 4. NO PROJECT CONTEXT: Clear it if we are on a non-estimation page
+    else {
+      setSelectedEstimation(prev => {
+        if (prev === null) return null;
+        console.log('MainLayout: Clearing project context (Non-estimation page)');
+        return null;
+      });
     }
-  }, [location.pathname, location.search, selectedEstimation, fetchNotes, setSelectedEstimation]);
+  }, [location.pathname, location.search, fetchNotes, setSelectedEstimation]);
 
   // Split estimations into structural segments
   const recentProjects = estimations.filter(p => !p.isPinned && !p.isArchived);
@@ -775,7 +798,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                        <SubMenu
                         items={item.children.filter(c => {
                           if (c.superAdminOnly) return user?.role === 'superadmin';
-                          if (c.adminOnly) return user?.role === 'admin' || user?.role === 'superadmin';
+                          if (c.adminOnly) return ['admin', 'owner', 'superadmin'].includes(user?.role);
                           return true;
                         })}
                         activePath={activePath}
@@ -1016,6 +1039,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
         {selectedEstimation?.id && <ToolsDock />}
       </div>
       {/* ── Resume / Fresh Start Modal ── */}
+      {/* ── Resume / Fresh Start Modal ── */}
       {showResumeModal && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <motion.div 
@@ -1063,6 +1087,58 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
         </div>
       )}
 
+      {/* ── Confirm Leave Project Modal ── */}
+      {showConfirmLeaveModal && (
+        <div className="fixed inset-0 z-[2001] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100"
+          >
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 mb-5 border-4 border-rose-100/50">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                  >
+                    <AlertTriangle size={32} />
+                  </motion.div>
+                </div>
+                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Active Project Found</h3>
+                <p className="text-slate-500 text-base mt-2 leading-relaxed">
+                  You are currently editing <span className="font-bold text-slate-700">"{leaveProjectInfo?.projectName}"</span>.
+                </p>
+              </div>
+
+              <div className="bg-rose-50/50 rounded-2xl p-5 mb-8 border border-rose-100/50">
+                <p className="text-rose-700 font-semibold text-center text-[15px]">
+                  Leave this project and start a NEW estimation?
+                </p>
+                <p className="text-rose-400 text-xs text-center mt-2 font-medium">
+                  Unsaved changes to this project will be lost.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => { setShowConfirmLeaveModal(false); setLeaveProjectInfo(null); }}
+                  className="px-6 py-4 rounded-2xl border-2 border-slate-100 text-slate-600 font-bold hover:bg-slate-50 hover:border-slate-200 transition-all text-sm uppercase tracking-wider"
+                >
+                  Stay Here
+                </button>
+                <button 
+                  onClick={handleConfirmLeave}
+                  className="px-6 py-4 rounded-2xl bg-rose-500 text-white font-extrabold hover:bg-rose-600 shadow-xl shadow-rose-100 hover:shadow-rose-200 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  <ArrowRight size={18} /> Yes, Leave
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1087,3 +1163,4 @@ function buildCrumbs(path) {
   };
   return map[path] || ['MISC Pro'];
 }
+

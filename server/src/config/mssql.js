@@ -7,8 +7,8 @@ const config = {
     database: (process.env.MSSQL_DATABASE || 'MISC_DB').trim(),
     port: parseInt(process.env.MSSQL_PORT) || 1433,
     options: {
-        encrypt: true, // For Azure
-        trustServerCertificate: (process.env.MSSQL_TRUST_SERVER_CERTIFICATE || 'true').trim() === 'true', // For Localhost
+        encrypt: (process.env.MSSQL_ENCRYPT || 'true') === 'true',
+        trustServerCertificate: (process.env.MSSQL_TRUST_SERVER_CERTIFICATE || 'false') === 'true',
         enableArithAbort: true
     },
     pool: {

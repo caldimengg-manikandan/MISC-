@@ -24,7 +24,7 @@ export default function SystemSettings() {
   const fetchConfig = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -42,7 +42,7 @@ export default function SystemSettings() {
     const t = toast.loading("Updating system settings...");
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/admin/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ export default function SystemSettings() {
       const t = toast.loading("Executing batch propagation...");
       try {
         const token = localStorage.getItem('steel_token');
-        const res = await fetch(`${API_BASE_URL}/api/admin/recalculate-all`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/admin/recalculate-all`, { credentials: 'include',
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -219,3 +219,4 @@ export default function SystemSettings() {
     </motion.div>
   );
 }
+

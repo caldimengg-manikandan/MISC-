@@ -17,7 +17,7 @@ export default function SendForReviewModal({ isOpen, onClose, onConfirm, project
     if (isOpen) {
       setLoading(true);
       const token = localStorage.getItem('steel_token');
-      fetch(`${API_BASE_URL}/api/projects/users/reviewers`, {
+      fetch(`${API_BASE_URL}/api/v1/projects/users/reviewers`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.json())
@@ -145,3 +145,4 @@ export default function SendForReviewModal({ isOpen, onClose, onConfirm, project
     </AnimatePresence>
   );
 }
+

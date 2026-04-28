@@ -30,7 +30,7 @@ export default function ProjectHistory() {
           return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/projects`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/projects`, { credentials: 'include',
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -183,3 +183,4 @@ export default function ProjectHistory() {
     </div>
   );
 }
+

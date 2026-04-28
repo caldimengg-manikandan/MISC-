@@ -410,7 +410,7 @@ export default function EstimationDashboard() {
 
   const fetchRecentChats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/agent/threads`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads`, { credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
@@ -427,7 +427,7 @@ export default function EstimationDashboard() {
   const loadThread = async (id) => {
     setActiveChatId(id);
     try {
-      const res  = await fetch(`${API_BASE_URL}/api/agent/threads/${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const res  = await fetch(`${API_BASE_URL}/api/v1/agent/threads/${id}`, { credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } });
       const data = await res.json();
       if (data.success) setMessages(data.history || []);
     } catch (_) {}
@@ -460,7 +460,7 @@ export default function EstimationDashboard() {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
-      const res = await fetch(`${API_BASE_URL}/api/agent/chat`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/chat`, { credentials: 'include',
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body:    JSON.stringify({ message: query, chatId: activeChatId, userName: user?.name }),
@@ -873,3 +873,4 @@ export default function EstimationDashboard() {
     </div>
   );
 }
+

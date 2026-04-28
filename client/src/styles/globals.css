@@ -2719,6 +2719,54 @@ textarea.form-input {
   box-shadow: 0 20px 60px rgba(99, 102, 241, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
+/* ── Login Methods Tabs ── */
+.asl-login-methods {
+  display: flex;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  gap: 4px;
+}
+
+.asl-dark .asl-login-methods {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.asl-method-tab {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--gpt-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.asl-method-tab:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--gpt-text-primary);
+}
+
+.asl-dark .asl-method-tab:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.asl-method-tab.asl-active {
+  background: white;
+  color: #0d0d0d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.asl-dark .asl-method-tab.asl-active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 /* Form success flash */
 .asl-login-form.form-success .asl-login-card-inner {
   animation: asl-success-flash 0.4s ease;

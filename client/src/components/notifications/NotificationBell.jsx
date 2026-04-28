@@ -51,7 +51,7 @@ export default function NotificationBell() {
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/notifications`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/notifications`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -83,7 +83,7 @@ export default function NotificationBell() {
 
   const markRead = async (id) => {
     try {
-      await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
+      await fetch(`${API_BASE_URL}/api/v1/notifications/${id}/read`, { credentials: 'include',
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -95,7 +95,7 @@ export default function NotificationBell() {
   const markAllRead = async () => {
     setLoading(true);
     try {
-      await fetch(`${API_BASE_URL}/api/notifications/mark-all-read`, {
+      await fetch(`${API_BASE_URL}/api/v1/notifications/mark-all-read`, { credentials: 'include',
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -108,7 +108,7 @@ export default function NotificationBell() {
   const clearAll = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/notifications/clear`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/notifications/clear`, { credentials: 'include',
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -269,3 +269,4 @@ export default function NotificationBell() {
     </div>
   );
 }
+

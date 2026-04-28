@@ -75,6 +75,7 @@ const AppRoutes = () => {
       <Route path="/support" element={<EngRoute element={<SupportCenter />} />} />
       
       {/* Estimation Modules */}
+      <Route path="/project/:projectId/estimate/stair-railings" element={<EngRoute element={<StairConfig />} />} />
       <Route path="/estimate/stair-railings" element={<EngRoute element={<StairConfig />} />} />
       <Route path="/estimate/railings" element={<EngRoute element={<RailingsConfig />} />} />
       <Route path="/estimate/ladders" element={<EngRoute element={<Placeholder type="Ladders" />} />} />
@@ -97,3 +98,4 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
+

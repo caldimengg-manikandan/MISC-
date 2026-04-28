@@ -40,7 +40,7 @@ function AiChatPanel({ onClose }) {
   const loadHistory = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res   = await fetch(`${API_BASE_URL}/api/agent/history`, {
+      const res   = await fetch(`${API_BASE_URL}/api/v1/agent/history`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -73,7 +73,7 @@ function AiChatPanel({ onClose }) {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
-      const res = await fetch(`${API_BASE_URL}/api/agent/chat`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/chat`, { credentials: 'include',
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',
@@ -158,7 +158,7 @@ function AiChatPanel({ onClose }) {
   const handleClear = async () => {
     const token = localStorage.getItem('steel_token');
     try {
-      await fetch(`${API_BASE_URL}/api/agent/clear`, {
+      await fetch(`${API_BASE_URL}/api/v1/agent/clear`, { credentials: 'include',
         method:  'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -419,3 +419,4 @@ function formatTime(ts) {
 }
 
 export default AiChatPanel;
+

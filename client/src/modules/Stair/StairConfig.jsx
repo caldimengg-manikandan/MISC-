@@ -1,11 +1,10 @@
-// src/components/estimation/StairEstimation.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import StairFlight from './StairFlight';
 import LandingConfig from '../Landing/LandingConfig';
 import RailConfig from '../Rail/RailConfig';
 import KickPlateConfig from '../KickPlate/KickPlateConfig';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin, Zap, X } from 'lucide-react';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils.js';
 import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
@@ -820,6 +819,7 @@ function StairItem({
 
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function StairEstimation() {
+  const { projectId: urlProjectId } = useParams();
   const navigate = useNavigate();
   const initialId = makeId();
   const [activeId, setActiveId] = useState(initialId);
@@ -843,8 +843,9 @@ export default function StairEstimation() {
     customerName: '', 
     customerId: null, 
     customerInfo: null,
-    projectId: null 
+    projectId: urlProjectId || null 
   });
+  const [loading, setLoading] = useState(!!urlProjectId);
   const [templateModal, setTemplateModal] = useState({ isOpen: false, nextLabel: 'Stair 1' });
   const [saving, setSaving] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -901,106 +902,95 @@ export default function StairEstimation() {
 
   // ── Load project info + stair data from DB on mount ───────────────────────
   useEffect(() => {
-    const savedInfo = localStorage.getItem(getContextKey());
-    
-    if (!savedInfo) {
-      // 🚀 FRESH DRAFT: No project info in localStorage yet
-      // We still set a draft context so the MainLayout/ToolsDock know we are in "Estimation Mode"
-      setSelectedEstimation({ id: 'draft', projectName: 'New Estimation', isDraft: true });
+    let active = true;
+
+    const loadProjectData = async () => {
+      const effectiveId = urlProjectId || projectData.projectId;
+      console.log('StairConfig: effectiveId resolved to:', effectiveId, 'urlProjectId:', urlProjectId);
       
-      // Try loading global draft if it exists
-      const draft = localStorage.getItem('stair_draft_global');
-      if (draft) {
-        try {
-          const restored = restoreStairs(JSON.parse(draft));
-          isUpdatingFromCalc.current = true; 
-          setStairs(restored);
-          if (restored.length > 0) setActiveId(restored[0].id);
-        } catch (e) {}
-      }
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(savedInfo);
-      setProjectData(prev => ({
-        ...prev,
-        projectName:   parsed.projectName   || 'New Estimation',
-        projectNumber: parsed.projectNumber || 'Draft',
-        customerName:  parsed.customerName  || parsed.clientName || 'Internal',
-        customerId:    parsed.customerId    || null,
-        projectId:     parsed.id            || null,
-      }));
-
-      const projectId = parsed.id;
-      if (!projectId) {
-        // 🚀 NAMED DRAFT (Has names but no DB ID yet)
-        setSelectedEstimation({ id: 'draft', ...parsed, isDraft: true });
-        const draft = localStorage.getItem('stair_draft_global');
-        if (draft) {
-          const restored = restoreStairs(JSON.parse(draft));
-          isUpdatingFromCalc.current = true; 
-          setStairs(restored);
-          if (restored.length > 0) setActiveId(restored[0].id);
+      if (!effectiveId) {
+        setLoading(false);
+        const savedInfo = localStorage.getItem(getContextKey());
+        if (savedInfo) {
+          try {
+            const parsed = JSON.parse(savedInfo);
+            if (parsed.id) {
+              navigate(`/project/${parsed.id}/estimate/stair-railings`, { replace: true });
+              return;
+            }
+          } catch (e) {}
         }
+        setShowAllocateModal(true);
+        setSelectedEstimation({ id: 'draft', projectName: 'New Estimation', isDraft: true });
         return;
       }
-      
-      setSelectedEstimation({ id: projectId, ...parsed });
-      fetchNotes(projectId);
 
+      setLoading(true);
       const token = localStorage.getItem('steel_token');
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        toast.error('Authentication required');
+        return;
+      }
 
-      fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.project) {
-          const proj = data.project;
+      const fetchWithRetry = async (attempt = 1) => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/v1/projects/${effectiveId}`, { credentials: 'include',
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include'
+          });
+          const data = await res.json();
           
-          // Update projectData with rich customer info from JOIN (LinkedCustomerName, CustomerEmail etc)
-          setProjectData(prev => ({
-            ...prev,
-            customerName: proj.LinkedCustomerName || proj.customer_name || 'Internal',
-            customerId: proj.customer_id,
-            customerInfo: proj.customer_id ? {
-              company: proj.LinkedCustomerName,
-              contact: proj.contactPerson,
-              email:   proj.CustomerEmail,
-              phone:   proj.CustomerPhone,
-              city:    proj.CustomerCity,
-              state:   proj.CustomerState
-            } : null
-          }));
+          if (!active) return;
 
-          // 📝 PERSISTENCE CHECK: Look for unsaved local draft
-          const draftKey = `stair_draft_${projectId}`;
-          const draft = localStorage.getItem(draftKey);
-          if (draft) {
-            requestConfirmation("Restore Unsaved Changes?", "We found an unsaved draft from your last session. Would you like to restore it?").then(confirmed => {
-              if (confirmed) {
-                const restoredDraft = restoreStairs(JSON.parse(draft));
-                isUpdatingFromCalc.current = true; // Use common suppressor ref
-                setStairs(restoredDraft);
-                if (restoredDraft.length > 0) setActiveId(restoredDraft[0].id);
-                setIsDirty(true); // Draft IS dirty because it wasn't saved to DB yet
-              } else {
-                restoreStairsFromDB(proj);
-              }
+          if (data.success && data.project) {
+            const proj = data.project;
+            setProjectData({
+              projectName:   proj.projectName   || 'New Estimation',
+              projectNumber: proj.projectNumber || 'Draft',
+              customerName:  proj.LinkedCustomerName || proj.customer_name || 'Internal',
+              customerId:    proj.customer_id,
+              projectId:     proj.id,
+              customerInfo: proj.customer_id ? {
+                company: proj.LinkedCustomerName,
+                contact: proj.contactPerson,
+                email:   proj.CustomerEmail,
+                phone:   proj.CustomerPhone,
+                city:    proj.CustomerCity,
+                state:   proj.CustomerState
+              } : null
             });
-            return; 
-          }
 
-          restoreStairsFromDB(proj);
+            setSelectedEstimation({ id: proj.id, ...proj });
+            fetchNotes(proj.id);
+            restoreStairsFromDB(proj);
+            setLoading(false);
+          } else if (attempt < 3) {
+            console.log(`StairConfig: Hydration attempt ${attempt} failed, retrying...`);
+            setTimeout(() => fetchWithRetry(attempt + 1), 600);
+          } else {
+            setLoading(false);
+            toast.error('Project not found or access denied');
+            setShowAllocateModal(true);
+          }
+        } catch (err) {
+          if (!active) return;
+          console.error('Hydration failed:', err);
+          if (attempt < 3) {
+            setTimeout(() => fetchWithRetry(attempt + 1), 600);
+          } else {
+            setLoading(false);
+            toast.error('Sync failed. Please check connection.');
+          }
         }
-      })
-      .catch(err => console.error('Failed to load project stairs:', err));
-    } catch (e) {
-      console.error('Failed to parse project info:', e);
-    }
-  }, [fetchNotes, setSelectedEstimation]);
+      };
+
+      fetchWithRetry();
+    };
+
+    loadProjectData();
+    return () => { active = false; };
+  }, [urlProjectId, fetchNotes, setSelectedEstimation, navigate]);
 
   // Refactored helper for DB restoration
   const restoreStairsFromDB = (proj) => {
@@ -1015,16 +1005,24 @@ export default function StairEstimation() {
 
     const raw = proj.stairs;
     const saved = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : null);
-    if (saved && saved.length > 0) {
-      const restored = restoreStairs(saved);
-      if (restored.length > 0) {
-        isUpdatingFromCalc.current = true; // 🛡️ Suppress dirty flagging on DB load
-        setStairs(restored);
-        setActiveId(restored[0].id); 
-        toast.success(`Loaded ${restored.length} stair(s) from database`);
-        setIsDirty(false); // DB version is NOT dirty
+    
+    // 🛡️ FALLBACK: If DB has no stairs, ensure we have at least 'Stair 1'
+    const finalStairs = (saved && saved.length > 0) ? saved : [
+      { 
+        id: makeId(), 
+        label: 'Stair 1', 
+        flights: [], 
+        landings: [], 
+        rails: [],
+        template: 'custom'
       }
-    }
+    ];
+
+    const restored = restoreStairs(finalStairs);
+    isUpdatingFromCalc.current = true; // 🛡️ Suppress dirty flagging on DB load
+    setStairs(restored);
+    if (restored.length > 0) setActiveId(restored[0].id); 
+    setIsDirty(false); 
   };
 
   // ── Save stairs to DB ─────────────────────────────────────────────────────
@@ -1055,9 +1053,13 @@ export default function StairEstimation() {
         };
       });
 
-      const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}`, { credentials: 'include',
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${token}` 
+        },
+        credentials: 'include',
         body: JSON.stringify({ 
           stairs: stairsToSave,
           customerName: projectData.customerName,
@@ -1266,12 +1268,13 @@ export default function StairEstimation() {
         estimateId: projectData.projectId
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/calculate`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/calculate`, { 
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 
@@ -1283,9 +1286,13 @@ export default function StairEstimation() {
         
         // 💾 AUTO-SAVE calculation summary back to DB immediately
         if (projectData.projectId && token) {
-          fetch(`${API_BASE_URL}/api/projects/${projectData.projectId}`, {
+          fetch(`${API_BASE_URL}/api/v1/projects/${projectData.projectId}`, { credentials: 'include',
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            headers: { 
+              'Content-Type': 'application/json', 
+              Authorization: `Bearer ${token}` 
+            },
+            credentials: 'include',
             body: JSON.stringify({ 
               estimationResult: data,
               totalWeight: data.totalWeight || data.summary?.totalSteelWeight,
@@ -2306,6 +2313,34 @@ export default function StairEstimation() {
   return (
     <>
       <style>{GPT_OVERRIDE_STYLE}</style>
+      
+      {/* 🧊 HYDRATION OVERLAY 🧊 */}
+      <AnimatePresence>
+        {loading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100000,
+              background: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+            }}
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              style={{ width: '40px', height: '40px', border: '3px solid #0ea5e9', borderTopColor: 'transparent', borderRadius: '50%' }}
+            />
+            <h2 style={{ marginTop: '20px', fontSize: '18px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
+              Hydrating Project Data
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Synchronizing your estimation state with the server...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="stair-page">
 
 
@@ -2576,7 +2611,7 @@ export default function StairEstimation() {
                   return;
                 }
                 const token = localStorage.getItem('steel_token');
-                window.location.href = `${API_BASE_URL}/api/reports/${projectData.projectId}/bom-excel?token=${token}`;
+                window.location.href = `${API_BASE_URL}/api/v1/reports/${projectData.projectId}/bom-excel?token=${token}`;
               }}
             >
               <Table size={14} /> Excel BOM
@@ -2864,10 +2899,16 @@ export default function StairEstimation() {
         isOpen={showAllocateModal}
         onClose={() => setShowAllocateModal(false)}
         onAllocate={handleAllocated}
-        initialData={{ projectName: projectData.projectName }}
+        initialData={{ 
+          projectName: projectData.projectName,
+          stairs: stairsRef.current,
+          estimationResult: projectData.estimationResult,
+          localConfig
+        }}
       />
 
     </div>
     </>
   );
 }
+

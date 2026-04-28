@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const db = require('../config/mssql');
 const auth = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/requireRole');
 const logger = require('../utils/logger');
 
 // GET all prices (only for authenticated users)
@@ -71,6 +72,7 @@ router.get('/:type', auth, async (req, res) => {
 // UPDATE price (admin only)
 router.put('/:type', [
   auth,
+  requireAdmin,
   body('steelPerLF').isFloat({ min: 0, max: 1000 }),
   body('shopMHPerLF').isFloat({ min: 0, max: 10 }),
   body('fieldMHPerLF').isFloat({ min: 0, max: 10 })
@@ -81,13 +83,6 @@ router.put('/:type', [
       return res.status(400).json({
         success: false,
         errors: errors.array()
-      });
-    }
-    
-    if (req.user.role !== 'admin' && req.user.role !== 'owner' && req.user.email !== process.env.ADMIN_EMAIL) {
-      return res.status(403).json({
-        success: false,
-        error: 'Admin access required to update prices'
       });
     }
     

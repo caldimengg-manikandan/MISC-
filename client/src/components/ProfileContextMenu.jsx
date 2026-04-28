@@ -118,3 +118,4 @@ export default function ProfileContextMenu({ user, handleLogout }) {
     </div>
   );
 }
+

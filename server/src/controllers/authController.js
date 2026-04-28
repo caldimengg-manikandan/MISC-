@@ -6,10 +6,13 @@ const db = require('../config/mssql');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { generateLicenseSignature } = require('../utils/cryptoUtils');
 const EmailService = require('../services/EmailService');
 const { getLicenseForUser } = require('../middleware/licenseCheck');
+const { enforcePasswordPolicy } = require('../utils/passwordPolicy');
+const { auditLog } = require('../utils/auditLogger');
 
-// ── JWT generation (includes sessionToken for single-session enforcement) ──
+// ── JWT generation ──
 function generateToken(user, sessionToken) {
   return jwt.sign(
     {
@@ -18,13 +21,32 @@ function generateToken(user, sessionToken) {
       email: user.email,
       companyId: user.company_id || null,
       admin_owner_id: user.admin_owner_id || null,
-      sessionToken,                              // single-session enforcement
-      licenseValid: true,                        // I4: cached license state
-      tokenIssuedAt: new Date().toISOString(),   // I4: 1-hour TTL check
+      sessionToken,
+      licenseValid: true,
+      tokenIssuedAt: new Date().toISOString(),
     },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }  // Short-lived access token
   );
+}
+
+function generateRefreshToken(userId) {
+  return jwt.sign(
+    { userId },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
+  );
+}
+
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'Strict',
+};
+
+function setAuthCookies(res, accessToken, refreshToken) {
+  res.cookie('auth_token', accessToken, { ...COOKIE_OPTS, maxAge: 15 * 60 * 1000 });
+  res.cookie('refresh_token', refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
 }
 
 function fingerprint(req) {
@@ -42,7 +64,10 @@ const login = async (req, res) => {
 
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
     const user = rows[0];
-    if (!user) return res.status(401).json({ success: false, error: 'Invalid email or password' });
+    if (!user) {
+      await auditLog(req, 'LOGIN_FAIL', 'users', null, null, { email: email.toLowerCase(), reason: 'user_not_found' });
+      return res.status(401).json({ success: false, error: 'Invalid email or password' });
+    }
 
     // ── Account lock check ──
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
@@ -59,7 +84,19 @@ const login = async (req, res) => {
     // ── Password check ──
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      const failedAttempts = (user.failed_attempts || 0) + 1;
+      if (failedAttempts >= 5) {
+        await db.query(
+          'UPDATE users SET failed_attempts = ?, is_locked = 1, locked_at = GETDATE(), locked_until = DATEADD(minute, 30, GETDATE()) WHERE id = ?',
+          [failedAttempts, user.id]
+        );
+        await auditLog(req, 'LOGIN_FAIL', 'users', user.id, null, { email: user.email, reason: 'password_mismatch_locked', attempts: failedAttempts });
+        return res.status(403).json({ success: false, locked: true, msRemaining: 30 * 60 * 1000, error: 'Account locked due to too many failed attempts. Try again in 30 minutes.' });
+      } else {
+        await db.query('UPDATE users SET failed_attempts = ? WHERE id = ?', [failedAttempts, user.id]);
+        await auditLog(req, 'LOGIN_FAIL', 'users', user.id, null, { email: user.email, reason: 'password_mismatch', attempts: failedAttempts });
+        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      }
     }
 
     // ── License check (for non-superadmin) ──
@@ -91,10 +128,13 @@ const login = async (req, res) => {
           session_token = ?, session_ip = ?, session_device = ?, session_device_id = ?,
           session_at = GETDATE(), lastLogin = GETDATE(),
           otp_code = NULL, otp_expires_at = NULL, otp_attempts = 0,
-          otp_resend_count = 0, otp_resend_window_start = NULL
+          otp_resend_count = 0, otp_resend_window_start = NULL,
+          failed_attempts = 0, is_locked = 0, locked_until = NULL
         WHERE id = ?`,
         [sessionToken, currentIp, currentDevice, deviceIdCookie, user.id]
       );
+
+      await auditLog(req, 'LOGIN', 'users', user.id, null, { email: user.email, method: 'direct' });
 
       // Set device_id cookie if new (W5/C7: httpOnly, secure, sameSite strict)
       if (!deviceIdCookie) {
@@ -107,24 +147,43 @@ const login = async (req, res) => {
         });
       }
 
+      /* MFA logic for Admins and Superadmins removed per user request:
+         "it should accept the password if they enters correct"
+      if (user.role === 'admin' || user.role === 'superadmin') {
+        if (user.mfa_enabled) {
+          ...
+        }
+      }
+      */
+
       const token = generateToken(user, sessionToken);
+      const refreshToken = generateRefreshToken(user.id);
+      setAuthCookies(res, token, refreshToken);
       const daysRemaining = user.trialEnd
         ? Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / 86400000))
         : 0;
 
+      console.log('DEBUG LOGIN: Final response body:', {
+        success: true,
+        mustChangePassword: !!user.mustChangePassword,
+        user_id: user.id,
+        role: user.role
+      });
       return res.json({
         success: true,
         mustChangePassword: !!user.mustChangePassword,
+        // token still sent in body for backward-compat with older clients during migration
         token,
         user: {
           id: user.id,
-          email: user.email,
+          email: user.email,                                      
           name: user.name || user.full_name || '',
           role: user.role,
           company: user.company,
           companyId: user.company_id,
           daysRemaining,
           isPaid: !!user.isPaid,
+          mfaWarning: (user.role === 'admin' || user.role === 'superadmin') && !user.mfa_enabled
         }
       });
     }
@@ -237,19 +296,21 @@ const verifyLoginOTP = async (req, res) => {
         session_at = GETDATE(), lastLogin = GETDATE(),
         otp_code = NULL, otp_expires_at = NULL, otp_attempts = 0,
         otp_resend_count = 0, otp_resend_window_start = NULL,
-        locked_until = NULL
+        locked_until = NULL, failed_attempts = 0, is_locked = 0
       WHERE id = ?`,
       [sessionToken, currentIp, currentDevice, newDeviceId, userId]
     );
 
-    res.cookie('device_id', newDeviceId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 365 * 24 * 60 * 60 * 1000
-    });
+    /* MFA logic for Admins and Superadmins removed per user request
+    if (user.role === 'admin' || user.role === 'superadmin') {
+      ...
+    }
+    */
 
     const token = generateToken(user, sessionToken);
+    const refreshToken = generateRefreshToken(user.id);
+    setAuthCookies(res, token, refreshToken);
+
     const daysRemaining = user.trialEnd
       ? Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / 86400000))
       : 0;
@@ -267,6 +328,7 @@ const verifyLoginOTP = async (req, res) => {
         companyId: user.company_id,
         daysRemaining,
         isPaid: !!user.isPaid,
+        mfaWarning: (user.role === 'admin' || user.role === 'superadmin') && !user.mfa_enabled
       }
     });
 
@@ -279,10 +341,11 @@ const verifyLoginOTP = async (req, res) => {
 // ── Logout ────────────────────────────────────────────────────────────────────
 const logout = async (req, res) => {
   try {
-    await db.query(
-      'UPDATE users SET session_token = NULL WHERE id = ?',
-      [req.userId]
-    );
+    await auditLog(req, 'LOGOUT', 'users', req.userId, null, null);
+    await db.query('UPDATE users SET session_token = NULL WHERE id = ?', [req.userId]);
+    // Clear both auth cookies
+    res.clearCookie('auth_token',    { httpOnly: true, sameSite: 'Strict', secure: process.env.NODE_ENV === 'production' });
+    res.clearCookie('refresh_token', { httpOnly: true, sameSite: 'Strict', secure: process.env.NODE_ENV === 'production' });
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     console.error('Logout error:', err);
@@ -310,6 +373,7 @@ const activate = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid or already used activation link' });
     }
 
+    if (!enforcePasswordPolicy(password, res)) return;
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Update user password + link license
@@ -323,10 +387,20 @@ const activate = async (req, res) => {
     const userId = uRows[0]?.id;
 
     if (userId) {
+      // Re-compute signature now that admin_user_id is known
+      const newSignature = generateLicenseSignature({
+        license_key: license.license_key,
+        admin_user_id: userId,
+        license_type: license.license_type,
+        max_estimators: license.max_estimators,
+        valid_until: license.valid_until,
+        is_active: license.is_active
+      });
+
       // Link license to this admin user
       await db.query(
-        `UPDATE licenses SET admin_user_id = ?, invite_accepted_at = GETDATE() WHERE id = ?`,
-        [userId, license.id]
+        `UPDATE licenses SET admin_user_id = ?, invite_accepted_at = GETDATE(), signature = ? WHERE id = ?`,
+        [userId, newSignature, license.id]
       );
     }
 
@@ -380,6 +454,7 @@ const updateProfile = async (req, res) => {
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    if (!enforcePasswordPolicy(newPassword, res)) return;
     const [rows] = await db.query('SELECT password FROM users WHERE id = ?', [req.userId]);
     const isMatch = await bcrypt.compare(currentPassword, rows[0].password);
     if (!isMatch) return res.status(400).json({ success: false, error: 'Current password incorrect' });
@@ -422,6 +497,7 @@ const verifyOTP = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
+    if (!enforcePasswordPolicy(newPassword, res)) return;
     const [rows] = await db.query('SELECT id FROM users WHERE email = ? AND otp = ? AND otpExpires > GETUTCDATE()', [email.toLowerCase(), otp]);
     if (rows.length === 0) return res.status(400).json({ success: false, error: 'Link expired. Please start over.' });
     const hashed = await bcrypt.hash(newPassword, 12);
@@ -465,6 +541,7 @@ const registerVerified = async (req, res) => {
   try {
     const { fullName, email, organization, password, phone } = req.body;
     if (!fullName || !email || !password) return res.status(400).json({ success: false, error: 'Required fields missing' });
+    if (!enforcePasswordPolicy(password, res)) return;
     const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
     if (existing.length > 0) return res.status(400).json({ success: false, error: 'User already exists' });
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -484,8 +561,69 @@ const registerVerified = async (req, res) => {
   }
 };
 
+// ── Login with MFA (TOTP as primary factor) ───────────────────────────────
+const loginWithMfa = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ success: false, error: 'Email and MFA code are required' });
+
+    const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+    const user = rows[0];
+    if (!user) return res.status(401).json({ success: false, error: 'User not found' });
+
+    if (!user.mfa_enabled || !user.mfa_secret) {
+      return res.status(401).json({ success: false, error: 'MFA is not enabled for this account' });
+    }
+
+    const speakeasy = require('speakeasy');
+    const verified = speakeasy.totp.verify({
+      secret: user.mfa_secret,
+      encoding: 'base32',
+      token: code,
+      window: 2 // 1 min drift
+    });
+
+    if (!verified) {
+      return res.status(401).json({ success: false, error: 'Invalid MFA code' });
+    }
+
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    await db.query(
+      `UPDATE users SET session_token = ?, session_at = GETDATE(), lastLogin = GETDATE() WHERE id = ?`,
+      [sessionToken, user.id]
+    );
+
+    const token = generateToken(user, sessionToken);
+    const refreshToken = generateRefreshToken(user.id);
+    setAuthCookies(res, token, refreshToken);
+
+    const daysRemaining = user.trialEnd
+      ? Math.max(0, Math.ceil((new Date(user.trialEnd) - new Date()) / 86400000))
+      : 0;
+
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || user.full_name || '',
+        role: user.role,
+        company: user.company,
+        companyId: user.company_id,
+        daysRemaining,
+        isPaid: !!user.isPaid
+      }
+    });
+  } catch (err) {
+    console.error('MFA Direct Login error:', err);
+    res.status(500).json({ success: false, error: 'MFA login failed' });
+  }
+};
+
 module.exports = {
   login,
+  loginWithMfa,
   verifyLoginOTP,
   logout,
   activate,

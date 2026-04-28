@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 import toast from 'react-hot-toast';
 
-const API_URL = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
+const API_URL = `${API_BASE_URL}/api/v1`;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -12,17 +12,28 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Add Token
+// Request Interceptor: Enable credentials
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('steel_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    config.withCredentials = true;
     return config;
   },
   (error) => Promise.reject(error)
 );
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
 
 // Response Interceptor: Handle Security & Errors
 api.interceptors.response.use(
@@ -58,9 +69,37 @@ api.interceptors.response.use(
       }
 
       // 4. Standard 401 Unauthorized (Token expired/invalid)
-      if (status === 401) {
-        handleGlobalLogout();
-        return Promise.reject(error);
+      if (status === 401 && !error.config._retry && error.config.url !== '/auth/login' && error.config.url !== '/auth/refresh') {
+        const originalRequest = error.config;
+        originalRequest._retry = true;
+
+        if (isRefreshing) {
+          return new Promise(function(resolve, reject) {
+            failedQueue.push({ resolve, reject });
+          }).then(() => {
+            return api(originalRequest);
+          }).catch(err => {
+            return Promise.reject(err);
+          });
+        }
+
+        isRefreshing = true;
+
+        return new Promise(function (resolve, reject) {
+          axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
+            .then(() => {
+              processQueue(null);
+              resolve(api(originalRequest));
+            })
+            .catch((err) => {
+              processQueue(err);
+              handleGlobalLogout();
+              reject(err);
+            })
+            .finally(() => {
+              isRefreshing = false;
+            });
+        });
       }
 
       // 5. 403 Forbidden (Insufficient Permissions)
@@ -76,7 +115,6 @@ api.interceptors.response.use(
 );
 
 function handleGlobalLogout() {
-  localStorage.removeItem('steel_token');
   localStorage.removeItem('steel_user');
   // Avoid loop if already on login
   if (!window.location.pathname.includes('/login')) {
@@ -85,3 +123,4 @@ function handleGlobalLogout() {
 }
 
 export default api;
+

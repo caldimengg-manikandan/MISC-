@@ -142,3 +142,4 @@ export default function ProjectContextMenu({ project, isPinned, onRenameStart })
     </div>
   );
 }
+

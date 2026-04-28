@@ -5,7 +5,7 @@ const auth = require('../middleware/auth');
 
 // Middleware to check if user is admin
 const adminOnly = (req, res, next) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'owner') {
+  if (!['admin', 'owner', 'superadmin'].includes(req.user.role)) {
     return res.status(403).json({ success: false, message: 'Access denied. Admin only.' });
   }
   next();

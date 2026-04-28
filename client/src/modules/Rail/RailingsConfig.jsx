@@ -193,7 +193,7 @@ export default function RailingsConfig() {
       const token = localStorage.getItem('steel_token');
       if (!token) return;
 
-      fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+      fetch(`${API_BASE_URL}/api/v1/projects/${projectId}`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(r => r.json())
@@ -266,7 +266,7 @@ export default function RailingsConfig() {
       // Save rails under guardRails column (reusing existing schema column) 
       const railsToSave = railsRef.current.map(({ ...r }) => r);
 
-      const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}`, { credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -398,7 +398,7 @@ export default function RailingsConfig() {
         estimateId: projectData.projectId
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/calculate`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/calculate`, { credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -414,7 +414,7 @@ export default function RailingsConfig() {
 
         // Auto-save calculation summary
         if (projectData.projectId && token) {
-          fetch(`${API_BASE_URL}/api/projects/${projectData.projectId}`, {
+          fetch(`${API_BASE_URL}/api/v1/projects/${projectData.projectId}`, { credentials: 'include',
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({
@@ -1041,7 +1041,7 @@ export default function RailingsConfig() {
                 onClick={() => {
                   if (!projectData.projectId) { toast.error('Please save the project first before exporting BOM'); return; }
                   const token = localStorage.getItem('steel_token');
-                  window.location.href = `${API_BASE_URL}/api/reports/${projectData.projectId}/bom-excel?token=${token}`;
+                  window.location.href = `${API_BASE_URL}/api/v1/reports/${projectData.projectId}/bom-excel?token=${token}`;
                 }}
               >
                 <Table size={14} /> Excel BOM
@@ -1230,7 +1230,12 @@ export default function RailingsConfig() {
           isOpen={showAllocateModal}
           onClose={() => setShowAllocateModal(false)}
           onAllocate={handleAllocated}
-          initialData={{ projectName: projectData.projectName }}
+          initialData={{ 
+            projectName: projectData.projectName,
+            guardRails: rails,
+            estimationResult: estimationResult,
+            localConfig
+          }}
         />
 
         {/* ── Classic Confirmation Modal ── */}
@@ -1259,3 +1264,4 @@ export default function RailingsConfig() {
     </>
   );
 }
+

@@ -8,6 +8,7 @@
 // I4: License check runs on every request, not just login.
 
 const db = require('../config/mssql');
+const { verifyLicenseSignature } = require('../utils/cryptoUtils');
 
 async function getLicenseForUser(userId, role, adminOwnerId) {
   let adminId;
@@ -21,7 +22,7 @@ async function getLicenseForUser(userId, role, adminOwnerId) {
   if (!adminId) return null;
 
   const [rows] = await db.query(
-    `SELECT l.is_active, l.valid_until, l.max_estimators
+    `SELECT l.is_active, l.valid_until, l.max_estimators, l.license_key, l.admin_user_id, l.license_type, l.signature
      FROM licenses l
      WHERE l.admin_user_id = ? AND l.is_active = 1`,
     [adminId]
@@ -70,6 +71,16 @@ module.exports = async (req, res, next) => {
       return res.status(403).json({
         licenseInactive: true,
         message: 'Your license has been deactivated. Contact your administrator.'
+      });
+    }
+
+    // Verify signature to prevent tampering
+    const isIntact = verifyLicenseSignature(license, license.signature);
+    if (!isIntact) {
+      console.error(`TAMPER DETECTED: License ${license.id} (Key: ${license.license_key}) signature mismatch.`);
+      return res.status(403).json({
+        licenseTampered: true,
+        message: 'License integrity verification failed. Please contact support.'
       });
     }
 
