@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 import toast from 'react-hot-toast';
 
-const API_URL = `${API_BASE_URL}/api/v1`;
+const API_URL = `${API_BASE_URL}/api/v1`.replace(/\/+$/, '');
 
 const api = axios.create({
   baseURL: API_URL,
@@ -11,6 +11,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
 
 // Request Interceptor: Enable credentials
 api.interceptors.request.use(

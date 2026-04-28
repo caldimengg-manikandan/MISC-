@@ -7,7 +7,8 @@ import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
 
-const API_URL = `${API_BASE_URL}/api/v1`;
+const API_URL = `${API_BASE_URL}/api/v1`.replace(/\/+$/, '');
+
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
