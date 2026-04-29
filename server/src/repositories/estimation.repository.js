@@ -2,13 +2,18 @@
 const db = require('../config/mssql');
 
 class EstimationRepository {
-    async getStats(companyId = null) {
+    async getStats(companyId = null, userId = null) {
         let query = 'SELECT status, COUNT(*) as count FROM projects';
         let params = [];
         
         if (companyId !== null && companyId !== undefined) {
-            query += ' WHERE (company_id = ? OR owner_admin_id = ?)';
+            query += ' WHERE (company_id = ? OR owner_admin_id = ?';
             params.push(companyId, companyId);
+            if (userId) {
+                query += ' OR assigned_engineer_id = ? OR reviewer_id = ?';
+                params.push(userId, userId);
+            }
+            query += ')';
         }
         
         query += ' GROUP BY status';
@@ -16,7 +21,7 @@ class EstimationRepository {
         return rows;
     }
 
-    async findAll(filters = {}, companyId = null) {
+    async findAll(filters = {}, companyId = null, userId = null) {
         let query = `
             SELECT p.*, c.companyName as customer_name, c.contactPerson, c.email, c.phone
             FROM projects p
@@ -26,8 +31,13 @@ class EstimationRepository {
         let params = [];
 
         if (companyId !== null && companyId !== undefined) {
-            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?)';
+            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?';
             params.push(companyId, companyId);
+            if (userId) {
+                query += ' OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
+                params.push(userId, userId);
+            }
+            query += ')';
         }
 
         if (filters.status) {
@@ -44,7 +54,7 @@ class EstimationRepository {
         return rows;
     }
 
-    async findById(id, companyId = null) {
+    async findById(id, companyId = null, userId = null) {
         let query = `
             SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
                    c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip
@@ -55,8 +65,13 @@ class EstimationRepository {
         let params = [id];
 
         if (companyId !== null && companyId !== undefined) {
-            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?)';
+            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?';
             params.push(companyId, companyId);
+            if (userId) {
+                query += ' OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
+                params.push(userId, userId);
+            }
+            query += ')';
         }
 
         const [rows] = await db.query(query, params);
@@ -64,20 +79,33 @@ class EstimationRepository {
     }
 
     async create(data) {
-        const { projectName, customer_name, customer_id, dueDate, createdBy, companyId, ownerAdminId } = data;
+        const { projectName, customer_name, customer_id, dueDate, createdBy, companyId, ownerAdminId, assignedEngineerId, reviewerId, accessType } = data;
         const defaultStairs = JSON.stringify([{ label: "Stair 1", flights: [], landings: [], rails: [] }]);
+        
+        let engineerEmail = null;
+        if (assignedEngineerId) {
+            const [engRows] = await db.query('SELECT email FROM users WHERE id = ?', [assignedEngineerId]);
+            if (engRows[0]) engineerEmail = engRows[0].email;
+        }
+        
         const [result] = await db.query(`
             INSERT INTO projects (
                 projectName, customer_name, customer_id, dueDate, status, workflow_status, 
                 revision_number, userId, createdBy, company_id, owner_admin_id, 
+                assigned_engineer_id, engineerId, assignedEngineer,
+                reviewer_id,
                 isPinned, isArchived, created_at, updatedAt, stairs
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, 'NEW', 'new', 0, ?, ?, ?, ?, 0, 0, GETDATE(), GETDATE(), ?)
+            VALUES (?, ?, ?, ?, 'NEW', 'new', 0, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, GETDATE(), GETDATE(), ?)
         `, [
             projectName, customer_name, customer_id ? customer_id : null, 
             dueDate ? dueDate : null, createdBy, createdBy, 
             companyId || null, ownerAdminId || companyId || null, 
+            assignedEngineerId || null,
+            assignedEngineerId || null,
+            engineerEmail,
+            reviewerId || null,
             defaultStairs
         ]);
         return result[0].id;

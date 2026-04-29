@@ -29,9 +29,9 @@ const getProject = async (projectId, userId, isAdmin) => {
     query = 'SELECT * FROM projects WHERE id = ?';
     params = [projectId];
   } else {
-    // Creator OR Assignee
-    query = 'SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ?)';
-    params = [projectId, userId, userId];
+    // Creator OR Assignee (engineer or reviewer)
+    query = 'SELECT * FROM projects WHERE id = ? AND (userId = ? OR assigned_engineer_id = ? OR reviewer_id = ?)';
+    params = [projectId, userId, userId, userId];
   }
   const [rows] = await db.query(query, params);
   return rows[0] || null;

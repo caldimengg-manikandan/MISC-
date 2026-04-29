@@ -7,7 +7,7 @@ const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 class EstimationController {
     async getDashboardStats(req, res) {
         try {
-            const rows = await estimationRepository.getStats(req.companyId);
+            const rows = await estimationRepository.getStats(req.companyId, req.userId);
             const stats = {
                 [STATUS.NEW]: 0,
                 [STATUS.ASSIGNED]: 0,
@@ -28,7 +28,7 @@ class EstimationController {
     async getList(req, res) {
         try {
             const { status, engineerId } = req.query;
-            const estimations = await estimationRepository.findAll({ status, engineerId }, req.companyId);
+            const estimations = await estimationRepository.findAll({ status, engineerId }, req.companyId, req.userId);
             const processed = estimations.map(e => ({
                 ...e,
                 status: statusService.updateStatus(e)
@@ -42,7 +42,7 @@ class EstimationController {
     async getDetail(req, res) {
         try {
             const { id } = req.params;
-            const estimation = await estimationRepository.findById(id, req.companyId);
+            const estimation = await estimationRepository.findById(id, req.companyId, req.userId);
             if (!estimation) return res.status(404).json({ success: false, message: 'Not found' });
 
             if (estimation.modules && typeof estimation.modules === 'string') {
@@ -56,18 +56,23 @@ class EstimationController {
 
     async create(req, res) {
         try {
-            const { projectName, customer_name, customer_id, dueDate } = req.body;
+            const { projectName, customer_name, customer_id, dueDate, assignedEngineerId, reviewerId, accessType } = req.body;
             const ownerAdminId = await resolveOwnerAdminId(req);
             
             const id = await estimationRepository.create({ 
                 projectName, customer_name, customer_id, dueDate, 
                 createdBy: req.userId,
                 companyId: req.companyId,
-                ownerAdminId: ownerAdminId
+                ownerAdminId: ownerAdminId,
+                assignedEngineerId: assignedEngineerId || null,
+                reviewerId: reviewerId || null,
+                accessType: accessType || 'edit'
             });
             
             await estimationRepository.updateData(id, req.body);
-            await estimationRepository.logActivity(id, STATUS_ACTIONS.CREATE, req.userId, null, req.companyId);
+            await estimationRepository.logActivity(id, STATUS_ACTIONS.CREATE, req.userId, 
+                assignedEngineerId ? `Assigned to engineer ID: ${assignedEngineerId}` : null, 
+                req.companyId);
             res.json({ success: true, id });
         } catch (err) {
             res.status(500).json({ success: false, message: err.message });

@@ -47,6 +47,11 @@ module.exports = async (req, res, next) => {
     // Attach user to request (strip password)
     const { password, ...userWithoutPassword } = user;
     req.user = userWithoutPassword; // includes admin_owner_id from DB (I6 fix)
+    
+    // Fix: Propagate JWT cache variables so licenseCheck.js 1-hour cache works!
+    if (decoded.tokenIssuedAt) req.user.tokenIssuedAt = decoded.tokenIssuedAt;
+    if (decoded.licenseValid !== undefined) req.user.licenseValid = decoded.licenseValid;
+
     req.userId = user.id;
     req.userRole = user.role;
     req.companyId = user.company_id || decoded.companyId || null;

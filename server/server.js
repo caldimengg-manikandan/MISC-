@@ -181,6 +181,16 @@ app.use(hpp());
 
 // ================ REQUEST HANDLING ================
 
+// Temporary fix for Nginx stripping /api
+app.use((req, res, next) => {
+  if (req.url.startsWith('/v1/')) {
+    console.log('Rewriting URL from', req.url, 'to', '/api' + req.url);
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
+
 // Rate limiting - different limits for different routes
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

@@ -256,6 +256,17 @@ const verifyLoginOTP = async (req, res) => {
       return res.status(400).json({ success: false, error: 'OTP has expired. Please log in again.' });
     }
 
+    // ── License check (for non-superadmin) ──
+    if (user.role !== 'superadmin') {
+      const license = await getLicenseForUser(user.id, user.role, user.admin_owner_id);
+      if (!license) {
+        return res.status(403).json({ licenseInactive: true, error: 'No active license. Contact your administrator.' });
+      }
+      if (new Date(license.valid_until) < new Date()) {
+        return res.status(403).json({ licenseExpired: true, error: 'License expired. Contact your administrator.' });
+      }
+    }
+
     // ── OTP match ──
     if (user.otp_code !== otp.trim()) {
       const newAttempts = (user.otp_attempts || 0) + 1;

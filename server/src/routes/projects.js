@@ -46,12 +46,12 @@ router.get('/', auth, async (req, res) => {
       query = 'SELECT * FROM projects WHERE (owner_admin_id = ? OR company_id = ? OR userId = ? OR createdBy = ?) ORDER BY updatedAt DESC';
       params = [ownerAdminId, ownerAdminId, req.userId, req.userId];
     } else {
-      // Estimator: must be assigned to or have created the project
+      // Estimator/Engineer: must be creator, assigned engineer, or assigned reviewer
       query = `SELECT * FROM projects
                WHERE (owner_admin_id = ? OR company_id = ?)
-               AND (userId = ? OR createdBy = ? OR engineerId = ?)
+               AND (userId = ? OR createdBy = ? OR engineerId = ? OR assigned_engineer_id = ? OR reviewer_id = ?)
                ORDER BY updatedAt DESC`;
-      params = [ownerAdminId, ownerAdminId, req.userId, req.userId, req.userId];
+      params = [ownerAdminId, ownerAdminId, req.userId, req.userId, req.userId, req.userId, req.userId];
     }
 
     const [projects] = await db.query(query, params);
@@ -383,8 +383,8 @@ router.get('/:projectId', auth, async (req, res) => {
       whereClause += ' AND (p.owner_admin_id = ? OR p.company_id = ? OR p.userId = ? OR p.createdBy = ?)';
       params.push(ownerAdminId, ownerAdminId, req.userId, req.userId);
       if (req.userRole === 'estimator') {
-        whereClause += ' AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ?)';
-        params.push(req.userId, req.userId, req.userId);
+        whereClause += ' AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?)';
+        params.push(req.userId, req.userId, req.userId, req.userId, req.userId);
       }
     }
 
