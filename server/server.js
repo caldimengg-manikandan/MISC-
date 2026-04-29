@@ -237,7 +237,7 @@ app.use(cookieParser());
 
 // Body parsing with enhanced limits and validation
 app.use(express.json({
-  limit: '1mb',
+  limit: '50mb',
   verify: (req, res, buf) => {
     try {
       JSON.parse(buf);
