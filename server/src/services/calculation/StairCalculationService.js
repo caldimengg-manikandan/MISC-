@@ -1054,17 +1054,6 @@ class StairCalculationService {
           totalCost: this.roundExcel(totalCost, 2),
           flights: flightResults
         };
-      })),
-            geometry: geometry ? {
-              risers: geometry.risers,
-              actualRise: geometry.actualRise,
-              treads: geometry.treads,
-              totalRun: geometry.totalRun,
-              angle: geometry.angle,
-              stringerLength: geometry.stringerLength
-            } : null
-          }
-        };
       }))
     };
 
