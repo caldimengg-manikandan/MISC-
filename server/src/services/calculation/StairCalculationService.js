@@ -176,7 +176,7 @@ class StairCalculationService {
    * LAYER 1: TAKEOFF (Tekla Geometry Mode)
    * Pure geometry and quantity counts from user inputs.
    */
-  async calculateTakeoff(input) {
+  async calculateTakeoff(input, adminOwnerId = null) {
     const { rails, platforms, stairs } = input;
 
     const takeoff = {
@@ -368,7 +368,7 @@ class StairCalculationService {
    * LAYER 2: ESTIMATE
    * Convert takeoff units to weights and labor hours using lookups.
    */
-  async calculateEstimate(takeoff) {
+  async calculateEstimate(takeoff, adminOwnerId = null) {
     // 🧠 PRICING HIERARCHY: Local Estimate `takeoff.config` Overrides > Global `configManager` > Fallback
     const getRate = (key, defaultVal) => {
       if (takeoff.config && typeof takeoff.config[key] === 'number') {
@@ -650,8 +650,11 @@ class StairCalculationService {
         let shopMHPF = 0;
         let fieldMHPF = 0;
         const [dbBenchmarks] = await db.query(
-          'SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary WHERE (label = ? OR value = ?) AND category = ?',
-          [typeLabel, typeLabel, 'platform_type']
+          `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
+           WHERE (label = ? OR value = ?) AND category = ? 
+           AND (admin_owner_id IS NULL OR admin_owner_id = ?)
+           ORDER BY CASE WHEN admin_owner_id IS NULL THEN 1 ELSE 0 END`,
+          [typeLabel, typeLabel, 'platform_type', adminOwnerId]
         );
         if (dbBenchmarks.length > 0 && dbBenchmarks[0].steelLbsLf !== null) {
           lbsPerSF = dbBenchmarks[0].steelLbsLf;
@@ -814,8 +817,10 @@ class StairCalculationService {
           const [exactMatch] = await db.query(
             `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
              WHERE (UPPER(TRIM(label)) = UPPER(TRIM(?)) OR UPPER(TRIM(value)) = UPPER(TRIM(?)))
-             AND category = 'stringer_size'`,
-            [src, src]
+             AND category = 'stringer_size'
+             AND (admin_owner_id IS NULL OR admin_owner_id = ?)
+             ORDER BY CASE WHEN admin_owner_id IS NULL THEN 1 ELSE 0 END`,
+            [src, src, adminOwnerId]
           );
 
           if (exactMatch.length > 0 && exactMatch[0].steelLbsLf !== null) {
@@ -827,8 +832,10 @@ class StairCalculationService {
             const [fullMatch] = await db.query(
               `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
                WHERE (UPPER(REPLACE(REPLACE(REPLACE(label, ' ', ''), '.', ''), '-', '')) = ? OR UPPER(REPLACE(REPLACE(REPLACE(value, ' ', ''), '.', ''), '-', '')) = ?) 
-               AND category = ?`,
-              [cleanFull, cleanFull, 'stringer_size']
+               AND category = ?
+               AND (admin_owner_id IS NULL OR admin_owner_id = ?)
+               ORDER BY CASE WHEN admin_owner_id IS NULL THEN 1 ELSE 0 END`,
+              [cleanFull, cleanFull, 'stringer_size', adminOwnerId]
             );
 
             if (fullMatch.length > 0 && fullMatch[0].steelLbsLf !== null) {
@@ -861,8 +868,10 @@ class StairCalculationService {
               const [dictBenchmarks] = await db.query(
                 `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
                  WHERE (UPPER(REPLACE(REPLACE(REPLACE(label, ' ', ''), '.', ''), '-', '')) = ? OR UPPER(REPLACE(REPLACE(REPLACE(value, ' ', ''), '.', ''), '-', '')) = ? OR (label LIKE ? AND label NOT LIKE '%wide%' AND label NOT LIKE '%Std.%')) 
-                 AND category = 'stringer_size'`,
-                [cleanSearch, cleanSearch, '%' + searchProfile + '%']
+                 AND category = 'stringer_size'
+                 AND (admin_owner_id IS NULL OR admin_owner_id = ?)
+                 ORDER BY CASE WHEN admin_owner_id IS NULL THEN 1 ELSE 0 END`,
+                [cleanSearch, cleanSearch, '%' + searchProfile + '%', adminOwnerId]
               );
 
               if (dictBenchmarks.length > 0 && dictBenchmarks[0].steelLbsLf !== null && dictBenchmarks[0].steelLbsLf > 0) {
@@ -1231,10 +1240,10 @@ class StairCalculationService {
       if (!sanitized) return { success: false, error: 'Sanitization failed' };
 
       const normalized = validator.normalizeUnits(sanitized);
-      const takeoff = await this.calculateTakeoff(normalized);
+      const takeoff = await this.calculateTakeoff(normalized, normalized.adminOwnerId);
       if (!takeoff) throw new Error('Takeoff phase returned undefined');
 
-      const estimate = await this.calculateEstimate(takeoff);
+      const estimate = await this.calculateEstimate(takeoff, normalized.adminOwnerId);
       if (!estimate) throw new Error('Estimate phase returned undefined');
 
       const final = await this.calculateFinal(estimate);

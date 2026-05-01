@@ -11,23 +11,58 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
+/**
+ * Resolve the "admin owner ID" for the current user.
+ * - If admin/superadmin → their own userId
+ * - If estimator → their admin_owner_id from the JWT
+ * This is the tenant boundary key for dictionary isolation.
+ */
+function resolveAdminOwnerId(req) {
+  const role = req.user?.role || req.userRole;
+  if (role === 'admin' || role === 'superadmin') {
+    return req.userId || req.user?.id;
+  }
+  // Estimators belong to their admin owner
+  return req.user?.admin_owner_id || null;
+}
+
 // @route   GET /api/dictionary/:category
-// @desc    Get all dictionary entries for a category (including inactive ones for management)
+// @desc    Get dictionary entries for a category.
+//          Returns: global system defaults (admin_owner_id IS NULL) + tenant-specific entries.
+//          ?all=true also includes inactive entries (for management UI).
 router.get('/:category', async (req, res) => {
   try {
     const showAll = req.query.all === 'true';
-    console.log(`[Dictionary] Fetching category: ${req.params.category} (showAll: ${showAll})`);
-    
-    const query = showAll 
-      ? 'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive FROM dictionary WHERE category = ? ORDER BY [order] ASC, label ASC'
-      : 'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive FROM dictionary WHERE category = ? AND (isActive = 1 OR isActive IS NULL) ORDER BY [order] ASC, label ASC';
+    const adminOwnerId = resolveAdminOwnerId(req);
+    console.log(`[Dictionary] Fetching category: ${req.params.category} (showAll: ${showAll}, tenant: ${adminOwnerId})`);
 
-    const [entries] = await db.query(query, [req.params.category]);
-    console.log(`[Dictionary] Found ${entries.length} entries for ${req.params.category}`);
+    let query;
+    let params;
 
-    // 🔧 CRITICAL FIX: MSSQL NVARCHAR columns return numeric values as strings.
+    if (showAll) {
+      // Management view: global defaults + this tenant's entries (all active states)
+      query = `SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive, admin_owner_id
+               FROM dictionary
+               WHERE category = ? AND (admin_owner_id IS NULL OR admin_owner_id = ?)
+               ORDER BY CASE WHEN admin_owner_id IS NULL THEN 0 ELSE 1 END, [order] ASC, label ASC`;
+      params = [req.params.category, adminOwnerId];
+    } else {
+      // Normal dropdown view: global defaults + active tenant entries
+      query = `SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive, admin_owner_id
+               FROM dictionary
+               WHERE category = ?
+                 AND (isActive = 1 OR isActive IS NULL)
+                 AND (admin_owner_id IS NULL OR admin_owner_id = ?)
+               ORDER BY CASE WHEN admin_owner_id IS NULL THEN 0 ELSE 1 END, [order] ASC, label ASC`;
+      params = [req.params.category, adminOwnerId];
+    }
+
+    const [entries] = await db.query(query, params);
+    console.log(`[Dictionary] Found ${entries.length} entries for ${req.params.category} (tenant: ${adminOwnerId})`);
+
     const normalized = entries.map(e => ({
       ...e,
+      isGlobalDefault: e.admin_owner_id === null,
       steelLbsLf: e.steelLbsLf != null ? parseFloat(e.steelLbsLf) : null,
       shopLaborMhLf: e.shopLaborMhLf != null ? parseFloat(e.shopLaborMhLf) : null,
       fieldLaborMhLf: e.fieldLaborMhLf != null ? parseFloat(e.fieldLaborMhLf) : null,
@@ -44,12 +79,16 @@ router.get('/:category', async (req, res) => {
 });
 
 // @route   GET /api/dictionary/all/categories
-// @desc    Get all dictionary entries grouped by category (for admin)
+// @desc    Get all dictionary entries grouped by category (admin view - tenant scoped)
 router.get('/all/categories', auth, adminOnly, async (req, res) => {
   try {
+    const adminOwnerId = resolveAdminOwnerId(req);
     const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax FROM dictionary ORDER BY category ASC, [order] ASC',
-      []
+      `SELECT id, category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, admin_owner_id
+       FROM dictionary
+       WHERE admin_owner_id IS NULL OR admin_owner_id = ?
+       ORDER BY category ASC, [order] ASC`,
+      [adminOwnerId]
     );
     res.json({ success: true, data: entries });
   } catch (err) {
@@ -58,36 +97,41 @@ router.get('/all/categories', auth, adminOnly, async (req, res) => {
 });
 
 // @route   POST /api/dictionary
-// @desc    Add or Reactivate a dictionary entry
+// @desc    Add or Reactivate a dictionary entry (scoped to this tenant)
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { category, label, value, description, order, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax } = req.body;
-    console.log(`[Dictionary] Attempting to add/reactivate: ${category} -> ${label} (${value})`);
+    const adminOwnerId = resolveAdminOwnerId(req);
 
-    // Check if exists (including inactive)
-    const [existing] = await db.query('SELECT id, isActive FROM dictionary WHERE category = ? AND value = ?', [category, value]);
-    
+    console.log(`[Dictionary] Attempting to add/reactivate: ${category} -> ${label} (${value}) for tenant: ${adminOwnerId}`);
+
+    // Check if exists for THIS TENANT only (not global defaults)
+    const [existing] = await db.query(
+      'SELECT id, isActive FROM dictionary WHERE category = ? AND value = ? AND admin_owner_id = ?',
+      [category, value, adminOwnerId]
+    );
+
     if (existing.length > 0) {
       if (existing[0].isActive == 0 || existing[0].isActive === null || existing[0].is_active == 0) {
         console.log(`[Dictionary] Reactivating existing inactive entry: ${existing[0].id}`);
         await db.query(
-          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, is_active = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ?',
-          [label, order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, existing[0].id]
+          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, is_active = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ? AND admin_owner_id = ?',
+          [label, order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, existing[0].id, adminOwnerId]
         );
         const [updatedEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [existing[0].id]);
         return res.status(200).json({ success: true, data: updatedEntry[0], message: 'Reactivated existing entry' });
       }
-      console.log(`[Dictionary] Conflict: Active value already exists: ${value}`);
+      console.log(`[Dictionary] Conflict: Active value already exists for this tenant: ${value}`);
       return res.status(400).json({ success: false, message: 'Value already exists in this category' });
     }
 
     const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order], isActive, is_active, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?)',
-      [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null]
+      'INSERT INTO dictionary (category, label, value, description, [order], isActive, is_active, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, admin_owner_id) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?)',
+      [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, adminOwnerId]
     );
 
     const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [rows[0].id]);
-    console.log(`[Dictionary] Successfully added entry with ID: ${rows[0].id}`);
+    console.log(`[Dictionary] Successfully added entry with ID: ${rows[0].id} for tenant: ${adminOwnerId}`);
     res.status(201).json({ success: true, data: newEntry[0] });
   } catch (err) {
     console.error(`[Dictionary] Error adding entry to ${req.body.category}:`, err);
@@ -96,10 +140,18 @@ router.post('/', auth, adminOnly, async (req, res) => {
 });
 
 // @route   PUT /api/dictionary/:id
-// @desc    Update a dictionary entry
+// @desc    Update a dictionary entry (tenant-scoped - cannot edit global defaults)
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
+    const adminOwnerId = resolveAdminOwnerId(req);
     const { category, label, value, description, order, isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax } = req.body;
+
+    // Security: ensure the entry belongs to this tenant
+    const [check] = await db.query('SELECT id, admin_owner_id FROM dictionary WHERE id = ?', [req.params.id]);
+    if (check.length === 0) return res.status(404).json({ success: false, message: 'Entry not found' });
+    if (check[0].admin_owner_id !== null && check[0].admin_owner_id != adminOwnerId) {
+      return res.status(403).json({ success: false, message: 'Cannot edit another tenant\'s dictionary entry' });
+    }
 
     await db.query(
       'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ?, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ?',
@@ -130,10 +182,22 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
 });
 
 // @route   DELETE /api/dictionary/:id
-// @desc    Delete a dictionary entry
+// @desc    Delete a dictionary entry (tenant-scoped - cannot delete global defaults)
 router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
-    await db.query('DELETE FROM dictionary WHERE id = ?', [req.params.id]);
+    const adminOwnerId = resolveAdminOwnerId(req);
+
+    // Security: only allow deleting own entries, not global defaults
+    const [check] = await db.query('SELECT id, admin_owner_id FROM dictionary WHERE id = ?', [req.params.id]);
+    if (check.length === 0) return res.status(404).json({ success: false, message: 'Entry not found' });
+    if (check[0].admin_owner_id === null) {
+      return res.status(403).json({ success: false, message: 'Cannot delete a system default entry' });
+    }
+    if (check[0].admin_owner_id != adminOwnerId) {
+      return res.status(403).json({ success: false, message: 'Cannot delete another tenant\'s dictionary entry' });
+    }
+
+    await db.query('DELETE FROM dictionary WHERE id = ? AND admin_owner_id = ?', [req.params.id, adminOwnerId]);
     res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -141,10 +205,10 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
 });
 
 // @route   POST /api/dictionary/seed/initial
-// @desc    Seed initial dictionary data
+// @desc    Seed initial dictionary data (global defaults - no tenant)
 router.post('/seed/initial', auth, adminOnly, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT COUNT(*) as count FROM dictionary', []);
+    const [rows] = await db.query('SELECT COUNT(*) as count FROM dictionary WHERE admin_owner_id IS NULL', []);
     const count = rows[0].count;
     if (count > 0 && !req.body.force) {
       return res.json({ success: true, message: 'Dictionary already seeded', count });
@@ -189,63 +253,19 @@ router.post('/seed/initial', auth, adminOnly, async (req, res) => {
       ['mounting_type', 'Side Mounted Welded', 'Side Mounted Welded', 4],
       ['mounting_type', 'Embedded', 'Embedded', 5],
       ['mounting_type', 'Anchored', 'Anchored', 6],
-
-      ['guardRail_type', '1-Line Steel Floor Mounted Handrail 1 1/4" SCH. 40 pipe', '1-Line Steel Floor Mounted Handrail 1 1/4" SCH. 40 pipe', 1],
-      ['guardRail_type', '1-Line Steel Floor Mounted Handrail 1 1/2" SCH. 40 pipe', '1-Line Steel Floor Mounted Handrail 1 1/2" SCH. 40 pipe', 2],
-      ['guardRail_type', '1-Line Steel Floor Mounted Handrail 1 1/4" SCH. 40 Rail and 1 1/4" SCH. 80 Post', '1-Line Steel Floor Mounted Handrail 1 1/4" SCH. 40 Rail and 1 1/4" SCH. 80 Post', 3],
-      ['guardRail_type', '1-Line Steel Floor Mounted Handrail 1 1/2" SCH. 40 Rail and 1 1/2" SCH. 80 Post', '1-Line Steel Floor Mounted Handrail 1 1/2" SCH. 40 Rail and 1 1/2" SCH. 80 Post', 4],
-      ['guardRail_type', '2-Line Steel Pipe Guardrail 1 1/4" Sch. 40 Pipe Rails and Post', '2-Line Steel Pipe Guardrail 1 1/4" Sch. 40 Pipe Rails and Post', 5],
-      ['guardRail_type', '2-Line Steel Pipe Guardrail 1 1/2" Sch. 40 Pipe Rails and Post', '2-Line Steel Pipe Guardrail 1 1/2" Sch. 40 Pipe Rails and Post', 6],
-      ['guardRail_type', '2-Line Steel Pipe Guardrail 1 1/4" Sch. 40 Pipe Rails and SCH. 80 Post', '2-Line Steel Pipe Guardrail 1 1/4" Sch. 40 Pipe Rails and SCH. 80 Post', 7],
-      ['guardRail_type', '2-Line Steel Pipe Guardrail 1 1/2" Sch. 40 Pipe Rails and SCH. 80 Post', '2-Line Steel Pipe Guardrail 1 1/2" Sch. 40 Pipe Rails and SCH. 80 Post', 8],
-      ['guardRail_type', '3-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and Posts', '3-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and Posts', 9],
-      ['guardRail_type', '3-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and Posts', '3-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and Posts', 10],
-      ['guardRail_type', '3-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and SCH. 80 Posts', '3-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and SCH. 80 Posts', 11],
-      ['guardRail_type', '3-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and SCH. 80 Posts', '3-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and SCH. 80 Posts', 12],
-      ['guardRail_type', '8-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and Posts', '8-Line Steel Pipe Guardrail 1 1/4" SCH. 40 Pipe Rails and Posts', 13],
-      ['guardRail_type', '8-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and Posts', '8-Line Steel Pipe Guardrail 1 1/2" SCH. 40 Pipe Rails and Posts', 14],
-      ['guardRail_type', '2-Line Picket Guardrail w/1/2" pickets - 1 1/4" Pipe Rails and Post', '2-Line Picket Guardrail w/1/2" pickets - 1 1/4" Pipe Rails and Post', 15],
-      ['guardRail_type', '2-Line Picket Guardrail w/1/2" pickets - 1 1/2" Pipe Rails and Post', '2-Line Picket Guardrail w/1/2" pickets - 1 1/2" Pipe Rails and Post', 16],
-      ['guardRail_type', '2-Line Picket Guardrail w/1/2" pickets - 1 1/4" Pipe Rails and SCH 80 Post', '2-Line Picket Guardrail w/1/2" pickets - 1 1/4" Pipe Rails and SCH 80 Post', 17],
-      ['guardRail_type', '2-Line Picket Guardrail w/1/2" pickets - 1 1/2" Pipe Rails and SCH 80 Post', '2-Line Picket Guardrail w/1/2" pickets - 1 1/2" Pipe Rails and SCH 80 Post', 18],
-      ['guardRail_type', '2-Line Picket Guardrail w/3/4" pickets - 1 1/4" Pipe Rails and Post', '2-Line Picket Guardrail w/3/4" pickets - 1 1/4" Pipe Rails and Post', 19],
-      ['guardRail_type', '2-Line Picket Guardrail w/3/4" pickets - 1 1/2" Pipe Rails and Post', '2-Line Picket Guardrail w/3/4" pickets - 1 1/2" Pipe Rails and Post', 20],
-      ['guardRail_type', '2-Line Picket Guardrail w/3/4" pickets - 1 1/4" Pipe Rails and SCH 80 Post', '2-Line Picket Guardrail w/3/4" pickets - 1 1/4" Pipe Rails and SCH 80 Post', 21],
-      ['guardRail_type', '2-Line Picket Guardrail w/3/4" pickets - 1 1/2" Pipe Rails and SCH 80 Post', '2-Line Picket Guardrail w/3/4" pickets - 1 1/2" Pipe Rails and SCH 80 Post', 22],
-      ['guardRail_type', '3-Line Picket Guardrail w/1/2" pickets - 1 1/4" SCH 40 Rails and Post', '3-Line Picket Guardrail w/1/2" pickets - 1 1/4" SCH 40 Rails and Post', 23],
-      ['guardRail_type', '3-Line Picket Guardrail w/1/2" pickets - 1 1/2" SCH 40 Rails and Post', '3-Line Picket Guardrail w/1/2" pickets - 1 1/2" SCH 40 Rails and Post', 24],
-      ['guardRail_type', '3-Line Picket Guardrail w/1/2" pickets - 1 1/4" SCH 40 Rails and SCH 80 Post', '3-Line Picket Guardrail w/1/2" pickets - 1 1/4" SCH 40 Rails and SCH 80 Post', 25],
-      ['guardRail_type', '3-Line Picket Guardrail w/1/2" pickets - 1 1/2" SCH 40 Rails and SCH 80 Post', '3-Line Picket Guardrail w/1/2" pickets - 1 1/2" SCH 40 Rails and SCH 80 Post', 26],
-      ['guardRail_type', '3-Line Picket Guardrail w/3/4" pickets - 1 1/4" SCH 40 Rails and Post', '3-Line Picket Guardrail w/3/4" pickets - 1 1/4" SCH 40 Rails and Post', 27],
-      ['guardRail_type', '3-Line Picket Guardrail w/3/4" pickets - 1 1/2" SCH 40 Rails and Post', '3-Line Picket Guardrail w/3/4" pickets - 1 1/2" SCH 40 Rails and Post', 28],
-      ['guardRail_type', '3-Line Picket Guardrail w/3/4" pickets - 1 1/4" SCH 40 Rails and SCH 80 Post', '3-Line Picket Guardrail w/3/4" pickets - 1 1/4" SCH 40 Rails and SCH 80 Post', 29],
-      ['guardRail_type', '3-Line Picket Guardrail w/3/4" pickets - 1 1/2" SCH 40 Rails and SCH 80 Post', '3-Line Picket Guardrail w/3/4" pickets - 1 1/2" SCH 40 Rails and SCH 80 Post', 30],
-      ['guardRail_type', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/4 SCH 40 RAILS AND POST', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/4 SCH 40 RAILS AND POST', 31],
-      ['guardRail_type', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2 SCH 40 RAILS AND POST', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2 SCH 40 RAILS AND POST', 32],
-      ['guardRail_type', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/4 SCH 40 RAILS AND SCH 80 POST', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/4 SCH 40 RAILS AND SCH 80 POST', 33],
-      ['guardRail_type', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2 SCH 40 RAILS AND SCH 80 POST', '2-LINE STEEL PIPE GUARDRAIL W/ MESH PANEL INFILLS- 1 1/2 SCH 40 RAILS AND SCH 80 POST', 34],
-
-      ['stringer_size', 'W8x31', 'W8x31', 1],
-      ['stringer_size', 'W10x33', 'W10x33', 2],
-      ['stringer_size', 'W12x35', 'W12x35', 3],
-      ['stringer_size', 'W12x40', 'W12x40', 4],
-      ['stringer_size', 'W12x50', 'W12x50', 5],
-      ['stringer_size', 'W14x43', 'W14x43', 6],
-      ['stringer_size', 'MC12x10.6', 'MC12x10.6', 7],
-      ['stringer_size', 'C12x20.7', 'C12x20.7', 8],
-      ['stringer_size', 'C15x33.9', 'C15x33.9', 9],
     ];
 
-    if (req.body.force) await db.query('DELETE FROM dictionary', []);
+    if (req.body.force) await db.query('DELETE FROM dictionary WHERE admin_owner_id IS NULL', []);
 
     for (const item of initialData) {
+      // admin_owner_id = NULL means "global default visible to all"
       await db.query(
-        'INSERT INTO dictionary (category, label, value, [order], isActive) VALUES (?, ?, ?, ?, 1)',
+        'INSERT INTO dictionary (category, label, value, [order], isActive, admin_owner_id) VALUES (?, ?, ?, ?, 1, NULL)',
         item
       );
     }
 
-    const [finalCount] = await db.query('SELECT COUNT(*) as count FROM dictionary', []);
+    const [finalCount] = await db.query('SELECT COUNT(*) as count FROM dictionary WHERE admin_owner_id IS NULL', []);
     res.json({ success: true, count: finalCount[0].count });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

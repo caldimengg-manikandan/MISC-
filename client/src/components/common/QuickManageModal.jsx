@@ -390,7 +390,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
               <>
                 {allEntries.map((entry, index) => {
                   const isEditing = editingId === (entry.id || entry._id);
-                  const isDefault = entry.isDefault;
+                  const isDefault = entry.isDefault || entry.isGlobalDefault;
                   return (
                     <div key={entry.id || entry._id || `idx-${index}`} className={`quick-entry-item ${isEditing ? 'is-editing' : ''} ${isDefault ? 'default-item' : ''}`} style={{ 
                       display: 'grid', 
@@ -467,7 +467,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                         <>
                           <div className="entry-label" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {entry.label}
-                            {isDefault && <span className="default-badge" style={{ marginLeft: '8px' }}>System Default</span>}
+                            {(entry.isGlobalDefault || entry.isDefault) && <span className="default-badge" style={{ marginLeft: '8px' }}>System Default</span>}
                           </div>
                           {hasBenchmarkFields ? (
                             <>

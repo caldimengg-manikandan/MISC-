@@ -9,7 +9,8 @@ const flightCalcService = require('../services/calculation/StairFlightCalculatio
  */
 router.post('/stair-flight', async (req, res) => {
   try {
-    const result = await flightCalcService.calculateFlightAndStringers(req.body);
+    const adminOwnerId = req.userRole === 'admin' || req.userRole === 'superadmin' ? req.userId : req.user.admin_owner_id;
+    const result = await flightCalcService.calculateFlightAndStringers({ ...req.body, adminOwnerId });
     if (!result.success) return res.status(400).json(result);
     return res.json(result);
   } catch (err) {
@@ -20,7 +21,8 @@ router.post('/stair-flight', async (req, res) => {
 
 router.post('/stair-flight-full', async (req, res) => {
   try {
-    const result = await flightCalcService.calculateFlightAndStringers(req.body);
+    const adminOwnerId = req.userRole === 'admin' || req.userRole === 'superadmin' ? req.userId : req.user.admin_owner_id;
+    const result = await flightCalcService.calculateFlightAndStringers({ ...req.body, adminOwnerId });
     if (!result.success) return res.status(400).json(result);
     return res.json(result);
   } catch (err) {
@@ -35,7 +37,8 @@ router.post('/stair-flight-full', async (req, res) => {
 router.post('/full', async (req, res) => {
   try {
     const { debug = false } = req.query;
-    const result = await calcService.calculateFull(req.body, debug === 'true');
+    const adminOwnerId = req.userRole === 'admin' || req.userRole === 'superadmin' ? req.userId : req.user.admin_owner_id;
+    const result = await calcService.calculateFull({ ...req.body, adminOwnerId }, debug === 'true');
     
     if (!result) {
       return res.status(400).json({ success: false, message: 'Invalid or empty payload' });
@@ -56,7 +59,8 @@ router.post('/full', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const result = await calcService.calculateFull(req.body, false);
+    const adminOwnerId = req.userRole === 'admin' || req.userRole === 'superadmin' ? req.userId : req.user.admin_owner_id;
+    const result = await calcService.calculateFull({ ...req.body, adminOwnerId }, false);
     if (!result) return res.status(400).json({ success: false });
     res.json({ success: true, ...result });
   } catch (error) {
@@ -69,7 +73,8 @@ router.post('/', async (req, res) => {
  */
 router.post('/calculate', async (req, res) => {
   try {
-    const result = await calcService.calculateFull(req.body, false);
+    const adminOwnerId = req.userRole === 'admin' || req.userRole === 'superadmin' ? req.userId : req.user.admin_owner_id;
+    const result = await calcService.calculateFull({ ...req.body, adminOwnerId }, false);
     if (!result) return res.status(400).json({ success: false });
     res.json({ success: true, ...result });
   } catch (error) {
