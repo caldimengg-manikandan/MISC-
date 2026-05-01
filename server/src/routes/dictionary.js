@@ -15,14 +15,15 @@ const adminOnly = (req, res, next) => {
 // @desc    Get all active dictionary entries for a category
 router.get('/:category', async (req, res) => {
   try {
+    console.log(`[Dictionary] Fetching category: ${req.params.category}`);
     const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax FROM dictionary WHERE category = ? AND isActive = 1 ORDER BY [order] ASC, label ASC',
+      'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive FROM dictionary WHERE category = ? AND (isActive = 1 OR isActive IS NULL) ORDER BY [order] ASC, label ASC',
       [req.params.category]
     );
 
+    console.log(`[Dictionary] Found ${entries.length} entries for ${req.params.category}`);
+
     // 🔧 CRITICAL FIX: MSSQL NVARCHAR columns return numeric values as strings.
-    // The frontend uses strict comparison (=== widthBucket where widthBucket is a number),
-    // so we must cast all numeric fields to actual numbers before sending to the client.
     const normalized = entries.map(e => ({
       ...e,
       steelLbsLf: e.steelLbsLf != null ? parseFloat(e.steelLbsLf) : null,
@@ -35,6 +36,7 @@ router.get('/:category', async (req, res) => {
 
     res.json({ success: true, data: normalized });
   } catch (err) {
+    console.error(`[Dictionary] Error fetching ${req.params.category}:`, err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -66,7 +68,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO dictionary (category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)',
       [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null]
     );
 

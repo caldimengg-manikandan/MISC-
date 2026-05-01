@@ -118,6 +118,10 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     stringerSizes: DEFAULT_STRINGER_SIZES,
     finishes: DEFAULT_FINISH_OPTIONS,
     connections: DEFAULT_CONNECTION_TYPES,
+    mountingTypes: [
+      { value: 'anchored', label: 'Anchored' },
+      { value: 'embedded', label: 'Embedded' }
+    ],
     steelGrades: ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
   });
 
@@ -136,13 +140,14 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
       } catch (e) { return []; }
     };
 
-    const [st, gt, ss, fo, ct, sg] = await Promise.all([
+    const [st, gt, ss, fo, ct, sg, mt] = await Promise.all([
       fetchList('stair_type'),
       fetchList('grating_type'),
       fetchList('stringer_size'),
       fetchList('finish_option'),
       fetchList('connection_type'),
-      fetchList('steel_grade_stair')
+      fetchList('steel_grade_stair'),
+      fetchList('mounting_type')
     ]);
 
     setDropdowns({
@@ -152,6 +157,10 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
       stringerSizesData: ss,
       finishes: fo.length > 0 ? fo.map(i => i.label || i.value) : DEFAULT_FINISH_OPTIONS,
       connections: ct.length > 0 ? ct.map(i => i.label || i.value) : DEFAULT_CONNECTION_TYPES,
+      mountingTypes: mt.length > 0 ? mt : [
+        { value: 'anchored', label: 'Anchored' },
+        { value: 'embedded', label: 'Embedded' }
+      ],
       steelGrades: sg.length > 0 ? sg.map(i => i.label || i.value) : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
     });
   }, []);
@@ -436,10 +445,7 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
               )}
             </label>
             <SearchableSelect 
-              options={[
-                { value: 'anchored', label: 'Anchored' },
-                { value: 'embedded', label: 'Embedded' }
-              ]}
+              options={dropdowns.mountingTypes.map(m => ({ value: m.value || m, label: m.label || m }))}
               valueKey="value"
               displayKey="label"
               value={form.mountingType}

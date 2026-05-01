@@ -117,6 +117,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
       });
       const data = await res.json();
       if (data.success) {
+        console.log(`[QuickManage] Fetched ${data.data?.length} entries for ${category}:`, data.data);
         setEntries(data.data || []);
       }
     } catch (e) {
@@ -130,12 +131,17 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     if (isOpen) fetchEntries();
   }, [isOpen]);
 
-  // Merge database entries with defaults if defaults aren't already represented in entries
-  const allDisplayEntries = [...entries];
-  const dbLabels = new Set(entries.map(e => e.label));
-  
-  // Only show defaults if database is empty for this category
-  // OR optionally: show unique ones. Let's stick to showing defaults if DB is empty for now to match user expectation of "having its existing list"
+  // Merge database entries with defaults
+  const dbLabels = new Set(entries.map(e => (e.label || '').toLowerCase()));
+  const mergedDefaults = defaultOptions
+    .filter(opt => !dbLabels.has((opt.label || opt.value || opt).toString().toLowerCase()))
+    .map(opt => ({
+      label: opt.label || opt.value || opt,
+      value: opt.value || opt.label || opt,
+      isDefault: true
+    }));
+
+  const allEntries = [...entries, ...mergedDefaults];
   const showDefaults = entries.length === 0 && defaultOptions.length > 0;
 
   const handleAdd = async (e) => {
@@ -382,14 +388,16 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
             </div>
             {loading ? <div className="loading-txt">Loading...</div> : (
               <>
-                {entries.map((entry, index) => {
+                {allEntries.map((entry, index) => {
                   const isEditing = editingId === (entry.id || entry._id);
+                  const isDefault = entry.isDefault;
                   return (
-                    <div key={entry.id || entry._id || index} className={`quick-entry-item ${isEditing ? 'is-editing' : ''}`} style={{ 
+                    <div key={entry.id || entry._id || `idx-${index}`} className={`quick-entry-item ${isEditing ? 'is-editing' : ''} ${isDefault ? 'default-item' : ''}`} style={{ 
                       display: 'grid', 
                       gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 80px' : (category === 'stringer_size' ? '40px 1fr 100px 80px 80px 80px 80px 80px 80px' : '40px 1fr 140px 140px 140px 80px'), 
                       fontSize: '12px',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      opacity: isDefault ? 0.7 : 1
                     }}>
                       <div className="sno" style={{ opacity: 0.5, fontWeight: 700 }}>{index + 1}.</div>
                       
@@ -457,7 +465,10 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                         </>
                       ) : (
                         <>
-                          <div className="entry-label" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.label}</div>
+                          <div className="entry-label" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {entry.label}
+                            {isDefault && <span className="default-badge" style={{ marginLeft: '8px' }}>System Default</span>}
+                          </div>
                           {hasBenchmarkFields ? (
                             <>
                               <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.steelLbsLf || 0)}</div>
@@ -488,6 +499,10 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                               <X size={14} />
                             </button>
                           </>
+                        ) : isDefault ? (
+                          <div className="del-placeholder" title="System defaults cannot be deleted. Add as custom to manage.">
+                            <Trash2 size={14} style={{ opacity: 0.3 }} />
+                          </div>
                         ) : (
                           <>
                             <button onClick={() => handleEditClick(entry)} className="edit-btn" title="Edit">
