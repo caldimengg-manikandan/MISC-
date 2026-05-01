@@ -126,7 +126,7 @@ export default function ToolsDock() {
   }, [themeMode]);
 
   const handleAddNote = async () => {
-    if (!selectedEstimation?.id) return;
+    // Note: We no longer return early if !selectedEstimation?.id, allowing notes in Draft Mode
     
     // Add cascading offset so multiple notes don't spawn completely invisible under each other
     const noteCount = notes?.length || 0;
@@ -137,7 +137,7 @@ export default function ToolsDock() {
     const spawnY = Math.round(window.innerHeight / 2 - 120) + cascadeOffset;
     try {
       await addNote({
-        projectId: selectedEstimation.id,
+        projectId: selectedEstimation?.id || null,
         title: 'New Note',
         content: '',
         note_type: 'personal',

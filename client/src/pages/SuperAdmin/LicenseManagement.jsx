@@ -27,7 +27,15 @@ const LicenseManagement = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLicense, setEditingLicense] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
+  // Edit Form State
+  const [editFormData, setEditFormData] = useState({
+    maxEstimators: 10,
+    validUntil: '',
+    notes: ''
+  });
   // New License Form State
   const [formData, setFormData] = useState({
     adminEmail: '',
@@ -85,6 +93,31 @@ const LicenseManagement = () => {
       fetchLicenses();
     } catch (err) {
       toast.error('Update failed');
+    }
+  };
+
+  const handleEditClick = (license) => {
+    setEditingLicense(license);
+    setEditFormData({
+      maxEstimators: license.max_estimators,
+      validUntil: new Date(license.valid_until).toISOString().split('T')[0],
+      notes: license.notes || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateLicense = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      await api.patch(`/superadmin/licenses/${editingLicense.id}`, editFormData);
+      toast.success('License updated successfully');
+      setIsEditModalOpen(false);
+      fetchLicenses();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update license');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -243,7 +276,11 @@ const LicenseManagement = () => {
                         >
                           <ShieldCheck className="w-4 h-4" />
                         </button>
-                        <button className="p-2 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all text-slate-400">
+                        <button 
+                          onClick={() => handleEditClick(license)}
+                          className="p-2 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition-all text-slate-400"
+                          title="Edit License"
+                        >
                           <MoreVertical className="w-4 h-4" />
                         </button>
                       </div>
@@ -378,6 +415,104 @@ const LicenseManagement = () => {
                     className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
                   >
                     {loading ? <RefreshCw className="w-5 h-5 animate-spin mx-auto" /> : 'Issue License & Invite'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center border border-indigo-100">
+                    <RefreshCw className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Edit License</h3>
+                    <p className="text-xs text-slate-500 font-mono">{editingLicense?.license_key}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateLicense} className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-500 ml-1">Estimator Slots (Usage)</label>
+                    <div className="relative">
+                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                        type="number"
+                        required
+                        min="1"
+                        value={editFormData.maxEstimators}
+                        onChange={(e) => setEditFormData({...editFormData, maxEstimators: parseInt(e.target.value)})}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-500 ml-1">Valid Until (Validity)</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                        type="date"
+                        required
+                        value={editFormData.validUntil}
+                        onChange={(e) => setEditFormData({...editFormData, validUntil: e.target.value})}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-500 ml-1">Private Notes</label>
+                  <textarea 
+                    rows="3"
+                    value={editFormData.notes}
+                    onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})}
+                    placeholder="Update reference, contract info, etc."
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+                  >
+                    {loading ? <RefreshCw className="w-5 h-5 animate-spin mx-auto" /> : 'Update License'}
                   </button>
                 </div>
               </form>

@@ -66,7 +66,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO dictionary (category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)',
       [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null]
     );
 
@@ -222,7 +222,7 @@ router.post('/seed/initial', auth, adminOnly, async (req, res) => {
 
     for (const item of initialData) {
       await db.query(
-        'INSERT INTO dictionary (category, label, value, [order]) VALUES (?, ?, ?, ?)',
+        'INSERT INTO dictionary (category, label, value, [order], isActive) VALUES (?, ?, ?, ?, 1)',
         item
       );
     }

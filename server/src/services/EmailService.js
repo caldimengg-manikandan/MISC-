@@ -16,13 +16,19 @@ function getTransporter() {
 
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
+    port: parseInt(process.env.SMTP_PORT || '465'),
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    tls: { rejectUnauthorized: false },
+    tls: { 
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
   return transporter;
 }
@@ -33,12 +39,18 @@ async function send(to, subject, html) {
     console.log(`[EmailService STUB] To: ${to} | Subject: ${subject}`);
     return;
   }
-  await t.sendMail({
-    from: `"MISC Pro" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to,
-    subject,
-    html,
-  });
+  try {
+    await t.sendMail({
+      from: `"MISC Pro" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[EmailService] Email sent successfully to ${to}`);
+  } catch (err) {
+    console.error(`[EmailService] Failed to send email to ${to}:`, err.message);
+    throw err; // Re-throw to be caught by route handler
+  }
 }
 
 // ── OTP email (device-change detection) ──────────────────────────────────────

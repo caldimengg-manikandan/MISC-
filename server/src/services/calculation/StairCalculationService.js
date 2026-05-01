@@ -298,53 +298,64 @@ class StairCalculationService {
         const width = s.stairWidth || s.width;
         const widthFt = parseToFeet(width);
 
-        // 📐 GEOMETRY ENGINE INTEGRATION (Strict Tekla Logic)
-        let geometry = null;
-        try {
-          geometry = calculateStairGeometry({
-            totalHeight: s.totalHeight,
-            tread: s.run,
-            rise: s.rise,
-            risers: s.numRisers || s.risers
-          });
-        } catch (e) {
-          if (this.debug) console.warn(`[ENGINE OMIT] Invalid geometry for stair: ${e.message}`);
-        }
+        const calcTakeoff = (st) => {
+          let geometry = null;
+          try {
+            geometry = calculateStairGeometry({
+              totalHeight: st.totalHeight,
+              tread: st.run || st.tread,
+              rise: st.rise,
+              risers: st.numRisers || st.risers
+            });
+          } catch (e) {
+            if (this.debug) console.warn(`[ENGINE OMIT] Invalid geometry for stair/flight: ${e.message}`);
+          }
 
-        const risers = geometry ? geometry.risers : 0;
-        const totalRunFt = geometry ? geometry.totalRun : 0;
-        const diagonalFt = geometry ? geometry.stringerLength : 0;
-        const slopeDeg = geometry ? geometry.angle : 0;
-        const panArea = widthFt * totalRunFt;
+          const risers = geometry ? geometry.risers : 0;
+          const totalRunFt = geometry ? geometry.totalRun : 0;
+          const diagonalFt = geometry ? geometry.stringerLength : 0;
+          const slopeDeg = geometry ? geometry.angle : 0;
+          const panArea = (st.widthFt || widthFt) * totalRunFt;
 
-        // Extents (summing normalized feet)
-        const nsBot = parseToFeet(s.nsStringerBot);
-        const fsBot = parseToFeet(s.fsStringerBot);
-        const nsTop = parseToFeet(s.nsStringerTop);
-        const fsTop = parseToFeet(s.fsStringerTop);
+          const nsBot = parseToFeet(st.nsStringerBot);
+          const fsBot = parseToFeet(st.fsStringerBot);
+          const nsTop = parseToFeet(st.nsStringerTop);
+          const fsTop = parseToFeet(st.fsStringerTop);
 
-        const nsTrueLength = diagonalFt + nsBot + nsTop;
-        const fsTrueLength = diagonalFt + fsBot + fsTop;
-        const totalLFBothStringers = nsTrueLength + fsTrueLength;
+          const nsTrueLength = diagonalFt + nsBot + nsTop;
+          const fsTrueLength = diagonalFt + fsBot + fsTop;
+          const totalLFBothStringers = nsTrueLength + fsTrueLength;
 
-        this.addTrace(`stair_${s.id}_takeoff`, 'Tekla Geometry (Feet)',
-          { H: parseToFeet(s.totalHeight, 'IN'), Run: parseToFeet(s.run, 'IN') },
-          { risers, totalRunFt, diagonalFt, slopeDeg, panArea });
+          return {
+            ...st,
+            geometry,
+            risers,
+            widthFt: st.widthFt || widthFt,
+            heightFt: parseToFeet(st.totalHeight, 'IN'),
+            totalRunFt: this.roundExcel(totalRunFt, 3),
+            slope: this.roundExcel(slopeDeg, 2),
+            stringerLength: this.roundExcel(Math.max(nsTrueLength, fsTrueLength), 2),
+            nsTrueLength: this.roundExcel(nsTrueLength, 2),
+            fsTrueLength: this.roundExcel(fsTrueLength, 2),
+            totalLFBothStringers: this.roundExcel(totalLFBothStringers, 2),
+            panArea: this.roundExcel(panArea, 2),
+            isCompliant: slopeDeg >= 30 && slopeDeg <= 38
+          };
+        };
+
+        const mainTakeoff = calcTakeoff(s);
+        const flightTakeoffs = (s.flights || []).map(fl => calcTakeoff({
+          ...fl,
+          stairType: fl.stairType || s.stairType,
+          stringerType: fl.stringerType || s.stringerType,
+          stringerSize: fl.stringerSize || s.stringerSize,
+          stairWidth: fl.stairWidth || s.stairWidth,
+          widthFt: parseToFeet(fl.stairWidth || fl.width || width)
+        }));
 
         return {
-          ...s,
-          geometry, // Pass to estimating phase
-          risers,
-          widthFt: this.roundExcel(widthFt, 4), // ✅ Pass resolved width to estimate phase for panLbs
-          heightFt: parseToFeet(s.totalHeight, 'IN'),
-          totalRunFt: this.roundExcel(totalRunFt, 3),
-          slope: this.roundExcel(slopeDeg, 2),
-          stringerLength: this.roundExcel(Math.max(nsTrueLength, fsTrueLength), 2),
-          nsTrueLength: this.roundExcel(nsTrueLength, 2),
-          fsTrueLength: this.roundExcel(fsTrueLength, 2),
-          totalLFBothStringers: this.roundExcel(totalLFBothStringers, 2),
-          panArea: this.roundExcel(panArea, 2),
-          isCompliant: slopeDeg >= 30 && slopeDeg <= 38
+          ...mainTakeoff,
+          flights: flightTakeoffs
         };
       }),
       config: input.config || {}
@@ -759,339 +770,291 @@ class StairCalculationService {
 
 
       stairs: await Promise.all((takeoff.stairs || []).map(async s => {
-        const stairTypeLabel = (s.stairType || '').toUpperCase();
-        const hasFlights = s.flights && s.flights.length > 0;
+        const estimateStair = async (st) => {
+          const stairTypeLabel = (st.stairType || '').toUpperCase();
+          const geometry = st.geometry;
+          const risers = st.risers || 0;
+          const treads = geometry ? geometry.treads : (risers > 0 ? risers - 1 : 0);
+          const hasGeometry = (st.totalLFBothStringers > 0 && risers > 0) || (geometry !== null);
 
-        // 📐 GEOMETRY ENGINE ALREADY RESOLVED IN TAKEOFF
-        const geometry = s.geometry;
-        const risers = s.risers || 0;
-        const treads = geometry ? geometry.treads : (risers > 0 ? risers - 1 : 0);
-        const actualRise = geometry ? geometry.actualRise : 0;
+          let strLbs = 0;
+          let panLbs = 0;
+          let shopHrs = 0;
+          let fieldHrs = 0;
 
-        const hasGeometry = (s.totalLFBothStringers > 0 && risers > 0) || (geometry !== null);
+          if (!hasGeometry) {
+            return {
+              ...st,
+              totalWeight: 0, shopHours: 0, fieldHours: 0, totalCost: 0,
+              systemCalc: { risers: 0, baseSteelLbs: 0, scrapLbs: 0, shopTotalHrs: 0, fieldTotalHrs: 0, mountingCharge: 0 }
+            };
+          }
 
-        let strLbs = 0;
-        let panLbs = 0;
-        let shopHrs = 0;
-        let fieldHrs = 0;
+          let baseRiserShopHrs = 0;
+          let baseRiserFieldHrs = 0;
+          let resolvedWidth = st.widthFt || 5.0;
 
-        // 🔒 ENGINE RULE: No flights AND no local geometry = No weight. Period.
-        if (!hasFlights && !hasGeometry) {
-          return {
-            ...s,
-            totalWeight: 0, shopHours: 0, fieldHours: 0, totalCost: 0,
-            systemCalc: { risers: 0, baseSteelLbs: 0, scrapLbs: 0, shopTotalHrs: 0, fieldTotalHrs: 0, mountingCharge: 0 }
-          };
-        }
+          if (stairTypeLabel.includes('PAN')) {
+            strLbs = 10.600;
+            panLbs = resolvedWidth * 10.0;
+            baseRiserShopHrs = 1.350;
+            baseRiserFieldHrs = 0.900;
+            shopHrs = 0.150;
+            fieldHrs = 0.100;
+          } else if (stairTypeLabel.includes('GRATING')) {
+            strLbs = 10.600;
+            panLbs = resolvedWidth * 10.0;
+            baseRiserShopHrs = 1.250;
+            baseRiserFieldHrs = 0.850;
+            shopHrs = 0.150;
+            fieldHrs = 0.100;
+          }
 
-        let baseRiserShopHrs = 0;
-        let baseRiserFieldHrs = 0;
-
-        // Use generic fallbacks ONLY if it's a known stair type that has contents but missing detailed data
-        // 🏗️ STRENGTHENED METHODOLOGY: Extract width from label if not provided in geometry
-        let resolvedWidth = s.widthFt || 5.0;
-        if (!s.widthFt || s.widthFt === 5.0) {
-           const labelWidthMatch = (s.stringerSize || '').match(/(\d+)'?-(\d*)"?\s+wide/i);
-           if (labelWidthMatch) {
-              const ft = parseFloat(labelWidthMatch[1]);
-              const inc = parseFloat(labelWidthMatch[2] || 0);
-              resolvedWidth = ft + (inc / 12);
-              console.log(`[STAIR ENGINE] 📏 Extracted width from label: ${resolvedWidth} ft`);
-           }
-        }
-
-        if (stairTypeLabel.includes('PAN')) {
-          strLbs = 10.600;
-          // 🔄 EXCEL PARITY MATCH: Engine calculates pan mass as (Width * 10 lbs/sqft) per riser.
-          panLbs = resolvedWidth * 10.0;
-          baseRiserShopHrs = 1.350;
-          baseRiserFieldHrs = 0.900;
-          shopHrs = 0.150;
-          fieldHrs = 0.100;
-        } else if (stairTypeLabel.includes('GRATING')) {
-          strLbs = 10.600;
-          // 🔄 EXCEL PARITY MATCH: Even in grating mode, pan mass (Width * 10 lbs/sqft) per riser 
-          // must be calculated to ensure finish (galvanize/powder) lbs are accurate.
-          panLbs = resolvedWidth * 10.0;
-          baseRiserShopHrs = 1.250;
-          baseRiserFieldHrs = 0.850;
-          shopHrs = 0.150;
-          fieldHrs = 0.100;
-        }
-
-        const src = s.stringerSize || '';
-
-        // 🔍 Stage 1: Absolute Exact Match (Zero cleaning - literal check)
-        const [exactMatch] = await db.query(
-          `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
-           WHERE (UPPER(TRIM(label)) = UPPER(TRIM(?)) OR UPPER(TRIM(value)) = UPPER(TRIM(?)))
-           AND category = 'stringer_size'`,
-          [src, src]
-        );
-
-        if (exactMatch.length > 0 && exactMatch[0].steelLbsLf !== null) {
-          strLbs = parseFloat(exactMatch[0].steelLbsLf);
-          shopHrs = parseFloat(exactMatch[0].shopLaborMhLf || shopHrs);
-          fieldHrs = parseFloat(exactMatch[0].fieldLaborMhLf || fieldHrs);
-          console.log(`[STAIR ENGINE] 🎯 Absolute Exact Match: "${src}" -> ${strLbs} lbs`);
-        } else {
-          const cleanFull = src.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-
-          // 🔍 Stage 2: Semi-Exact Match (Cleaned Alphanumeric only)
-          const [fullMatch] = await db.query(
+          const src = st.stringerSize || '';
+          const [exactMatch] = await db.query(
             `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
-             WHERE (
-               UPPER(REPLACE(REPLACE(REPLACE(label, ' ', ''), '.', ''), '-', '')) = ? 
-               OR UPPER(REPLACE(REPLACE(REPLACE(value, ' ', ''), '.', ''), '-', '')) = ?
-             ) 
-             AND category = ?`,
-            [cleanFull, cleanFull, 'stringer_size']
+             WHERE (UPPER(TRIM(label)) = UPPER(TRIM(?)) OR UPPER(TRIM(value)) = UPPER(TRIM(?)))
+             AND category = 'stringer_size'`,
+            [src, src]
           );
 
-          if (fullMatch.length > 0 && fullMatch[0].steelLbsLf !== null) {
-            strLbs = parseFloat(fullMatch[0].steelLbsLf);
-            shopHrs = parseFloat(fullMatch[0].shopLaborMhLf || shopHrs);
-            fieldHrs = parseFloat(fullMatch[0].fieldLaborMhLf || fieldHrs);
-            console.log(`[STAIR ENGINE] ✅ Cleaned Full Match: "${src}" -> ${strLbs} lbs`);
+          if (exactMatch.length > 0 && exactMatch[0].steelLbsLf !== null) {
+            strLbs = parseFloat(exactMatch[0].steelLbsLf);
+            shopHrs = parseFloat(exactMatch[0].shopLaborMhLf || shopHrs);
+            fieldHrs = parseFloat(exactMatch[0].fieldLaborMhLf || fieldHrs);
           } else {
-            // 🔍 Stage 3: Fallback Search - Metal Profile Extraction
-            let searchProfile = src;
-            if (src.includes('/')) {
-              searchProfile = src.split('/').pop().trim();
-            } else if (src.includes('MC') || src.includes('C ') || src.includes('TS')) {
-              const tokens = src.split(' ');
-              if (tokens.length > 3) searchProfile = tokens.slice(-4).join(' ');
-            }
-
-            const cleanSearch = searchProfile.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-
-            // Try internal benchmarks first as a sensible fallback
-            if (STRINGER_BENCHMARKS[cleanSearch]) {
-              strLbs = STRINGER_BENCHMARKS[cleanSearch].lbs;
-              shopHrs = STRINGER_BENCHMARKS[cleanSearch].shop;
-              fieldHrs = STRINGER_BENCHMARKS[cleanSearch].field;
-              console.log(`[STAIR ENGINE] 📍 Profile Match (Internal): "${cleanSearch}" -> ${strLbs} lbs`);
-            } else {
-              // Try regex weight extraction (e.g. MC 12 X 10.6)
-              const weightMatch = src.match(/X\s*(\d+(\.\d+)?)/i);
-              if (weightMatch) {
-                strLbs = parseFloat(weightMatch[1]);
-                shopHrs = 0.150;
-                fieldHrs = 0.100;
-                console.log(`[STAIR ENGINE] 🔍 Regex Weight Match: ${strLbs} lbs`);
-              }
-            }
-
-            // Stage 4: DB Profile Match (Exclude recipes from matching profiles broad-ly)
-            const [dictBenchmarks] = await db.query(
+            const cleanFull = src.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            const [fullMatch] = await db.query(
               `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
-               WHERE (
-                 UPPER(REPLACE(REPLACE(REPLACE(label, ' ', ''), '.', ''), '-', '')) = ? 
-                 OR UPPER(REPLACE(REPLACE(REPLACE(value, ' ', ''), '.', ''), '-', '')) = ?
-                 OR (label LIKE ? AND label NOT LIKE '%wide%' AND label NOT LIKE '%Std.%')
-               ) 
-               AND category = 'stringer_size'`,
-              [cleanSearch, cleanSearch, '%' + searchProfile + '%']
+               WHERE (UPPER(REPLACE(REPLACE(REPLACE(label, ' ', ''), '.', ''), '-', '')) = ? OR UPPER(REPLACE(REPLACE(REPLACE(value, ' ', ''), '.', ''), '-', '')) = ?) 
+               AND category = ?`,
+              [cleanFull, cleanFull, 'stringer_size']
             );
 
-            if (dictBenchmarks.length > 0 && dictBenchmarks[0].steelLbsLf !== null && dictBenchmarks[0].steelLbsLf > 0) {
-              strLbs = parseFloat(dictBenchmarks[0].steelLbsLf);
-              shopHrs = parseFloat(dictBenchmarks[0].shopLaborMhLf || shopHrs);
-              fieldHrs = parseFloat(dictBenchmarks[0].fieldLaborMhLf || fieldHrs);
-              console.log(`[STAIR ENGINE] 📊 DB Profile Hit: ${strLbs} lbs`);
+            if (fullMatch.length > 0 && fullMatch[0].steelLbsLf !== null) {
+              strLbs = parseFloat(fullMatch[0].steelLbsLf);
+              shopHrs = parseFloat(fullMatch[0].shopLaborMhLf || shopHrs);
+              fieldHrs = parseFloat(fullMatch[0].fieldLaborMhLf || fieldHrs);
+            } else {
+              let searchProfile = src;
+              if (src.includes('/')) {
+                searchProfile = src.split('/').pop().trim();
+              } else if (src.includes('MC') || src.includes('C ') || src.includes('TS')) {
+                const tokens = src.split(' ');
+                if (tokens.length > 3) searchProfile = tokens.slice(-4).join(' ');
+              }
+              const cleanSearch = searchProfile.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+
+              if (STRINGER_BENCHMARKS[cleanSearch]) {
+                strLbs = STRINGER_BENCHMARKS[cleanSearch].lbs;
+                shopHrs = STRINGER_BENCHMARKS[cleanSearch].shop;
+                fieldHrs = STRINGER_BENCHMARKS[cleanSearch].field;
+              } else {
+                const weightMatch = src.match(/X\s*(\d+(\.\d+)?)/i);
+                if (weightMatch) {
+                  strLbs = parseFloat(weightMatch[1]);
+                  shopHrs = 0.150;
+                  fieldHrs = 0.100;
+                }
+              }
+
+              const [dictBenchmarks] = await db.query(
+                `SELECT steelLbsLf, shopLaborMhLf, fieldLaborMhLf FROM dictionary 
+                 WHERE (UPPER(REPLACE(REPLACE(REPLACE(label, ' ', ''), '.', ''), '-', '')) = ? OR UPPER(REPLACE(REPLACE(REPLACE(value, ' ', ''), '.', ''), '-', '')) = ? OR (label LIKE ? AND label NOT LIKE '%wide%' AND label NOT LIKE '%Std.%')) 
+                 AND category = 'stringer_size'`,
+                [cleanSearch, cleanSearch, '%' + searchProfile + '%']
+              );
+
+              if (dictBenchmarks.length > 0 && dictBenchmarks[0].steelLbsLf !== null && dictBenchmarks[0].steelLbsLf > 0) {
+                strLbs = parseFloat(dictBenchmarks[0].steelLbsLf);
+                shopHrs = parseFloat(dictBenchmarks[0].shopLaborMhLf || shopHrs);
+                fieldHrs = parseFloat(dictBenchmarks[0].fieldLaborMhLf || fieldHrs);
+              }
             }
           }
-        }
 
-        // 🔄 EXCEL PARITY MATCH: Master standard recipes evaluate Stringer & Pan properties strictly on a PER RISER basis.
-        // Rule: Only identify as Recipe Mode if "Std." prefix is present. Avoid mass-threshold heuristics as they break heavy standard shapes.
-        const isRecipeMode = (src || '').toLowerCase().includes('std.') || (src || '').toLowerCase().includes('std ');
+          const isRecipeMode = (src || '').toLowerCase().includes('std.') || (src || '').toLowerCase().includes('std ');
+          let stringerBaseWeight = 0;
+          let shopHoursInternal = 0;
+          let fieldHoursInternal = 0;
 
-        let stringerBaseWeight = 0;
-        let shopHoursInternal = 0;
-        let fieldHoursInternal = 0;
+          if (isRecipeMode) {
+            stringerBaseWeight = risers * strLbs;
+            shopHoursInternal = risers * shopHrs;
+            fieldHoursInternal = risers * fieldHrs;
+          } else {
+            stringerBaseWeight = st.totalLFBothStringers * strLbs;
+            shopHoursInternal = (st.totalLFBothStringers * shopHrs) + (risers * baseRiserShopHrs);
+            fieldHoursInternal = (st.totalLFBothStringers * fieldHrs) + (risers * baseRiserFieldHrs);
+          }
 
-        if (isRecipeMode) {
-          // Exactly matches Excel: Qty.Riser * Coefficient
-          stringerBaseWeight = risers * strLbs;
-          shopHoursInternal = risers * shopHrs;
-          fieldHoursInternal = risers * fieldHrs;
-        } else {
-          // Standard geometric calculation for pure manual shapes
-          stringerBaseWeight = s.totalLFBothStringers * strLbs;
-          shopHoursInternal = (s.totalLFBothStringers * shopHrs) + (risers * baseRiserShopHrs);
-          fieldHoursInternal = (s.totalLFBothStringers * fieldHrs) + (risers * baseRiserFieldHrs);
-        }
+          const panTotalWeight = risers * panLbs;
+          let panPriceTotal = (stairTypeLabel.includes('PAN') || isRecipeMode) ? (panTotalWeight * panRate) : (panTotalWeight * steelPrice);
 
-        const panTotalWeight = risers * panLbs;
+          const totalUnitWeight = stringerBaseWeight + panTotalWeight;
+          let gratingTotalCost = 0;
+          if (stairTypeLabel.includes('GRATING') || (st.config && st.config.stairGrating === true)) {
+            const w = st.widthFt || 5;
+            let gratingTreadRate = 80.15;
+            if (w <= 3.5) gratingTreadRate = 56.10;
+            else if (w <= 4.0) gratingTreadRate = 64.12;
+            else if (w <= 4.5) gratingTreadRate = 72.15;
+            
+            const gratingKeyLookup = st.gratingTreadType || st.gratingType || '';
+            const gratingFactorKey = {
+              '1 1/4" Bar grating/Welded': 'grating_factor_bar_125_welded',
+              '1 1/4" Bar grating/Bolted': 'grating_factor_bar_125_bolted',
+              '1" Bar grating/Welded': 'grating_factor_bar_100_welded',
+              '1" Bar grating/Bolted': 'grating_factor_bar_100_bolted',
+              'McNichols treads': 'grating_factor_mcnichols',
+              'Other Pre-fabricated Treads': 'grating_factor_prefab',
+            }[gratingKeyLookup] ?? 'grating_factor_bar_125_welded';
+            
+            const treadFactor = configManager.get(gratingFactorKey, 1.00);
+            gratingTotalCost = gratingTreadRate * treadFactor * risers;
+            panPriceTotal = 0;
+          }
 
-        // 🔄 EXCEL PARITY MATCH: Master standard recipes isolate Stringer from Pans in pricing.
-        // Pan material is priced at a specific unit rate (typically $1.00/lb) while stringers use raw steel rate ($0.75/lb).
-        let panPriceTotal = (stairTypeLabel.includes('PAN') || isRecipeMode) ? (panTotalWeight * panRate) : (panTotalWeight * steelPrice);
+          const finishBaseLbs = stringerBaseWeight + panTotalWeight;
+          const isGalv = /GALV/i.test(st.finish || '');
+          const isPowder = /POWDER/i.test(st.finish || '');
 
-        const totalUnitWeight = stringerBaseWeight + panTotalWeight;
-        const totalSteelWithScrap = stringerBaseWeight * scrapMultiplier;
-
-        // 🔄 EXCEL PARITY MATCH: GRATING PRICING
-        // Evaluated based on Stair Width tiers matching benchmark matrix (Scaling up to $80.15 for 5FT).
-        let gratingTotalCost = 0;
-        if (stairTypeLabel.includes('GRATING') || (s.config && s.config.stairGrating === true)) {
-          const w = s.widthFt || 5;
-          let gratingTreadRate = 80.15; // default <= 5
-          if (w <= 3.5) gratingTreadRate = 56.10;
-          else if (w <= 4.0) gratingTreadRate = 64.12;
-          else if (w <= 4.5) gratingTreadRate = 72.15;
-          
-          const gratingKeyLookup = s.gratingTreadType || s.gratingType || '';
-          
-          const gratingFactorKey = {
-            '1 1/4" Bar grating/Welded':      'grating_factor_bar_125_welded',
-            '1 1/4" Bar grating/Bolted':      'grating_factor_bar_125_bolted',
-            '1" Bar grating/Welded':          'grating_factor_bar_100_welded',
-            '1" Bar grating/Bolted':          'grating_factor_bar_100_bolted',
-            'McNichols treads':               'grating_factor_mcnichols',
-            'Other Pre-fabricated Treads':    'grating_factor_prefab',
-          }[gratingKeyLookup] ?? 'grating_factor_bar_125_welded';
-          
-          const treadFactor = configManager.get(gratingFactorKey, 1.00);
-
-          gratingTotalCost = gratingTreadRate * treadFactor * risers;
-          panPriceTotal = 0; // Grating replaces pans
-        }
-
-        // 🔄 EXCEL PARITY MATCH: FINISH PRICING (Galvanize / Powder Coat)
-        // SUM($E$40,$C$44) = Stringer Base Lbs + Pans Total Lbs
-        const finishBaseLbs = stringerBaseWeight + panTotalWeight;
-        const isGalv = /GALV/i.test(s.finish || '');
-        const isPowder = /POWDER/i.test(s.finish || '');
-
-        let finishTotalCost = 0;
-        let galvShopHrs = 0;
-        let galvFieldHrs = 0;
-
-        if (isGalv || isPowder) {
-          // 🔄 EXCEL MATCH: Default finish rates configured to Standard Pricing (Galvanize: $0.75, Powder Coat: $1.7587). Pulled safely via getRate hierarchy.
-          const finishRate = isGalv ? getRate('galvanize_charge', 0.7500) : getRate('powder_coat_rate', 1.7587);
-          finishTotalCost = finishBaseLbs * finishRate;
+          let finishTotalCost = 0;
+          let galvShopHrs = 0;
+          let galvFieldHrs = 0;
 
           if (isGalv || isPowder) {
-            // Evaluates labor mapping directly compatible with the provided 'Galvanizing Labor' (Finish Labor) matrix scale
-            const galvMh = matchLabor(s.stringerSize || stairTypeLabel);
+            const finishRate = isGalv ? getRate('galvanize_charge', 0.7500) : getRate('powder_coat_rate', 1.7587);
+            finishTotalCost = finishBaseLbs * finishRate;
+            const galvMh = matchLabor(st.stringerSize || stairTypeLabel);
             galvShopHrs = risers * galvMh.shop;
             galvFieldHrs = risers * galvMh.field;
           }
-        }
 
-        // CONNECTION LABOR LOGIC
-        const weldedShopMH = getRate('welded_shop_mh', 0.5);
-        const weldedFieldMH = getRate('welded_field_mh', 0.25);
-        const boltedShopMH = getRate('bolted_shop_mh', 1.0);
-        const boltedFieldMH = getRate('bolted_field_mh', 0.5);
+          const weldedShopMH = getRate('welded_shop_mh', 0.5);
+          const weldedFieldMH = getRate('welded_field_mh', 0.25);
+          const boltedShopMH = getRate('bolted_shop_mh', 1.0);
+          const boltedFieldMH = getRate('bolted_field_mh', 0.5);
 
-        const connectionPoints = [
-          { extent: parseToFeet(s.nsStringerBot) || 0, conn: s.nsStringerConnBot || s.nsConnBot },
-          { extent: parseToFeet(s.fsStringerBot) || 0, conn: s.fsStringerConnBot || s.fsConnBot },
-          { extent: parseToFeet(s.nsStringerTop) || 0, conn: s.nsStringerConnTop || s.nsConnTop },
-          { extent: parseToFeet(s.fsStringerTop) || 0, conn: s.fsStringerConnTop || s.fsConnTop },
-        ];
-        
-        const activeConn = connectionPoints.filter(p => p.extent > 0);
-        const weldedCount = activeConn.filter(p => p.conn === 'Welded').length;
-        const boltedCount = activeConn.filter(p => p.conn === 'Bolted').length;
+          const connectionPoints = [
+            { extent: parseToFeet(st.nsStringerBot) || 0, conn: st.nsStringerConnBot || st.nsConnBot },
+            { extent: parseToFeet(st.fsStringerBot) || 0, conn: st.fsStringerConnBot || st.fsConnBot },
+            { extent: parseToFeet(st.nsStringerTop) || 0, conn: st.nsStringerConnTop || st.nsConnTop },
+            { extent: parseToFeet(st.fsStringerTop) || 0, conn: st.fsStringerConnTop || st.fsConnTop },
+          ];
+          
+          const activeConn = connectionPoints.filter(p => p.extent > 0);
+          const weldedCount = activeConn.filter(p => p.conn === 'Welded').length;
+          const boltedCount = activeConn.filter(p => p.conn === 'Bolted').length;
 
-        const extraShopHours = (weldedCount * weldedShopMH) + (boltedCount * boltedShopMH);
-        const extraFieldHours = (weldedCount * weldedFieldMH) + (boltedCount * boltedFieldMH);
+          const extraShopHours = (weldedCount * weldedShopMH) + (boltedCount * boltedShopMH);
+          const extraFieldHours = (weldedCount * weldedFieldMH) + (boltedCount * boltedFieldMH);
 
-        shopHoursInternal += extraShopHours;
-        fieldHoursInternal += extraFieldHours;
+          shopHoursInternal += extraShopHours;
+          fieldHoursInternal += extraFieldHours;
 
-        // ── Canonical Flow Steps (Benchmark Parity Handoff) ──
-        // 1. steelCost = steelLbsTotal × steel_price_per_lb
-        const steelPriceBase = stringerBaseWeight * steelPrice;
+          const steelPriceBase = stringerBaseWeight * steelPrice;
+          const scrapLbs = stringerBaseWeight * scrapPortion;
+          const scrapPriceOnly = scrapLbs * steelPrice;
 
-        // 2. scrapCost = scrapLbs × steel_price_per_lb
-        // 🔄 EXCEL PARITY: Scrap applies to Stringers only in stairs.
-        const scrapLbs = stringerBaseWeight * scrapPortion;
-        const scrapPriceOnly = scrapLbs * steelPrice;
+          const anchorBoltRate = configManager.get('anchor_bolt_rate', 0.025);
+          const embeddedRate = configManager.get('mounting_embedded_rate', 5.00);
+          const anchoredRate = configManager.get('mounting_anchored_rate', 6.00);
 
-        // 3. finishCost = finishRate × steelLbsTotal (never × scrap)
-        // Calculated above as finishTotalCost.
+          const mTypeVal = st.config?.mountingType || st.mountingType || '';
+          const mType = (mTypeVal && typeof mTypeVal === 'string') ? mTypeVal.toLowerCase() : '';
+          let porRokCost = 0;
+          let anchorBoltsCost = stringerBaseWeight * anchorBoltRate;
 
-        // 4. porRokCost = postQty × mountingRate (anchored=$6, embedded=$5)
-        // 5. anchorBoltsCost = steelLbsTotal × anchor_bolt_rate
-        const anchorBoltRate = configManager.get('anchor_bolt_rate', 0.025);
-        const embeddedRate = configManager.get('mounting_embedded_rate', 5.00);
-        const anchoredRate = configManager.get('mounting_anchored_rate', 6.00);
-
-        const mTypeVal = s.config?.mountingType || s.mountingType || '';
-        const mType = (mTypeVal && typeof mTypeVal === 'string') ? mTypeVal.toLowerCase() : '';
-        let porRokCost = 0;
-        let anchorBoltsCost = stringerBaseWeight * anchorBoltRate;
-
-        const isValidMType = mType !== '' && mType !== '0' && !mType.includes('select');
-        if (isValidMType) {
-          const stairConnCount = 4; // 2 stringers × 2 ends
-          if (mType.includes('embedded')) {
-            porRokCost = stairConnCount * embeddedRate;
-          } else if (mType.includes('anchored')) {
-            porRokCost = stairConnCount * anchoredRate;
+          const isValidMType = mType !== '' && mType !== '0' && !mType.includes('select');
+          if (isValidMType) {
+            const stairConnCount = 4;
+            if (mType.includes('embedded')) porRokCost = stairConnCount * embeddedRate;
+            else if (mType.includes('anchored')) porRokCost = stairConnCount * anchoredRate;
           }
-        }
 
-        // 6. subTotalMaterial = steelCost + panCost + gratingCost + finishCost + porRokCost + anchorBoltsCost (NO scrap)
-        const subTotalMaterial = steelPriceBase + panPriceTotal + gratingTotalCost + finishTotalCost + porRokCost + anchorBoltsCost;
+          const subTotalMaterial = steelPriceBase + panPriceTotal + gratingTotalCost + finishTotalCost + porRokCost + anchorBoltsCost;
+          const shopLaborCost = (shopHoursInternal + galvShopHrs) * shopRate;
+          const fieldLaborCost = (fieldHoursInternal + galvFieldHrs) * fieldRate;
+          const subTotalWithoutTax = subTotalMaterial + shopLaborCost + fieldLaborCost + scrapPriceOnly;
+          const taxRate_ = configManager.get('tax_rate', 0.06);
+          const taxTotal = subTotalMaterial * taxRate_;
+          const totalCostPerStair = subTotalWithoutTax + taxTotal;
 
-        // 7. subTotalWithoutTax = subTotalMaterial + shopLaborCost + fieldLaborCost + scrapCost
-        const shopLaborCost = (shopHoursInternal + galvShopHrs) * shopRate;
-        const fieldLaborCost = (fieldHoursInternal + galvFieldHrs) * fieldRate;
-        const subTotalWithoutTax = subTotalMaterial + shopLaborCost + fieldLaborCost + scrapPriceOnly;
+          return {
+            ...st,
+            totalWeight: this.roundExcel(totalUnitWeight + scrapLbs, 3),
+            shopHours: this.roundExcel(shopHoursInternal + galvShopHrs, 3),
+            fieldHours: this.roundExcel(fieldHoursInternal + galvFieldHrs, 3),
+            totalCost: this.roundExcel(totalCostPerStair, 2),
+            systemCalc: {
+              risers,
+              steelLbsPerLF: this.roundExcel(strLbs, 3),
+              shopMH: this.roundExcel(shopHrs, 3),
+              fieldMH: this.roundExcel(fieldHrs, 3),
+              totalSteel: this.roundExcel(stringerBaseWeight, 3),
+              scrapLbs: this.roundExcel(scrapLbs, 3),
+              scrapFactorPct: scrapFactorPct,
+              steelPriceBase: this.roundExcel(steelPriceBase, 2),
+              scrapPriceOnly: this.roundExcel(scrapPriceOnly, 2),
+              stairPansTotalPrice: this.roundExcel(panPriceTotal, 2),
+              gratingTotalCost: this.roundExcel(gratingTotalCost, 2),
+              finishTotalCost: this.roundExcel(finishTotalCost, 2),
+              porRokCost: this.roundExcel(porRokCost, 2),
+              anchorBoltsCost: this.roundExcel(anchorBoltsCost, 2),
+              subTotalMaterial: this.roundExcel(subTotalMaterial, 2),
+              shopLaborPrice: this.roundExcel(shopLaborCost, 2),
+              fieldLaborPrice: this.roundExcel(fieldLaborCost, 2),
+              shopTotalHrs: this.roundExcel(shopHoursInternal + galvShopHrs, 3),
+              fieldTotalHrs: this.roundExcel(fieldHoursInternal + galvFieldHrs, 3),
+              subTotalWithoutTax: this.roundExcel(subTotalWithoutTax, 2),
+              taxTotal: this.roundExcel(taxTotal, 2),
+              taxRatePct: taxRate_ * 100,
+              pricePerRiser: this.roundExcel(totalCostPerStair / (risers || 1), 2),
+              stairPansTotalWeight: this.roundExcel(panTotalWeight, 3),
+              galvShopTotalHrs: this.roundExcel(galvShopHrs, 3),
+              galvFieldTotalHrs: this.roundExcel(galvFieldHrs, 3),
+              angleHeight: st.heightFt,
+              slope: geometry ? this.roundExcel(geometry.angle, 2) : (st.slope || 0),
+              angle: geometry ? this.roundExcel(geometry.angle, 2) : (st.angle || 0),
+              isCompliant: st.isCompliant,
+              riserHeightIn: geometry ? this.roundExcel(geometry.actualRise * 12, 3) : 0,
+              geometry: geometry ? {
+                risers: geometry.risers,
+                actualRise: geometry.actualRise,
+                treads: geometry.treads,
+                totalRun: geometry.totalRun,
+                angle: geometry.angle,
+                stringerLength: geometry.stringerLength
+              } : null
+            }
+          };
+        };
 
-        // 8. tax = subTotalMaterial × tax_rate
-        const taxRate = configManager.get('tax_rate', 0.06);
-        const taxTotal = subTotalMaterial * taxRate;
+        const mainResult = await estimateStair(s);
+        const flightResults = await Promise.all((s.flights || []).map(fl => estimateStair(fl)));
 
-        // 9. total = subTotalWithoutTax + tax
-        const totalCostPerStair = subTotalWithoutTax + taxTotal;
+        let totalWeight = mainResult.totalWeight || 0;
+        let shopHours = mainResult.shopHours || 0;
+        let fieldHours = mainResult.fieldHours || 0;
+        let totalCost = mainResult.totalCost || 0;
+
+        flightResults.forEach(fr => {
+          totalWeight += fr.totalWeight || 0;
+          shopHours += fr.shopHours || 0;
+          fieldHours += fr.fieldHours || 0;
+          totalCost += fr.totalCost || 0;
+        });
 
         return {
-          ...s,
-          totalWeight: this.roundExcel(totalUnitWeight, 3),
-          shopHours: this.roundExcel(shopHoursInternal + galvShopHrs, 3),
-          fieldHours: this.roundExcel(fieldHoursInternal + galvFieldHrs, 3),
-          totalCost: this.roundExcel(totalCostPerStair, 2),
-          systemCalc: {
-            risers,
-            steelLbsPerLF: this.roundExcel(strLbs, 3),
-            shopMH: this.roundExcel(shopHrs, 3),
-            fieldMH: this.roundExcel(fieldHrs, 3),
-            totalSteel: this.roundExcel(stringerBaseWeight, 3),
-            scrapLbs: this.roundExcel(scrapLbs, 3),
-            scrapFactorPct: scrapFactorPct,
-            steelPriceBase: this.roundExcel(steelPriceBase, 2),
-            scrapPriceOnly: this.roundExcel(scrapPriceOnly, 2),
-            stairPansTotalPrice: this.roundExcel(panPriceTotal, 2),
-            gratingTotalCost: this.roundExcel(gratingTotalCost, 2),
-            finishTotalCost: this.roundExcel(finishTotalCost, 2),
-            porRokCost: this.roundExcel(porRokCost, 2),
-            anchorBoltsCost: this.roundExcel(anchorBoltsCost, 2),
-            subTotalMaterial: this.roundExcel(subTotalMaterial, 2),
-            shopLaborPrice: this.roundExcel(shopLaborCost, 2),
-            fieldLaborPrice: this.roundExcel(fieldLaborCost, 2),
-            shopTotalHrs: this.roundExcel(shopHoursInternal + galvShopHrs, 3),
-            fieldTotalHrs: this.roundExcel(fieldHoursInternal + galvFieldHrs, 3),
-            subTotalWithoutTax: this.roundExcel(subTotalWithoutTax, 2),
-            taxTotal: this.roundExcel(taxTotal, 2),
-            taxRatePct: taxRate * 100,
-            pricePerRiser: this.roundExcel(totalCostPerStair / (risers || 1), 2),
-            stairPansTotalWeight: this.roundExcel(panTotalWeight, 3),
-            galvShopTotalHrs: this.roundExcel(galvShopHrs, 3),
-            galvFieldTotalHrs: this.roundExcel(galvFieldHrs, 3),
-            angleHeight: s.heightFt,
-            slope: geometry ? this.roundExcel(geometry.angle, 2) : (s.slope || 0),
-            angle: geometry ? this.roundExcel(geometry.angle, 2) : (s.angle || 0),
-            isCompliant: s.isCompliant,
-
-            riserHeightIn: geometry ? this.roundExcel(geometry.actualRise * 12, 3) : 0,
+          ...mainResult,
+          totalWeight: this.roundExcel(totalWeight, 3),
+          shopHours: this.roundExcel(shopHours, 3),
+          fieldHours: this.roundExcel(fieldHours, 3),
+          totalCost: this.roundExcel(totalCost, 2),
+          flights: flightResults
+        };
+      })),
             geometry: geometry ? {
               risers: geometry.risers,
               actualRise: geometry.actualRise,
@@ -1204,27 +1167,32 @@ class StairCalculationService {
     // ── STAIRS AGGREGATION ──
     const stairs = estimate.stairs || [];
     stairs.forEach((st, i) => {
-      const s = st.systemCalc || st;
-      totalBaseSteelWeight += ((s.totalSteel || 0) + (s.stairPansTotalWeight || 0));
-      totalScrapLbs += (s.scrapLbs || 0);
-      totalShopHours += (s.shopTotalHrs || 0);
-      totalFieldHours += (s.fieldTotalHrs || 0);
-      totalGalvShopHrs += (s.galvShopTotalHrs || 0);
-      totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
-      totalRisers += (s.risers || 0);
+      const aggregate = (item) => {
+        const s = item.systemCalc || item;
+        totalBaseSteelWeight += ((s.totalSteel || 0) + (s.stairPansTotalWeight || 0));
+        totalScrapLbs += (s.scrapLbs || 0);
+        totalShopHours += (s.shopTotalHrs || 0);
+        totalFieldHours += (s.fieldTotalHrs || 0);
+        totalGalvShopHrs += (s.galvShopTotalHrs || 0);
+        totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
+        totalRisers += (s.risers || 0);
 
-      sumSteelBasePrice += (s.steelPriceBase || 0);
-      sumPansPrice += (s.stairPansTotalPrice || 0);
-      sumGratingPrice += (s.gratingTotalCost || 0);
-      sumGalvanizePrice += (s.finishTotalCost || 0);
-      sumScrapPrice += (s.scrapPriceOnly || 0);
-      sumShopLaborPrice += (s.shopLaborPrice || 0);
-      sumFieldLaborPrice += (s.fieldLaborPrice || 0);
-      sumTaxTotal += (s.taxTotal || 0);
-      sumSubtotalWithoutTax += (s.subTotalWithoutTax || 0);
+        sumSteelBasePrice += (s.steelPriceBase || 0);
+        sumPansPrice += (s.stairPansTotalPrice || 0);
+        sumGratingPrice += (s.gratingTotalCost || 0);
+        sumGalvanizePrice += (s.finishTotalCost || 0);
+        sumScrapPrice += (s.scrapPriceOnly || 0);
+        sumShopLaborPrice += (s.shopLaborPrice || 0);
+        sumFieldLaborPrice += (s.fieldLaborPrice || 0);
+        sumTaxTotal += (s.taxTotal || 0);
+        sumSubtotalWithoutTax += (s.subTotalWithoutTax || 0);
 
-      sumPorRok += (s.porRokCost || 0);
-      sumAnchorBolts += (s.anchorBoltsCost || 0);
+        sumPorRok += (s.porRokCost || 0);
+        sumAnchorBolts += (s.anchorBoltsCost || 0);
+      };
+
+      aggregate(st);
+      (st.flights || []).forEach(fl => aggregate(fl));
     });
 
     const subtotalWithoutTax = sumSubtotalWithoutTax;

@@ -372,7 +372,7 @@ const activate = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Token and password are required' });
     }
 
-    // Look up the invite token in licenses table
+    // 1. Look up the invite token in licenses table (for Admin invitations)
     const [licenseRows] = await db.query(
       `SELECT l.*, u.id as user_id, u.email, u.role FROM licenses l
        LEFT JOIN users u ON u.email = l.invite_email
@@ -380,42 +380,67 @@ const activate = async (req, res) => {
       [inviteToken]
     );
     const license = licenseRows[0];
-    if (!license) {
-      return res.status(400).json({ success: false, error: 'Invalid or already used activation link' });
-    }
 
-    if (!enforcePasswordPolicy(password, res)) return;
-    const hashedPassword = await bcrypt.hash(password, 12);
+    if (license) {
+      if (!enforcePasswordPolicy(password, res)) return;
+      const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Update user password + link license
-    await db.query(
-      `UPDATE users SET [password] = ?, mustChangePassword = 0 WHERE email = ?`,
-      [hashedPassword, license.invite_email]
-    );
-
-    // Get the user's ID after update
-    const [uRows] = await db.query('SELECT id FROM users WHERE email = ?', [license.invite_email]);
-    const userId = uRows[0]?.id;
-
-    if (userId) {
-      // Re-compute signature now that admin_user_id is known
-      const newSignature = generateLicenseSignature({
-        license_key: license.license_key,
-        admin_user_id: userId,
-        license_type: license.license_type,
-        max_estimators: license.max_estimators,
-        valid_until: license.valid_until,
-        is_active: license.is_active
-      });
-
-      // Link license to this admin user
+      // Update user password + link license
       await db.query(
-        `UPDATE licenses SET admin_user_id = ?, invite_accepted_at = GETDATE(), signature = ? WHERE id = ?`,
-        [userId, newSignature, license.id]
+        `UPDATE users SET [password] = ?, mustChangePassword = 0 WHERE email = ?`,
+        [hashedPassword, license.invite_email]
       );
+
+      // Get the user's ID after update
+      const [uRows] = await db.query('SELECT id FROM users WHERE email = ?', [license.invite_email]);
+      const userId = uRows[0]?.id;
+
+      if (userId) {
+        const newSignature = generateLicenseSignature({
+          license_key: license.license_key,
+          admin_user_id: userId,
+          license_type: license.license_type,
+          max_estimators: license.max_estimators,
+          valid_until: license.valid_until,
+          is_active: license.is_active
+        });
+
+        await db.query(
+          `UPDATE licenses SET admin_user_id = ?, invite_accepted_at = GETDATE(), signature = ? WHERE id = ?`,
+          [userId, newSignature, license.id]
+        );
+      }
+      return res.json({ success: true, message: 'Account activated. You can now log in.' });
     }
 
-    res.json({ success: true, message: 'Account activated. You can now log in.' });
+    // 2. Look up the invite token in users table (for Estimator invitations)
+    const [userRows] = await db.query(
+      'SELECT id, email, otp_expires_at FROM users WHERE otp_code = ?',
+      [inviteToken]
+    );
+    const user = userRows[0];
+
+    if (user) {
+      // Check expiry
+      if (user.otp_expires_at && new Date(user.otp_expires_at) < new Date()) {
+        return res.status(400).json({ success: false, error: 'Activation link has expired.' });
+      }
+
+      if (!enforcePasswordPolicy(password, res)) return;
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      await db.query(
+        `UPDATE users SET [password] = ?, mustChangePassword = 0, otp_code = NULL, otp_expires_at = NULL WHERE id = ?`,
+        [hashedPassword, user.id]
+      );
+
+      return res.json({ success: true, message: 'Estimator account activated. You can now log in.' });
+    }
+
+    // 3. Fallback: No matching token found
+    return res.status(400).json({ success: false, error: 'Invalid or already used activation link' });
+
+
   } catch (err) {
     console.error('Activate error:', err);
     res.status(500).json({ success: false, error: 'Activation failed' });

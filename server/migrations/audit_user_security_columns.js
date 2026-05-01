@@ -11,7 +11,7 @@ async function migrate() {
       ['session_device_id', 'VARCHAR(255) NULL'],
       ['session_at', 'DATETIME NULL'],
       ['lastLogin', 'DATETIME NULL'],
-      ['otp_code', 'VARCHAR(10) NULL'],
+      ['otp_code', 'VARCHAR(128) NULL'],
       ['otp_expires_at', 'DATETIME NULL'],
       ['otp_attempts', 'INT DEFAULT 0'],
       ['otp_resend_count', 'INT DEFAULT 0'],

@@ -249,8 +249,8 @@ app.use(express.json({
 
 app.use(express.urlencoded({
   extended: true,
-  limit: '1mb',
-  parameterLimit: 100 // Limit number of parameters
+  limit: '50mb',
+  parameterLimit: 5000 // Limit number of parameters
 }));
 
 // Request logging with custom format

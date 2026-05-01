@@ -1346,7 +1346,10 @@ export default function StairEstimation() {
         const width = toFeet(stair.stairWidth);
         const hFeet = toFeet(stair.totalHeight);
 
-        if (rise && run && width) {
+        const hasMainGeometry = (rise > 0 && run > 0 && width > 0);
+        const hasSubItems = (stair.flights?.length > 0 || stair.landings?.length > 0 || stair.rails?.length > 0);
+
+        if (hasMainGeometry || hasSubItems) {
           stairs.push({
             id: stair.id,
             risers: parseInt(stair.numRisers) || 0,
@@ -1486,6 +1489,18 @@ export default function StairEstimation() {
               numRisers: stairCalc.risers, // Sync both naming conventions
               systemCalc: stairCalc.systemCalc
             });
+
+            // ✈️ Map Flight results
+            if (updatedStair.flights && stairCalc.flights) {
+              updatedStair.flights = updatedStair.flights.map((fl, fi) => {
+                const flCalc = stairCalc.flights[fi] || {};
+                return {
+                  ...fl,
+                  ...flCalc,
+                  systemCalc: flCalc.systemCalc || {}
+                };
+              });
+            }
           }
 
           // 2. Map Landing results

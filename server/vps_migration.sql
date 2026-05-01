@@ -793,7 +793,7 @@ CREATE TABLE [users] (
   [session_device] NVARCHAR(1000) NULL,
   [session_device_id] NVARCHAR(200) NULL,
   [session_at] DATETIME NULL,
-  [otp_code] NVARCHAR(20) NULL,
+  [otp_code] NVARCHAR(128) NULL,
   [otp_expires_at] DATETIME NULL,
   [otp_attempts] INT NOT NULL,
   [otp_resend_count] INT NOT NULL,

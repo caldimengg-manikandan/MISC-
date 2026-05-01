@@ -44,37 +44,33 @@ router.get('/project/:projectId', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { title, content, note_type, pos_x, pos_y, color, mentions, context_type, context_id, is_locked } = req.body;
-    const projectId = parseInt(req.body.projectId);
+    const projectId = req.body.projectId ? parseInt(req.body.projectId) : null;
     const userId = req.userId;
     const companyId = req.companyId || req.user.company_id;
     const ownerAdminId = req.user.admin_owner_id || req.user.id;
     const lockedBit = is_locked ? 1 : 0;
 
-    if (!projectId || isNaN(projectId)) {
-      return res.status(400).json({ success: false, message: 'Valid projectId is required' });
-    }
+    // Verify project existence and ownership IF a projectId is provided
+    if (projectId && !isNaN(projectId)) {
+      let projectQuery = 'SELECT id, company_id FROM projects WHERE id = ?';
+      let queryParams = [projectId];
 
-    // Verify project existence and ownership
-    let projectQuery = 'SELECT id, company_id FROM projects WHERE id = ?';
-    let queryParams = [projectId];
+      // C2: Superadmin bypasses company check
+      if (req.userRole !== 'superadmin') {
+        projectQuery += ' AND (company_id = ? OR userId = ?)';
+        queryParams.push(companyId, userId);
+      }
 
-    // C2: Superadmin bypasses company check
-    if (req.userRole !== 'superadmin') {
-      projectQuery += ' AND (company_id = ? OR userId = ?)';
-      queryParams.push(companyId, userId);
-    }
-
-    const [projectCheck] = await db.query(projectQuery, queryParams);
-    
-    if (!projectCheck || projectCheck.length === 0) {
-      console.warn(`Note Creation Denied: Project ${projectId} not found or access denied. Checked Query: ${projectQuery} with Params: ${JSON.stringify(queryParams)}`);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Project not found or access denied', 
-        projectId, 
-        companyId,
-        role: req.userRole 
-      });
+      const [projectCheck] = await db.query(projectQuery, queryParams);
+      
+      if (!projectCheck || projectCheck.length === 0) {
+        console.warn(`Note Creation Denied: Project ${projectId} not found or access denied.`);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Project not found or access denied', 
+          projectId
+        });
+      }
     }
 
     const [result] = await db.query(

@@ -66,7 +66,7 @@ async function run() {
     ['session_device',     'NVARCHAR(500) NULL'],           // User-Agent hash
     ['session_device_id',  'NVARCHAR(100) NULL'],           // UUID cookie (W5)
     ['session_at',         'DATETIME NULL'],                // last login timestamp
-    ['otp_code',           'NVARCHAR(10) NULL'],            // device-change OTP
+    ['otp_code',           'NVARCHAR(128) NULL'],           // device-change OTP OR invite token (C9)
     ['otp_expires_at',     'DATETIME NULL'],
     ['otp_attempts',       'INT NOT NULL DEFAULT 0'],
     ['otp_resend_count',   'INT NOT NULL DEFAULT 0'],       // W6: resend cap
