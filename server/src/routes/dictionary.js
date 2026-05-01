@@ -68,10 +68,10 @@ router.post('/', auth, adminOnly, async (req, res) => {
     const [existing] = await db.query('SELECT id, isActive FROM dictionary WHERE category = ? AND value = ?', [category, value]);
     
     if (existing.length > 0) {
-      if (existing[0].isActive == 0 || existing[0].isActive === null) {
+      if (existing[0].isActive == 0 || existing[0].isActive === null || existing[0].is_active == 0) {
         console.log(`[Dictionary] Reactivating existing inactive entry: ${existing[0].id}`);
         await db.query(
-          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ?',
+          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, is_active = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ?',
           [label, order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, existing[0].id]
         );
         const [updatedEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [existing[0].id]);
@@ -82,7 +82,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO dictionary (category, label, value, description, [order], isActive, is_active, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?)',
       [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null]
     );
 
