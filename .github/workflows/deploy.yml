@@ -14,7 +14,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install & Build Client
         run: |
@@ -34,17 +34,17 @@ jobs:
             # 1. Pull latest code
             git pull origin master
             
-            # 2. Update server dependencies
+            # 2. Update server dependencies & Run Normalization
             cd server
             npm install --production
+            node scripts/normalize_db.js
             
-            # 3. Copy new frontend build (assuming we build on VPS for now to be safe, 
-            # or we can sync files. Building on VPS is safer if SSH keys for sync aren't set)
+            # 3. Update Client
             cd ../client
             npm install
             npm run build
             
             # 4. Restart the backend
             cd ../server
-            pm2 restart misc-automation || pm2 start server.js --name misc-automation
+            pm2 restart all
             pm2 save
