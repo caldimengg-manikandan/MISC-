@@ -111,7 +111,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     setLoading(true);
     try {
       const token = localStorage.getItem('steel_token');
-      const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, { credentials: 'include',
+      const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}?all=true`, { credentials: 'include',
         headers: { Authorization: `Bearer ${token}` },
         credentials: 'include'
       });

@@ -12,15 +12,17 @@ const adminOnly = (req, res, next) => {
 };
 
 // @route   GET /api/dictionary/:category
-// @desc    Get all active dictionary entries for a category
+// @desc    Get all dictionary entries for a category (including inactive ones for management)
 router.get('/:category', async (req, res) => {
   try {
-    console.log(`[Dictionary] Fetching category: ${req.params.category}`);
-    const [entries] = await db.query(
-      'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive FROM dictionary WHERE category = ? AND (isActive = 1 OR isActive IS NULL) ORDER BY [order] ASC, label ASC',
-      [req.params.category]
-    );
+    const showAll = req.query.all === 'true';
+    console.log(`[Dictionary] Fetching category: ${req.params.category} (showAll: ${showAll})`);
+    
+    const query = showAll 
+      ? 'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive FROM dictionary WHERE category = ? ORDER BY [order] ASC, label ASC'
+      : 'SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, isActive FROM dictionary WHERE category = ? AND (isActive = 1 OR isActive IS NULL) ORDER BY [order] ASC, label ASC';
 
+    const [entries] = await db.query(query, [req.params.category]);
     console.log(`[Dictionary] Found ${entries.length} entries for ${req.params.category}`);
 
     // 🔧 CRITICAL FIX: MSSQL NVARCHAR columns return numeric values as strings.
@@ -56,14 +58,26 @@ router.get('/all/categories', auth, adminOnly, async (req, res) => {
 });
 
 // @route   POST /api/dictionary
-// @desc    Add a new dictionary entry
+// @desc    Add or Reactivate a dictionary entry
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
     const { category, label, value, description, order, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax } = req.body;
+    console.log(`[Dictionary] Attempting to add/reactivate: ${category} -> ${label} (${value})`);
 
-    // Check if exists
-    const [existing] = await db.query('SELECT id FROM dictionary WHERE category = ? AND value = ?', [category, value]);
+    // Check if exists (including inactive)
+    const [existing] = await db.query('SELECT id, isActive FROM dictionary WHERE category = ? AND value = ?', [category, value]);
+    
     if (existing.length > 0) {
+      if (existing[0].isActive == 0 || existing[0].isActive === null) {
+        console.log(`[Dictionary] Reactivating existing inactive entry: ${existing[0].id}`);
+        await db.query(
+          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ? WHERE id = ?',
+          [label, order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, existing[0].id]
+        );
+        const [updatedEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [existing[0].id]);
+        return res.status(200).json({ success: true, data: updatedEntry[0], message: 'Reactivated existing entry' });
+      }
+      console.log(`[Dictionary] Conflict: Active value already exists: ${value}`);
       return res.status(400).json({ success: false, message: 'Value already exists in this category' });
     }
 
@@ -73,8 +87,10 @@ router.post('/', auth, adminOnly, async (req, res) => {
     );
 
     const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [rows[0].id]);
+    console.log(`[Dictionary] Successfully added entry with ID: ${rows[0].id}`);
     res.status(201).json({ success: true, data: newEntry[0] });
   } catch (err) {
+    console.error(`[Dictionary] Error adding entry to ${req.body.category}:`, err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
