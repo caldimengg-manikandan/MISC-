@@ -8,12 +8,29 @@ const notif = require('../services/NotificationService');
 const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 
 const tryParseJson = (val) => {
+  if (val === null || val === undefined) return val;
   if (typeof val !== 'string') return val;
-  try {
-    return JSON.parse(val);
-  } catch {
-    return val;
+  
+  // Recursive parse to handle "Inception JSON" (stringified strings)
+  let current = val;
+  let depth = 0;
+  const MAX_DEPTH = 10;
+  
+  while (typeof current === 'string' && depth < MAX_DEPTH) {
+    try {
+      const trimmed = current.trim();
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[') && !trimmed.startsWith('"')) {
+        break; 
+      }
+      const next = JSON.parse(current);
+      if (next === current) break;
+      current = next;
+      depth++;
+    } catch {
+      break;
+    }
   }
+  return current;
 };
 
 // Function to clean up empty geometries
@@ -459,7 +476,8 @@ router.put('/:projectId', auth, async (req, res) => {
       if (allowedFields.includes(key)) {
         setClause.push(`${key} = ?`);
         if (['stairs', 'guardRails', 'customRailValues', 'estimationResult'].includes(key)) {
-           queryParams.push(JSON.stringify(updates[key]));
+           // 🛡️ Prevent double-stringification if client already sent a string
+           queryParams.push(typeof updates[key] === 'string' ? updates[key] : JSON.stringify(updates[key]));
         } else if (key === 'customerId') {
            setClause[setClause.length - 1] = 'customer_id = ?';
            queryParams.push(updates[key]);
