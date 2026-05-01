@@ -9,7 +9,8 @@
  *   node server/scripts/migrate_dictionary_tenant.js
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '../../../.env') });
+process.env.MSSQL_TRUST_SERVER_CERTIFICATE = 'true';
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const db = require('../src/config/mssql');
 
 async function run() {
