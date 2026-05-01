@@ -1027,6 +1027,10 @@ export default function StairEstimation() {
 
   // ── Save stairs to DB ─────────────────────────────────────────────────────
   const saveChanges = useCallback(async () => {
+    if (loading || isUpdatingFromCalc.current) {
+      console.log('StairConfig: Save aborted (loading or hydration in progress)');
+      return;
+    }
     setSaving(true);
     try {
       const token = localStorage.getItem('steel_token');
@@ -1320,7 +1324,7 @@ export default function StairEstimation() {
   // ── Live per-change calculation (debounced 400ms) ─────────────────────────
   // Fires whenever stair data changes; embeds calc results back into each rail + landing.
   const liveCalcTimer = useRef(null);
-  const isUpdatingFromCalc = useRef(false); // prevents infinite loop
+  const isUpdatingFromCalc = useRef(true); // 🛡️ Initial state TRUE to suppress dirty flag on mount
 
   const triggerLiveCalc = useCallback((latestStairs) => {
     clearTimeout(liveCalcTimer.current);
