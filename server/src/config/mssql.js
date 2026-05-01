@@ -8,7 +8,7 @@ const config = {
     port: parseInt(process.env.MSSQL_PORT) || 1433,
     options: {
         encrypt: (process.env.MSSQL_ENCRYPT || 'true') === 'true',
-        trustServerCertificate: (process.env.MSSQL_TRUST_SERVER_CERTIFICATE || 'false') === 'true',
+        trustServerCertificate: (process.env.MSSQL_TRUST_SERVER_CERTIFICATE || 'true') === 'true',
         enableArithAbort: true
     },
     pool: {
