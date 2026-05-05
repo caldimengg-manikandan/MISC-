@@ -2619,14 +2619,26 @@ textarea.form-input {
 
 /* â”€â”€ Light mode â”€â”€ */
 .asl-login-container.asl-light {
-  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 40%, #f5f0ff 100%);
-  color: #0d0d0d;
+  background: #e2e8f0;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(16, 163, 127, 0.18) 0px, transparent 50%),
+    linear-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  color: #0f172a;
 }
 
 /* â”€â”€ Dark mode â”€â”€ */
 .asl-login-container.asl-dark {
-  background: linear-gradient(135deg, #0a0e1a 0%, #0d1530 50%, #0e0b1f 100%);
-  color: #ececf1;
+  background: #010413;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.25) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 163, 127, 0.25) 0px, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  color: #f8fafc;
 }
 
 /* â”€â”€ Particle canvas â”€â”€ */
@@ -2670,15 +2682,68 @@ textarea.form-input {
   transform: rotate(180deg) scale(1.1);
 }
 
-/* â”€â”€ Card â”€â”€ */
-.asl-login-card {
+/* â”€â”€ Split Layout Container â”€â”€ */
+.asl-login-split {
   position: relative;
   z-index: 5;
-  width: 520px; /* Increased size from 420px */
-  max-width: calc(100vw - 40px);
-  border-radius: 28px;
-  padding: 3px;
-  animation: asl-card-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  display: flex;
+  width: 1100px; /* Increased from 1000px */
+  max-width: 95vw;
+  min-height: 600px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: asl-card-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.asl-light .asl-login-split {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(99, 102, 241, 0.1);
+  box-shadow: 0 40px 100px -20px rgba(99, 102, 241, 0.15);
+}
+
+.asl-login-banner {
+  flex: 1.1;
+  position: relative;
+  background: #0a0e1a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.asl-login-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Changed from cover to show full image */
+  transition: transform 0.5s ease;
+}
+
+.asl-login-split:hover .asl-login-banner img {
+  transform: scale(1.02);
+}
+
+.asl-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, transparent, rgba(10, 14, 26, 0.2));
+}
+
+/* â”€â”€ Card â”€â”€ */
+.asl-login-card {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: transparent;
+  padding: 0;
+  animation: none; /* Parent handles animation */
 }
 
 @keyframes asl-card-in {
@@ -2703,11 +2768,13 @@ textarea.form-input {
 }
 
 .asl-login-card-inner {
-  border-radius: 26px;
-  padding: 48px 40px 36px; /* Roomier padding */
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  transition: background 0.4s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 60px; /* More generous padding for split layout */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .asl-dark .asl-login-card-inner {
@@ -4550,3 +4617,14 @@ textarea.form-input {
   }
 }
 
+
+/* Login Page Responsive adjustments */
+@media (max-width: 900px) {
+  .asl-login-banner {
+    display: none;
+  }
+  .asl-login-split {
+    width: 520px;
+    min-height: auto;
+  }
+}

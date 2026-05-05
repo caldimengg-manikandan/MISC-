@@ -318,13 +318,32 @@ const LoginPage = () => {
         {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
       </div>
 
-      <div className="asl-login-card">
+      <div className="asl-login-split">
+        {/* Left Side: Professional Banner */}
+        <div className="asl-login-banner">
+          <img 
+            src={`${process.env.PUBLIC_URL}/login-banner.png?v=3`} 
+            alt="CAL MISC - Estimate Faster, Bid Smarter" 
+            onError={(e) => {
+               // Fallback if image not found: show a nice gradient and branding
+               e.target.style.display = 'none';
+               e.target.parentNode.style.background = 'linear-gradient(135deg, #0a0e1a 0%, #1e293b 100%)';
+            }}
+          />
+          <div className="asl-banner-overlay">
+            <div className="asl-banner-content">
+              {/* This content will be visible if the image is transparent or as a fallback */}
+            </div>
+          </div>
+        </div>
+
+        <div className="asl-login-card">
         <div className="asl-login-card-inner">
           {/* Header */}
           <div className="asl-login-header">
             <div className="asl-brand-badge">
               <span className="asl-brand-icon">⚙</span>
-              <span className="asl-brand-name">MISCStairPro</span>
+              <span className="asl-brand-name">CAL MISC</span>
             </div>
             <h1>{location.search.includes('mode=signup') ? 'Join the Forge' : 'Welcome Back'}</h1>
             <p>{location.search.includes('mode=signup') ? 'Create your professional account' : 'Sign in to your professional account'}</p>
@@ -705,6 +724,7 @@ const LoginPage = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

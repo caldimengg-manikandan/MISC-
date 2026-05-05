@@ -184,6 +184,7 @@ export default function AllocateProjectModal({ isOpen, onClose, onAllocate, init
             state: selectedCustomer?.state
           }
         });
+        onClose();
         navigate(`/project/${newProjectId}/estimate/stair-railings`);
       } else {
         toast.error(res.data.message || 'Failed to create project');

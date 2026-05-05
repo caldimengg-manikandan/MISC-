@@ -1,4 +1,4 @@
-// server/src/migrations/addAdditionalCostsToProjects.js
+require('dotenv').config();
 const db = require('../config/mssql');
 
 async function up() {

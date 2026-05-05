@@ -493,7 +493,7 @@ const Login3D = () => {
             <div className="w-12 h-12 flex items-center justify-center">
               <img 
                 src="/logo.png" 
-                alt="MISCStairPro Logo" 
+                alt="CAL MISC Logo" 
                 className="w-full h-full object-contain drop-shadow-lg"
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -506,7 +506,7 @@ const Login3D = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">
-                MISC<span className="text-blue-400">Stair</span>Pro
+                CAL <span className="text-blue-400">MISC</span>
               </h1>
               <p className="text-sm text-gray-300">Professional 3D Stair Design Suite</p>
             </div>

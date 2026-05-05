@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils";
 // Content-focused anchor links — explain the platform and steel FAB
 const NAV_LINKS = [
   { label: "Products",      href: "/products",   tooltip: "View all Caldim solutions" },
-  { label: "Platform",      href: "#platform",   tooltip: "What MISC StairPro does" },
+  { label: "Platform",      href: "#platform",   tooltip: "What CAL MISC does" },
   { label: "How It Works",  href: "#how-it-works", tooltip: "Step-by-step estimation workflow" },
   { label: "Steel FAB 101", href: "#steel-fab",  tooltip: "Key structural steel facts" },
   { label: "What's Next",   href: "#roadmap",    tooltip: "Upcoming modules & growth" },
@@ -75,8 +75,8 @@ function LandingHeader({ scrolled }) {
             color: "rgba(255,255,255,0.92)",
           }}
         >
-          MISC
-          <span style={{ color: "#10a37f", marginLeft: "2px" }}>StairPro</span>
+          CAL
+          <span style={{ color: "#10a37f", marginLeft: "2px" }}>MISC</span>
         </span>
       </div>
 
@@ -226,7 +226,7 @@ function LandingFooter() {
         <span
           style={{ fontSize: "0.875rem", fontWeight: 600, color: "rgba(255,255,255,0.8)" }}
         >
-          MISC StairPro
+          CAL MISC
         </span>
         <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginLeft: "0.5rem" }}>
           Steel Estimation Suite
@@ -256,7 +256,7 @@ function LandingFooter() {
         </span>
       </div>
       <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>
-        © {new Date().getFullYear()} MISC StairPro. All rights reserved.
+        © {new Date().getFullYear()} CAL MISC. All rights reserved.
       </div>
     </footer>
   );
@@ -643,7 +643,7 @@ export default function GlobeScrollDemo() {
       title: "Precision Built",
       subtitle: "For Fabricators",
       description:
-        "MISC StairPro is a purpose-built estimation engine for structural steel fabricators. Generate accurate stair, railing, and guard-rail bids in minutes — not hours — with real-time cost breakdowns covering material weight, labor, finish, mounting, and scrap recovery. One platform. Every number accounted for.",
+        "CAL MISC is a purpose-built estimation engine for structural steel fabricators. Generate accurate stair, railing, and guard-rail bids in minutes — not hours — with real-time cost breakdowns covering material weight, labor, finish, mounting, and scrap recovery. One platform. Every number accounted for.",
       align: "left",
       actions: [
         {

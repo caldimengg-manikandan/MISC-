@@ -51,7 +51,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 2000;
+      z-index: 20000;
     }
     .sc-modal-panel {
       background: #fff;
@@ -124,12 +124,29 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .form-input-with-unit {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .form-input-with-unit .ed-input {
+      padding-left: 36px !important;
+      width: 100%;
+    }
+    .form-input-with-unit svg {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+      pointer-events: none;
+      z-index: 2;
+    }
   `;
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="sc-modal-backdrop" style={{ zIndex: 2000 }}>
+        <div className="sc-modal-backdrop" style={{ zIndex: 20000 }}>
           <motion.div 
             className="sc-modal-panel"
             style={{ maxWidth: '550px' }}
@@ -148,10 +165,9 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
                   <div className="ed-field">
                     <label className="ed-label">Company Name *</label>
                     <div className="form-input-with-unit">
-                      <Building2 size={14} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
+                      <Building2 size={14} />
                       <input 
                         className="ed-input" 
-                        style={{ paddingLeft: '32px' }}
                         value={formData.companyName}
                         onChange={e => set('companyName', e.target.value)}
                         placeholder="e.g. Acme Corp"
@@ -163,10 +179,9 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
                   <div className="ed-field">
                     <label className="ed-label">Contact Person</label>
                     <div className="form-input-with-unit">
-                      <User size={14} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
+                      <User size={14} />
                       <input 
                         className="ed-input" 
-                        style={{ paddingLeft: '32px' }}
                         value={formData.contactPerson}
                         onChange={e => set('contactPerson', e.target.value)}
                         placeholder="e.g. John Doe"
@@ -178,11 +193,10 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
                     <div className="ed-field">
                       <label className="ed-label">Email</label>
                       <div className="form-input-with-unit">
-                        <Mail size={14} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
+                        <Mail size={14} />
                         <input 
                           type="email"
                           className="ed-input" 
-                          style={{ paddingLeft: '32px' }}
                           value={formData.email}
                           onChange={e => set('email', e.target.value)}
                           placeholder="j.doe@acme.com"
@@ -192,10 +206,9 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onCustomerAdded }) => {
                     <div className="ed-field">
                       <label className="ed-label">Phone</label>
                       <div className="form-input-with-unit">
-                        <Phone size={14} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
+                        <Phone size={14} />
                         <input 
                           className="ed-input" 
-                          style={{ paddingLeft: '32px' }}
                           value={formData.phone}
                           onChange={e => set('phone', e.target.value)}
                           placeholder="+1..."

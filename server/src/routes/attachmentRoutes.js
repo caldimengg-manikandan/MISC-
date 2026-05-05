@@ -23,6 +23,7 @@ const crypto    = require('crypto');
 const { query } = require('../config/mssql');
 const logger    = require('../utils/logger');
 const storage   = require('../services/storageAdapter');  // ← unified local/S3 adapter
+const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 
 // ── Allowed Types ─────────────────────────────────────────────────────────────
 
@@ -111,11 +112,22 @@ async function ownershipGuard(req, res, next) {
         // Superadmin bypasses check
         if (userRole === 'superadmin') return next();
 
+        // Use the centralized resolver to find the owning admin ID for this user/tenant
+        const ownerAdminId = await resolveOwnerAdminId(req);
+
+        // Access Rule: User can see attachments if:
+        // 1. They are the creator (userId)
+        // 2. They belong to the owning company (companyId)
+        // 3. They are the assigned engineer or reviewer
         const [rows] = await query(
             `SELECT 1 AS ok FROM projects
-             WHERE id         = @projectId
-               AND (owner_id  = @userId OR company_id = @companyId)`,
-            { projectId, userId, companyId }
+             WHERE id = @projectId
+               AND (createdBy = @userId 
+                    OR company_id = @companyId 
+                    OR owner_admin_id = @ownerAdminId
+                    OR assigned_engineer_id = @userId 
+                    OR reviewer_id = @userId)`,
+            { projectId, userId, companyId, ownerAdminId }
         );
 
         if (!rows || rows.length === 0) {
@@ -197,10 +209,11 @@ router.post('/:projectId/attachments', ownershipGuard, upload.array('files', 10)
                 const { storageKey, filePath, filename, storedMime } =
                     storage.extractFileMeta(file, projectId);
 
+                const ownerAdminId = await resolveOwnerAdminId(req);
                 const [result] = await query(
                     `INSERT INTO project_attachments
                          (projectId, userId, filename, original_name, mime_type,
-                          file_path, storage_key, file_size)
+                          file_path, storage_key, file_size, company_id, owner_admin_id)
                      OUTPUT
                          INSERTED.id,
                          INSERTED.original_name AS file_name,
@@ -210,7 +223,7 @@ router.post('/:projectId/attachments', ownershipGuard, upload.array('files', 10)
                          INSERTED.file_size
                      VALUES
                          (@projectId, @userId, @filename, @originalName, @mimeType,
-                          @filePath, @storageKey, @fileSize)`,
+                          @filePath, @storageKey, @fileSize, @companyId, @ownerAdminId)`,
                     {
                         projectId,
                         userId,
@@ -220,6 +233,8 @@ router.post('/:projectId/attachments', ownershipGuard, upload.array('files', 10)
                         filePath:     filePath,
                         storageKey:   storageKey,
                         fileSize:     file.size,
+                        companyId:    req.companyId,
+                        ownerAdminId: ownerAdminId
                     }
                 );
 

@@ -9,7 +9,7 @@ import React, { useState, useEffect } from "react";
 const NAV_LINKS = [
   { label: "Home",          href: "/landing",    tooltip: "Back to Home" },
   { label: "Products",      href: "/products",   tooltip: "View all Caldim solutions" },
-  { label: "Platform",      href: "/landing#platform",   tooltip: "What MISC StairPro does" },
+  { label: "Platform",      href: "/landing#platform",   tooltip: "What CAL MISC does" },
   { label: "Steel FAB 101", href: "/landing#steel-fab",  tooltip: "Key structural steel facts" },
 ];
 
