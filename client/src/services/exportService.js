@@ -47,7 +47,8 @@ export const generateProposalPDF = (projectData, stairs, returnBlob = false) => 
 
   let currentY = 75;
 
-  stairs.forEach((stair, idx) => {
+  const stairsArr = Array.isArray(stairs) ? stairs : [];
+  stairsArr.forEach((stair, idx) => {
     if (currentY > 240) { doc.addPage(); currentY = 20; }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
@@ -76,11 +77,11 @@ export const generateProposalPDF = (projectData, stairs, returnBlob = false) => 
     currentY = doc.lastAutoTable.finalY + 15;
   });
 
-  const totalWeight = stairs.reduce((sum, s) => sum + parseFloat(s.calcStringerWeight || 0) + parseFloat(s.calcPanSteelWeight || 0), 0);
+  const totalWeight = stairsArr.reduce((sum, s) => sum + parseFloat(s.calcStringerWeight || 0) + parseFloat(s.calcPanSteelWeight || 0), 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text('ESTIMATION SUMMARY', 15, currentY + 10);
-  const finishArea = stairs.reduce((sum, s) => sum + calculateSurfaceArea(s), 0);
+  const finishArea = stairsArr.reduce((sum, s) => sum + calculateSurfaceArea(s), 0);
   
   autoTable(doc, {
     startY: currentY + 15,
@@ -341,7 +342,8 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   };
 
   // Render Stairs
-  if (stairs && stairs.length > 0) {
+  const stairsArr = Array.isArray(stairs) ? stairs : [];
+  if (stairsArr.length > 0) {
     worksheet.getRow(currentRow).getCell(2).value = 'STAIR SUB-ASSEMBLIES';
     worksheet.getRow(currentRow).getCell(2).font = { bold: true };
     currentRow++;
@@ -351,7 +353,7 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
     applyTableStyle(sHeader, true);
     currentRow++;
 
-    stairs.forEach((s, idx) => {
+    stairsArr.forEach((s, idx) => {
       const sRow = worksheet.getRow(currentRow);
       let runStr = s.run;
       if (typeof s.run === 'object' && s.run.value) runStr = s.run.value;
@@ -396,8 +398,8 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   // Extract all rails and landings
   const allRails = [];
   const allPlatforms = [];
-  if (stairs && stairs.length > 0) {
-    stairs.forEach(s => {
+  if (stairsArr.length > 0) {
+    stairsArr.forEach(s => {
       if (s.rails) allRails.push(...s.rails);
       if (s.landings) allPlatforms.push(...s.landings);
     });

@@ -1,6 +1,6 @@
 /**
  * roleGuard.test.js
- * Cross-role security tests for the MISC Pro AI Agent.
+ * Cross-role security tests for the CALMISC AI Agent.
  * Run with: node src/ai/tests/roleGuard.test.js
  *
  * Tests:
@@ -14,8 +14,8 @@
 
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../../../.env') });
 
-const { executeTool }    = require('../tools/index');
-const { classifyQuery }  = require('../agent/queryRouter');
+const { executeTool } = require('../tools/index');
+const { classifyQuery } = require('../agent/queryRouter');
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 let passed = 0;
@@ -49,12 +49,12 @@ async function assertThrows(fn, errorFragment, label) {
 
 // ─── Fake context ─────────────────────────────────────────────────────────────
 const ESTIMATOR_CTX = { userId: 999, companyId: 1, role: 'estimator' };
-const ADMIN_CTX     = { userId: 1,   companyId: 1, role: 'admin' };
+const ADMIN_CTX = { userId: 1, companyId: 1, role: 'admin' };
 
 // ─── Run Tests ────────────────────────────────────────────────────────────────
 async function runTests() {
   console.log('\n======================================');
-  console.log('  MISC Pro AI Agent — Role Guard Tests');
+  console.log('  CALMISC AI Agent — Role Guard Tests');
   console.log('======================================\n');
 
   // ── Tool-level role guards ──────────────────────────────────────────────────

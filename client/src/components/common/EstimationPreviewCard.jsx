@@ -68,7 +68,8 @@ export default function EstimationPreviewCard({
   stairType = "",
   finishName = "",
   unitType = "LF",
-  hidePricePerRiser = false
+  hidePricePerRiser = false,
+  hidePorRok = false
 }) {
   const scrapFactorPct = systemCalc.scrapFactorPct || 11;
   const taxRatePct = systemCalc.taxRatePct || 6;
@@ -148,7 +149,7 @@ export default function EstimationPreviewCard({
         </div>
         <div style={cellRowStyle(false)}>
           <StatCell label={`Scrap lbs (+${scrapFactorPct}%)`} value={steelScrapLbs} color={scrapColor} />
-          <StatCell label="Steel cost" value={steelDollars} color={moneyColor} borderRight={false} />
+          <StatCell label="Total weight (gross)" value={formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} borderRight={false} />
         </div>
       </div>
 
@@ -169,12 +170,20 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(true, false)}>
         <SectionHeader title="Material costs (Excl. Scrap)" />
         <div style={cellRowStyle(true)}>
-          <StatCell label="Steel weight cost" value={steelDollars} />
+          <StatCell label={`Steel weight cost ($${formatMoney(systemCalc.steelPricePerLb || 0.75)}/lb)`} value={steelDollars} />
           <StatCell label={`Finish (${finishName?.toLowerCase() || 'primer'})`} value={finishDollars} borderRight={false} />
         </div>
         <div style={cellRowStyle(true)}>
-          <StatCell label="POR ROK / Post cost" value={porRokDollars} />
-          <StatCell label="Anchor bolts" value={anchorBoltsDollars} borderRight={false} />
+          {hidePorRok ? (
+            <StatCell label="Anchor bolts" value={anchorBoltsDollars} />
+          ) : (
+            <StatCell label="POR ROK / Post cost" value={porRokDollars} />
+          )}
+          {hidePorRok ? (
+            <div style={{ flex: 1 }} />
+          ) : (
+            <StatCell label="Anchor bolts" value={anchorBoltsDollars} borderRight={false} />
+          )}
         </div>
         <div style={{ display: 'flex', ...subBgStyle }}>
           <StatCell label="Scrap cost (Isolated)" value={scrapDollars} color={scrapColor} />
@@ -192,12 +201,12 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(false, false)}>
         <SectionHeader title="Estimate summary" />
         <div style={cellRowStyle(true)}>
-          <StatCell label="Sub total material" value={subTotalMaterial} />
-          <StatCell label="Labor total" value={laborTotalDollars} borderRight={false} />
-        </div>
-        <div style={cellRowStyle(true)}>
-          <StatCell label="Scrap cost" value={scrapDollars} color={scrapColor} />
+          <StatCell label="Labor total" value={laborTotalDollars} />
           <StatCell label={`Tax (${taxRatePct}%)`} value={taxDollars} borderRight={false} />
+        </div>
+        <div style={cellRowStyle(false)}>
+          <StatCell label="Total Weight (Gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} />
+          <StatCell label="Material + Scrap" value={`$${formatMoney((systemCalc.subTotalMaterial || 0) + (systemCalc.scrapPriceOnly || 0))}`} color={moneyColor} borderRight={false} />
         </div>
 
         {/* ── Bottom Bar with accent glow on Total Estimate ── */}

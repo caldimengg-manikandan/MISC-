@@ -116,7 +116,7 @@ export default function EstimationDetail() {
         // Ensure core identifiers and metadata are mapped
         projectName: data.projectName || data.project_name || '',
         projectNumber: data.projectNumber || data.project_number || '',
-        customer_name: data.customer_name || data.LinkedCustomerName || data.customerName || '',
+        customer_name: data.LinkedCustomerName || data.customer_name || data.customerName || '',
         customer_id: data.customer_id || data.customerId || null,
         projectLocation: data.projectLocation || data.project_location || '',
         architect: data.architect || '',
@@ -544,7 +544,7 @@ export default function EstimationDetail() {
                                     Use Details
                                   </button>
                                   <button 
-                                    onClick={() => navigate(`/project-info?id=${prj.id}`)}
+                                    onClick={() => navigate(`/project/${prj.id}/estimate/stair-railings`)}
                                     className="text-[10px] bg-[#10a37f] text-white hover:bg-[#0d8a6b] px-3 py-1.5 rounded-lg font-black transition-all whitespace-nowrap shadow-sm"
                                     title="Open existing project and calculations"
                                   >

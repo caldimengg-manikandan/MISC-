@@ -3,9 +3,9 @@ name: misc-gpt-ui
 description: Design and extend the MISC engineering platform's ChatGPT-style shell. Use when asked to modify the sidebar, dashboard, navigation structure, or any shell-level UI of the MISC application.
 ---
 
-# MISC Pro — GPT-Style UI Design System
+# CALMISC — GPT-Style UI Design System
 
-The MISC Pro engineering estimation platform uses a ChatGPT-exact shell design wrapped around functional engineering modules.
+The CALMISC engineering estimation platform uses a ChatGPT-exact shell design wrapped around functional engineering modules.
 
 ## Core Design Tokens
 
@@ -36,7 +36,7 @@ app-shell (flex row, 100vh)
 │   ├── nav.sidebar-nav       — Navigation + Projects + Recent Estimations + Sign Out
 │   └── .sidebar-footer       — user avatar + name + role
 └── div.main-content (flex: 1)
-    ├── header.top-header (52px) — "MISC Pro ▾" + breadcrumb + actions
+    ├── header.top-header (52px) — "CALMISC ▾" + breadcrumb + actions
     └── main.workspace           — page content (children)
 ```
 

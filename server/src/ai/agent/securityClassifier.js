@@ -11,7 +11,7 @@ const BLOCKED_PATTERNS = [
   { p: /password/i, cat: 'Passwords' },
   { p: /credentials?/i, cat: 'Passwords' },
   { p: /passwd/i, cat: 'Passwords' },
-  
+
   { p: /login\s+as/i, cat: 'Credential access' },
   { p: /log\s+me\s+in/i, cat: 'Credential access' },
   { p: /bypass.{0,20}login/i, cat: 'Credential access' },
@@ -74,7 +74,7 @@ function getRefusalMessage(category) {
     return "I don't have access to system configuration, API keys, or infrastructure details. Please contact your system administrator for technical support.";
   }
   if (category === 'Prompt injection') {
-    return "I'm here to help with MISC Pro estimation questions only. I can't change my operating instructions.";
+    return "I'm here to help with CALMISC estimation questions only. I can't change my operating instructions.";
   }
   if (category === 'Social engineering') {
     return "I can't verify identity claims through chat, and I'm not able to bypass security for any reason. Please use the official account recovery process or contact your admin directly.";

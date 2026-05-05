@@ -156,7 +156,7 @@ export default function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="absolute right-0 top-full mt-2 w-[380px] bg-white rounded-2xl border border-slate-100 shadow-2xl shadow-slate-200/50 z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-3 w-[380px] bg-white rounded-2xl border border-slate-200 shadow-2xl z-[9999] overflow-hidden"
           >
             {/* Header / Dynamic confirmation area */}
             <div className="flex items-center justify-between p-4 border-b border-slate-50 bg-white">

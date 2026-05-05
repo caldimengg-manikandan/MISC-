@@ -1,7 +1,7 @@
-# MISC Pro — Application Overview
+# CALMISC — Application Overview
 
-## What is MISC Pro?
-MISC Pro is a web-based steel estimation platform for miscellaneous metal fabrication. It helps estimators and project managers at steel fabrication companies to:
+## What is CALMISC?
+CALMISC is a web-based steel estimation platform for miscellaneous metal fabrication. It helps estimators and project managers at steel fabrication companies to:
 - create and manage project estimations
 - calculate steel weights, labor hours, and total costs
 - track project workflow status

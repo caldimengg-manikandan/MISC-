@@ -1,4 +1,4 @@
-# Stair Calculation — MISC Pro Formula Reference
+# Stair Calculation — CALMISC Formula Reference
 
 ## Overview
 The stair calculation engine computes steel weight, labor hours, finishing costs, and total project cost for each stair flight.

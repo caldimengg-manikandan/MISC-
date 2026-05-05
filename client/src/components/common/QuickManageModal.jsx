@@ -364,8 +364,14 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
             <div className="list-header" style={{ 
               display: 'grid', 
               gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 80px' : (category === 'stringer_size' ? '40px 1fr 100px 80px 80px 80px 80px 80px 80px' : '40px 1fr 140px 140px 140px 80px'), 
-              padding: '0 14px', 
-              fontSize: '10px' 
+              padding: '8px 14px', 
+              fontSize: '10px',
+              position: 'sticky',
+              top: 0,
+              background: '#f8fafc',
+              borderBottom: '1px solid #e2e8f0',
+              zIndex: 10,
+              marginBottom: 0
             }}>
               <span>S.No.</span>
               <span>Description</span>
@@ -499,16 +505,22 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                               <X size={14} />
                             </button>
                           </>
-                        ) : isDefault ? (
-                          <div className="del-placeholder" title="System defaults cannot be deleted. Add as custom to manage.">
+                        ) : (isDefault && !entry.id && !entry._id) ? (
+                          <div className="del-placeholder" title="Hardcoded defaults cannot be deleted. Add as custom to manage.">
                             <Trash2 size={14} style={{ opacity: 0.3 }} />
                           </div>
                         ) : (
                           <>
-                            <button onClick={() => handleEditClick(entry)} className="edit-btn" title="Edit">
+                            <button onClick={() => {
+                              if (isDefault && !window.confirm('This is a System Default. Are you sure you want to edit it? It may affect global calculations.')) return;
+                              handleEditClick(entry);
+                            }} className="edit-btn" title="Edit">
                               <Edit2 size={14} />
                             </button>
-                            <button onClick={() => handleDelete(entry.id || entry._id)} className="del-btn" title="Delete">
+                            <button onClick={() => {
+                              if (isDefault && !window.confirm('This is a System Default. Deleting it may affect global calculations and existing projects. Proceed?')) return;
+                              handleDelete(entry.id || entry._id);
+                            }} className="del-btn" title="Delete">
                               <Trash2 size={14} />
                             </button>
                           </>

@@ -117,7 +117,22 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
       formData.append('attachmentType', payload.attachmentType);
 
       // Hydrate state for generators
-      const parsedStairs = typeof project.stairs === 'string' ? JSON.parse(project.stairs) : project.stairs || [];
+      let parsedStairs = [];
+      try {
+        parsedStairs = typeof project.stairs === 'string' ? JSON.parse(project.stairs) : project.stairs;
+        if (!Array.isArray(parsedStairs)) {
+          // If it's an object with numeric keys (rare but happens with some DB parsers), convert to array
+          if (parsedStairs && typeof parsedStairs === 'object') {
+            parsedStairs = Object.values(parsedStairs);
+          } else {
+            parsedStairs = [];
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse stairs:", e);
+        parsedStairs = [];
+      }
+
       const parsedEst = typeof project.estimationResult === 'string' ? JSON.parse(project.estimationResult) : project.estimationResult || {};
 
       if (payload.attachmentType === 'PDF' || payload.attachmentType === 'Both') {

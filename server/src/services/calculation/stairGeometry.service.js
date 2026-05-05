@@ -55,9 +55,14 @@ const calculateStairGeometry = (input) => {
   const { totalHeight, tread, rise } = input;
   
   // RULE 1: SINGLE UNIT SYSTEM (Convert everything to FEET)
-  const totalHeightFt = parseToFeet(totalHeight, 'IN');
+  let totalHeightFt = parseToFeet(totalHeight, 'IN');
   const runFt = parseToFeet(tread, 'IN');
   const targetRiseFt = parseToFeet(rise, 'IN');
+  let risers = parseInt(input.risers);
+
+  if (!totalHeightFt && risers > 0 && targetRiseFt > 0) {
+    totalHeightFt = risers * targetRiseFt;
+  }
 
   // RULE 7: VALIDATION RULES
   if (!totalHeightFt || !runFt) {
@@ -66,10 +71,9 @@ const calculateStairGeometry = (input) => {
 
   // RULE 2: RISER CALCULATION 
   // Priority: 1. User Target Rise (Dynamic), 2. Explicit Risers Count (Manual), 3. Standard Fallback (7")
-  let risers = parseInt(input.risers);
   
-  if (targetRiseFt > 0) {
-    // If user provides a target rise, we recalculate the count to match it
+  if (targetRiseFt > 0 && input.totalHeight) {
+    // If user provides a target rise and total height, we recalculate the count to match it
     risers = Math.max(2, Math.round(totalHeightFt / targetRiseFt));
   } else if (isNaN(risers) || risers <= 0) {
     const STANDARD_RISER = 7 / 12; // 7 inches in ft

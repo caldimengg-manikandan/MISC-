@@ -3,8 +3,8 @@
 // Injected globally into MainLayout.
 
 import React, { useState } from 'react';
-import { X }               from 'lucide-react';
-import AiChatPanel         from './AiChatPanel';
+import { X } from 'lucide-react';
+import AiChatPanel from './AiChatPanel';
 
 // Inline cursor blink keyframe
 const CURSOR_STYLE = `
@@ -29,7 +29,7 @@ function AiChatButton() {
       <button
         className={`ai-fab ${open ? 'panel-open' : ''}`}
         onClick={() => setOpen(o => !o)}
-        title={open ? 'Close assistant' : 'Open MISC Pro Assistant'}
+        title={open ? 'Close assistant' : 'Open CAL MISC Assistant'}
         aria-label={open ? 'Close AI assistant' : 'Open AI assistant'}
         id="btn-ai-assistant"
       >
@@ -38,7 +38,7 @@ function AiChatButton() {
         ) : (
           /* Sparkle / star icon */
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-5.74L4 10l5.91-1.74z"/>
+            <path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-5.74L4 10l5.91-1.74z" />
           </svg>
         )}
       </button>

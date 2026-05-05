@@ -23,7 +23,7 @@ class EstimationRepository {
 
     async findAll(filters = {}, companyId = null, userId = null) {
         let query = `
-            SELECT p.*, c.companyName as customer_name, c.contactPerson, c.email, c.phone
+            SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email, c.phone
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
             WHERE 1=1
@@ -81,6 +81,14 @@ class EstimationRepository {
     async create(data) {
         const { projectName, customer_name, customer_id, dueDate, createdBy, companyId, ownerAdminId, assignedEngineerId, reviewerId, accessType } = data;
         const defaultStairs = JSON.stringify([{ label: "Stair 1", flights: [], landings: [], rails: [] }]);
+        const defaultAdditionalCosts = JSON.stringify({
+            globalVars: { shopRate: 75, fieldRate: 75, porRokRate: 38, trucks: 1, overnightRate: 85, travelRate: 58 },
+            customItems: [],
+            delivery: 'none',
+            manualOvernights: '', manualTravel: '', manualDailyTravel: '',
+            safetyPct: 10, detailingPct: 10, taxPct: 6,
+            overheadPct: 12, profitPct: 15
+        });
         
         let engineerEmail = null;
         if (assignedEngineerId) {
@@ -94,10 +102,10 @@ class EstimationRepository {
                 revision_number, userId, createdBy, company_id, owner_admin_id, 
                 assigned_engineer_id, engineerId, assignedEngineer,
                 reviewer_id,
-                isPinned, isArchived, created_at, updatedAt, stairs
+                isPinned, isArchived, created_at, updatedAt, stairs, additionalCosts
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, 'NEW', 'new', 0, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, GETDATE(), GETDATE(), ?)
+            VALUES (?, ?, ?, ?, 'NEW', 'new', 0, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, GETDATE(), GETDATE(), ?, ?)
         `, [
             projectName, customer_name, customer_id ? customer_id : null, 
             dueDate ? dueDate : null, createdBy, createdBy, 
@@ -106,7 +114,8 @@ class EstimationRepository {
             assignedEngineerId || null,
             engineerEmail,
             reviewerId || null,
-            defaultStairs
+            defaultStairs,
+            defaultAdditionalCosts
         ]);
         return result[0].id;
     }
@@ -162,6 +171,7 @@ class EstimationRepository {
 
         addField('estimationResult', estimationResult !== undefined ? (estimationResult ? JSON.stringify(estimationResult) : null) : (data.modules ? JSON.stringify(data.modules) : undefined));
         addField('stairs',           data.stairs !== undefined ? (data.stairs ? JSON.stringify(data.stairs) : null) : undefined);
+        addField('additionalCosts',  data.additionalCosts !== undefined ? (data.additionalCosts ? JSON.stringify(data.additionalCosts) : null) : undefined);
         addField('guardRails',       data.guardRails !== undefined ? (data.guardRails ? JSON.stringify(data.guardRails) : null) : undefined);
         addField('customRailValues', data.customRailValues !== undefined ? (data.customRailValues ? JSON.stringify(data.customRailValues) : null) : undefined);
         addField('localConfig',      data.localConfig !== undefined ? (data.localConfig ? JSON.stringify(data.localConfig) : null) : undefined);

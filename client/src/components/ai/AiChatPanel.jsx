@@ -17,13 +17,13 @@ const SUGGESTION_PROMPTS = [
 ];
 
 function AiChatPanel({ onClose }) {
-  const [messages, setMessages]       = useState([]);
-  const [input, setInput]             = useState('');
-  const [isThinking, setIsThinking]   = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null); // partial bot message
   const messagesEndRef = useRef(null);
-  const inputRef       = useRef(null);
-  const abortRef       = useRef(null);
+  const inputRef = useRef(null);
+  const abortRef = useRef(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -40,7 +40,8 @@ function AiChatPanel({ onClose }) {
   const loadHistory = async () => {
     try {
       const token = localStorage.getItem('steel_token');
-      const res   = await fetch(`${API_BASE_URL}/api/v1/agent/history`, { credentials: 'include',
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/history`, {
+        credentials: 'include',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -59,9 +60,9 @@ function AiChatPanel({ onClose }) {
 
     // Add user message
     const userMsg = {
-      id:        `u_${Date.now()}`,
-      role:      'user',
-      content:   query,
+      id: `u_${Date.now()}`,
+      role: 'user',
+      content: query,
       timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMsg]);
@@ -73,23 +74,24 @@ function AiChatPanel({ onClose }) {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
-      const res = await fetch(`${API_BASE_URL}/api/v1/agent/chat`, { credentials: 'include',
-        method:  'POST',
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/chat`, {
+        credentials: 'include',
+        method: 'POST',
         headers: {
-          'Content-Type':  'application/json',
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body:   JSON.stringify({ message: query }),
+        body: JSON.stringify({ message: query }),
         signal: ctrl.signal,
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-      const reader  = res.body.getReader();
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer    = '';
-      let botText   = '';
-      let botMeta   = {};
+      let buffer = '';
+      let botText = '';
+      let botMeta = {};
 
       setIsThinking(false);
 
@@ -128,9 +130,9 @@ function AiChatPanel({ onClose }) {
       // Finalize: move streaming to messages list
       setStreamingMsg(null);
       setMessages(prev => [...prev, {
-        id:        botMsgId,
-        role:      'assistant',
-        content:   botText || '(No response)',
+        id: botMsgId,
+        role: 'assistant',
+        content: botText || '(No response)',
         timestamp: new Date().toISOString(),
         ...botMeta,
       }]);
@@ -140,8 +142,8 @@ function AiChatPanel({ onClose }) {
       setIsThinking(false);
       setStreamingMsg(null);
       setMessages(prev => [...prev, {
-        id:      `err_${Date.now()}`,
-        role:    'assistant',
+        id: `err_${Date.now()}`,
+        role: 'assistant',
         content: '⚠️ Connection error. Make sure you are connected and try again.',
         timestamp: new Date().toISOString(),
       }]);
@@ -158,11 +160,12 @@ function AiChatPanel({ onClose }) {
   const handleClear = async () => {
     const token = localStorage.getItem('steel_token');
     try {
-      await fetch(`${API_BASE_URL}/api/v1/agent/clear`, { credentials: 'include',
-        method:  'POST',
+      await fetch(`${API_BASE_URL}/api/v1/agent/clear`, {
+        credentials: 'include',
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (_) {}
+    } catch (_) { }
     setMessages([]);
     setStreamingMsg(null);
     setIsThinking(false);
@@ -177,13 +180,13 @@ function AiChatPanel({ onClose }) {
   const showWelcome = messages.length === 0 && !isThinking && !streamingMsg;
 
   return (
-    <div className="ai-panel" role="dialog" aria-label="MISC Pro AI Assistant">
+    <div className="ai-panel" role="dialog" aria-label="CAL MISC AI Assistant">
       {/* Header */}
       <div className="ai-panel-header">
         <div className="ai-panel-header-left">
           <div className="ai-panel-avatar">✦</div>
           <div>
-            <div className="ai-panel-title">MISC Pro Assistant</div>
+            <div className="ai-panel-title">CAL MISC Assistant</div>
             <div className="ai-panel-subtitle">
               {isThinking ? 'Thinking…' : 'Ask about projects, costs, or how things work'}
             </div>
@@ -300,22 +303,22 @@ function AiMessageWrapper({ message, isStreaming }) {
       animation: isStreaming ? 'none' : 'ai-panel-in 0.2s ease-out'
     }}>
       {/* Avatar */}
-      <div 
+      <div
         className={isStreaming ? 'ai-avatar-thinking' : ''}
         style={{
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
-        background: isBot ? 'linear-gradient(135deg,#10a37f,#0d8a6b)' : '#e5e7eb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        color: isBot ? '#fff' : '#666',
-        fontSize: isBot ? 12 : 10,
-        fontWeight: 700,
-        marginTop: 2,
-      }}>
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          background: isBot ? 'linear-gradient(135deg,#10a37f,#0d8a6b)' : '#e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          color: isBot ? '#fff' : '#666',
+          fontSize: isBot ? 12 : 10,
+          fontWeight: 700,
+          marginTop: 2,
+        }}>
         {isBot ? '✦' : 'U'}
       </div>
 
@@ -350,7 +353,7 @@ function AiMessageWrapper({ message, isStreaming }) {
               verticalAlign: 'baseline',
               boxShadow: '0 0 8px rgba(16,163,127,0.4)',
               animation: 'ai-cursor-blink 0.8s ease-in-out infinite',
-            }}/>
+            }} />
           )}
         </div>
 

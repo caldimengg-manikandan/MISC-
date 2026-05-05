@@ -1,7 +1,7 @@
-# Rates Configuration — MISC Pro System Config Keys
+# Rates Configuration — CALMISC System Config Keys
 
 ## Overview
-System rates control all financial calculations across MISC Pro. They are set globally in Pricing Settings (admin only) and can be overridden per-project in Local Pricing Overrides.
+System rates control all financial calculations across CALMISC. They are set globally in Pricing Settings (admin only) and can be overridden per-project in Local Pricing Overrides.
 
 ## All Config Keys
 

@@ -1,6 +1,6 @@
-# MISC Pro Security & Stability Validation Checklist
+# CALMISC Security & Stability Validation Checklist
 
-Use this checklist to manually verify the security hardening and stabilization work performed on the MISC Pro environment.
+Use this checklist to manually verify the security hardening and stabilization work performed on the CALMISC environment.
 
 ---
 

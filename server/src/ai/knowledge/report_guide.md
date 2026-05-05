@@ -1,4 +1,4 @@
-# Report Guide — Exporting Estimates from MISC Pro
+# Report Guide — Exporting Estimates from CALMISC
 
 ## Available Export Formats
 

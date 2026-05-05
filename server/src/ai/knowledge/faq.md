@@ -1,4 +1,4 @@
-# FAQ — MISC Pro Frequently Asked Questions
+# FAQ — CALMISC Frequently Asked Questions
 
 ## Calculations
 

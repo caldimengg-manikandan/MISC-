@@ -191,7 +191,8 @@ export default function EstimationList() {
 
   const filtered = estimations.filter(p =>
     p.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.customer_name && p.customer_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (p.customer_name && p.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (p.LinkedCustomerName && p.LinkedCustomerName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleDeleteClick = (e, project) => {
@@ -365,7 +366,7 @@ export default function EstimationList() {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      onClick={() => navigate('/project-info?id=' + p.id)}
+                      onClick={() => navigate(`/project/${p.id}/estimate/stair-railings`)}
                     >
                       <td onClick={e => toggleSelect(e, p.id)}>
                         <button className="el-selection-btn">
@@ -374,7 +375,7 @@ export default function EstimationList() {
                       </td>
                       <td><span className="el-id-chip">#{p.id.toString().slice(-6).toUpperCase()}</span></td>
                       <td className="el-td-name">{p.projectName}</td>
-                      <td className="el-td-muted">{p.customer_name || '—'}</td>
+                      <td className="el-td-muted">{p.LinkedCustomerName || p.customer_name || '—'}</td>
                       <td>
                         {p.workflow_status ? (
                           <WorkflowStatusBadge status={p.workflow_status} size="sm" />
@@ -398,7 +399,7 @@ export default function EstimationList() {
                           >
                             <Trash2 size={13} />
                           </button>
-                          <button className="el-row-cta" id={`btn-open-${p.id}`} onClick={() => navigate('/project-info?id=' + p.id)}>
+                          <button className="el-row-cta" id={`btn-open-${p.id}`} onClick={() => navigate(`/project/${p.id}/estimate/stair-railings`)}>
                             <ChevronRight size={15} />
                           </button>
                         </div>
@@ -422,7 +423,7 @@ export default function EstimationList() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  onClick={() => navigate('/project-info?id=' + p.id)}
+                  onClick={() => navigate(`/project/${p.id}/estimate/stair-railings`)}
                 >
                   <div className={`el-grid-selection ${selectedIds.includes(p.id) ? 'active' : ''}`} onClick={e => toggleSelect(e, p.id)}>
                     {selectedIds.includes(p.id) ? <CheckSquare size={18} /> : <Square size={18} />}

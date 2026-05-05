@@ -1,4 +1,4 @@
-# Dictionary Guide — MISC Pro Data Dictionary
+# Dictionary Guide — CALMISC Data Dictionary
 
 ## Overview
 The Dictionary stores the lookup tables that drive the calculation engine. Admins can manage dictionary entries in the Settings → Dictionary section.

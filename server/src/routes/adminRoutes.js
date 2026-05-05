@@ -24,6 +24,7 @@ router.get('/config', async (req, res) => {
       field_hourly_rate:      parseFloat(config.field_hourly_rate)      || 70.00,
       tax_rate:               parseFloat(config.tax_rate)               || 0.06,
       galvanize_rate:         parseFloat(config.galvanize_rate)         || 0.75,
+      primer_rate:            parseFloat(config.primer_rate)            || 0.00,
       powder_coat_rate:       parseFloat(config.powder_coat_rate)       || 1.7587,
       mounting_embedded_rate: parseFloat(config.mounting_embedded_rate) || 5.00,
       mounting_anchored_rate: parseFloat(config.mounting_anchored_rate) || 6.00,

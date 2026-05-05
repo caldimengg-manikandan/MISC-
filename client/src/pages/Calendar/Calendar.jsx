@@ -84,7 +84,7 @@ export default function Calendar() {
                 <div 
                   key={p.id} 
                   className={`cal-view-event status-${p.status ? p.status.replace(/\s+/g, '-').toLowerCase() : 'new'}`}
-                  onClick={() => navigate('/project-info?id=' + p.id)}
+                  onClick={() => navigate(`/project/${p.id}/estimate/stair-railings`)}
                 >
                   <span className="event-pno">#{p.id.toString().slice(-6).toUpperCase()}</span>
                   <span className="event-name">{p.projectName}</span>

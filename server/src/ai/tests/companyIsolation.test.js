@@ -29,7 +29,7 @@ function assert(condition, label) {
 
 async function runTests() {
   console.log('\n============================================');
-  console.log('  MISC Pro AI Agent — Company Isolation Tests');
+  console.log('  CALMISC AI Agent — Company Isolation Tests');
   console.log('============================================\n');
 
   // ── Query Router: company scoping checks ───────────────────────────────────

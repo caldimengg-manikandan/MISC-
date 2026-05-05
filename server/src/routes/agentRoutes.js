@@ -1,6 +1,6 @@
 /**
  * agentRoutes.js
- * Express routes for the MISC Pro AI assistant.
+ * Express routes for the CALMISC AI assistant.
  *
  * POST /api/agent/chat     — Main chat endpoint (SSE streaming)
  * GET  /api/agent/history  — Get session conversation history
@@ -8,13 +8,13 @@
  */
 
 const express = require('express');
-const router  = express.Router();
+const router = express.Router();
 
-const { 
-  runAgent, 
-  getChatThreads, 
-  getThreadHistory, 
-  deleteThread 
+const {
+  runAgent,
+  getChatThreads,
+  getThreadHistory,
+  deleteThread
 } = require('../ai/agent/agent');
 const authMiddleware = require('../middleware/auth');
 const { requireEstimator } = require('../middleware/requireRole');
@@ -35,11 +35,11 @@ router.post('/chat', authMiddleware, async (req, res) => {
   const ip = req.headers['x-forwarded-for']?.split(',')[0] ?? req.ip;
 
   const context = {
-    userId:    req.userId,
+    userId: req.userId,
     companyId: req.companyId,
-    role:      req.userRole || req.user?.role || 'estimator',
-    chatId:    chatId || null,
-    ip:        ip
+    role: req.userRole || req.user?.role || 'estimator',
+    chatId: chatId || null,
+    ip: ip
   };
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -53,24 +53,24 @@ router.post('/chat', authMiddleware, async (req, res) => {
   try {
     const result = await runAgent(message.trim(), context);
 
-    const text   = result.text || '';
+    const text = result.text || '';
     const chunks = splitIntoChunks(text, 50);
 
     for (let i = 0; i < chunks.length; i++) {
       sendSSE(res, {
         status: 'streaming',
-        text:   chunks[i],
-        done:   false,
+        text: chunks[i],
+        done: false,
       });
       await sleep(15);
     }
 
     sendSSE(res, {
       status: 'done',
-      text:   '',
-      done:   true,
+      text: '',
+      done: true,
       chatId: result.chatId,
-      tool:   result.tool   || null,
+      tool: result.tool || null,
       source: result.source || null,
       intent: result.intent || null,
     });

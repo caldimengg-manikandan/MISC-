@@ -1,4 +1,4 @@
-# Money Flow — How MISC Pro Builds the Total Estimate
+# Money Flow — How CALMISC Builds the Total Estimate
 
 ## Overview
 This document explains the exact flow from raw steel inputs to the final Grand Total displayed in the Calculation Summary.

@@ -13,14 +13,14 @@ router.get('/setup', authMiddleware, async (req, res) => {
   try {
     const [userRows] = await db.query('SELECT email, mfa_enabled FROM users WHERE id = ?', [req.userId]);
     const user = userRows[0];
-    
+
     if (user.mfa_enabled) {
       return res.status(400).json({ success: false, error: 'MFA is already enabled' });
     }
 
     const secret = speakeasy.generateSecret({
-      name: `MISC Pro (${user.email})`,
-      issuer: 'MISC Pro'
+      name: `CALMISC (${user.email})`,
+      issuer: 'CALMISC'
     });
 
     // Store the secret temporarily (or in a dedicated field)
@@ -59,8 +59,8 @@ router.post('/disable', authMiddleware, async (req, res) => {
     if (verified) {
       await db.query('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL WHERE id = ?', [req.userId]);
       const [updated] = await db.query('SELECT id, email, role, mfa_enabled FROM users WHERE id = ?', [req.userId]);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'MFA disabled successfully',
         user: updated[0]
       });
@@ -92,8 +92,8 @@ router.post('/verify', authMiddleware, async (req, res) => {
     if (verified) {
       await db.query('UPDATE users SET mfa_enabled = 1 WHERE id = ?', [req.userId]);
       const [updated] = await db.query('SELECT id, email, role, mfa_enabled FROM users WHERE id = ?', [req.userId]);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'MFA enabled successfully',
         user: updated[0]
       });
@@ -144,11 +144,11 @@ router.post('/login', async (req, res) => {
     if (verified) {
       // Create full session
       const authToken = jwt.sign(
-        { 
-          userId: user.id, 
-          role: user.role, 
-          email: user.email, 
-          companyId: user.company_id 
+        {
+          userId: user.id,
+          role: user.role,
+          email: user.email,
+          companyId: user.company_id
         },
         process.env.JWT_SECRET || 'fallback-secret',
         { expiresIn: '24h' }

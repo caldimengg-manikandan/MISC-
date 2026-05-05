@@ -1,7 +1,7 @@
-# Workflow Guide — MISC Pro Project Lifecycle
+# Workflow Guide — CALMISC Project Lifecycle
 
 ## Project Status Stages
-Every project in MISC Pro moves through these stages in order:
+Every project in CALMISC moves through these stages in order:
 
 1. **NEW** — Project created, not yet assigned to an engineer
 2. **ASSIGNED** — Engineer has been assigned to the project

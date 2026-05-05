@@ -132,7 +132,7 @@ const SidebarProjectRenderer = ({ p, navigate, isRecent = false, useEstimation }
   return (
     <div
       className={isRecent ? "sidebar-recent-item" : "sidebar-project-item"}
-      onClick={() => { if (!isRenaming) navigate('/project-info?id=' + p.id); }}
+      onClick={() => { if (!isRenaming) navigate(`/project/${p.id}/estimate/stair-railings`); }}
       title={p.projectName}
     >
       {!isRecent && <span className="sidebar-project-dot" />}
@@ -167,17 +167,18 @@ const SidebarProjectRenderer = ({ p, navigate, isRecent = false, useEstimation }
 
 // ── Global Header Navigation Definition ───────────────────────────────────────
 const HEADER_TABS = [
-  { id: 'dashboard',  label: 'Dashboard',     icon: <LayoutDashboard size={14} />, path: '/dashboard' },
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={14} />, path: '/dashboard' },
   { id: 'estimations', label: 'Projects', icon: <FolderOpen size={14} />, path: '/estimations' },
-  { id: 'estimate',   label: 'New Estimation', icon: <PenLine size={14} />,        path: null,
+  {
+    id: 'estimate', label: 'New Estimation', icon: <PenLine size={14} />, path: null,
     children: [
-      { label: 'Stair & Railings', icon: <Box size={13} />,        path: '/estimate/stair-railings' },
-      { label: 'Railings',         icon: <Database size={13} />,    path: '/estimate/railings' },
-      { label: 'Ladders',          icon: <ArrowUpDown size={13} />, path: '/estimate/ladders' },
-      { label: 'Bollards & Gates', icon: <Box size={13} />,        path: '/estimate/bollards' },
+      { label: 'Stair & Railings', icon: <Box size={13} />, path: '/estimate/stair-railings' },
+      { label: 'Railings', icon: <Database size={13} />, path: '/estimate/railings' },
+      { label: 'Ladders', icon: <ArrowUpDown size={13} />, path: '/estimate/ladders' },
+      { label: 'Bollards & Gates', icon: <Box size={13} />, path: '/estimate/bollards' },
     ],
   },
-  { id: 'reports',    label: 'Reports',        icon: <BarChart3 size={14} />,      path: '/reports' },
+  { id: 'reports', label: 'Reports', icon: <BarChart3 size={14} />, path: '/reports' },
 ];
 
 const HeaderTabBar = ({ navigate, activePath }) => {
@@ -196,7 +197,7 @@ const HeaderTabBar = ({ navigate, activePath }) => {
     <div className="header-nav-pill-bar">
       {HEADER_TABS.map(tab => {
         const isActive = activePath === tab.path || (tab.id === 'estimate' && activePath.startsWith('/estimate'));
-        
+
         if (tab.children) {
           return (
             <div key={tab.id} className="header-nav-dropdown" ref={dropdownRef}>
@@ -210,7 +211,7 @@ const HeaderTabBar = ({ navigate, activePath }) => {
               </button>
               <AnimatePresence>
                 {estimateOpen && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 8, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.95 }}
@@ -221,8 +222,8 @@ const HeaderTabBar = ({ navigate, activePath }) => {
                       <button
                         key={child.path}
                         className="header-nav-dropdown-item"
-                        onClick={() => { 
-                          setEstimateOpen(false); 
+                        onClick={() => {
+                          setEstimateOpen(false);
                           if (window.handleNav) window.handleNav(child.path);
                           else navigate(child.path);
                         }}
@@ -272,8 +273,8 @@ export default function MainLayout({ children }) {
     location.pathname.startsWith('/superadmin')
   );
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [exporting, setExporting]   = useState(false);
-  const [isSaving, setIsSaving]     = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showConfirmLeaveModal, setShowConfirmLeaveModal] = useState(false);
   const [leaveProjectInfo, setLeaveProjectInfo] = useState(null);
@@ -312,13 +313,14 @@ export default function MainLayout({ children }) {
     setExporting(true);
     const t = toast.loading('Generating BOM Excel…');
     try {
-      const resp = await fetch(`${API}/api/v1/reports/${currentProjectId}/bom-excel`, { credentials: 'include',
+      const resp = await fetch(`${API}/api/v1/reports/${currentProjectId}/bom-excel`, {
+        credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (!resp.ok) throw new Error(await resp.text());
       const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
       a.href = url;
       a.download = `BOM_${currentProjectId}_${Date.now()}.xlsx`;
       a.click();
@@ -336,7 +338,8 @@ export default function MainLayout({ children }) {
     setExportMenuOpen(false);
     const t = toast.loading('Preparing print preview…');
     try {
-      const resp = await fetch(`${API}/api/v1/reports/${currentProjectId}/live`, { credentials: 'include',
+      const resp = await fetch(`${API}/api/v1/reports/${currentProjectId}/live`, {
+        credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await resp.json();
@@ -360,20 +363,20 @@ export default function MainLayout({ children }) {
       st.label, st.stairType, st.width, st.risers, st.connection, st.stringerSize,
       n(st.stringerLFTotal), n(st.panAreaSqFt), n(st.stringerLbs), n(st.scrapLbs),
       f(st.steelCost), f(st.pansCost), f(st.finishCost), f(st.scrapCost),
-      f(st.porRokCost), f(st.anchorBoltsCost), n(st.shopHrsTotal,3), n(st.fieldHrsTotal,3),
+      f(st.porRokCost), f(st.anchorBoltsCost), n(st.shopHrsTotal, 3), n(st.fieldHrsTotal, 3),
       f(st.shopLaborCost), f(st.fieldLaborCost), f(st.subTotalWithoutTax), f(st.taxAmount),
       `<strong>${f(st.total)}</strong>`, f(st.pricePerRiser)
     ])).join('');
     const railRows = (rails || []).map(r => tableRow([
       r.index, r.label, r.stairRef, r.mountingType, n(r.length), r.postQty,
       f(r.steelCost), f(r.scrapCost), f(r.finishCost), f(r.porRokCost), f(r.anchorBoltsCost),
-      n(r.shopHrsTotal,3), n(r.fieldHrsTotal,3), f(r.shopLaborCost), f(r.fieldLaborCost),
+      n(r.shopHrsTotal, 3), n(r.fieldHrsTotal, 3), f(r.shopLaborCost), f(r.fieldLaborCost),
       f(r.subTotalWithoutTax), f(r.taxAmount), `<strong>${f(r.total)}</strong>`
     ])).join('');
     const platRows = (platforms || []).map(p => tableRow([
       p.index, p.label, p.stairRef, n(p.area), p.finish,
       f(p.steelCost), f(p.finishCost), f(p.mountingCost),
-      n(p.shopHrsTotal,3), n(p.fieldHrsTotal,3), f(p.shopLaborCost), f(p.fieldLaborCost),
+      n(p.shopHrsTotal, 3), n(p.fieldHrsTotal, 3), f(p.shopLaborCost), f(p.fieldLaborCost),
       f(p.subTotalWithoutTax), f(p.taxAmount), `<strong>${f(p.total)}</strong>`
     ])).join('');
 
@@ -455,62 +458,62 @@ export default function MainLayout({ children }) {
   <h2>1 — Project Header</h2>
   <div class="meta-grid">
     ${[['Project Number', project?.projectNumber], ['Location', project?.projectLocation],
-       ['Customer', project?.customerName],       ['Architect', project?.architect],
-       ['EOR', project?.eor],                      ['GC', project?.gcName],
-       ['Detailer', project?.detailer],            ['Vendor', project?.vendorName],
-       ['Enquiry Date', project?.enquiryDate ? new Date(project.enquiryDate).toLocaleDateString() : '—'],
-       ['Submission Deadline', project?.submissionDeadline ? new Date(project.submissionDeadline).toLocaleDateString() : '—']]
-      .map(([l,v]) => `<div class="meta-row"><span class="ml">${l}</span><span class="mv">${v || '—'}</span></div>`).join('')}
+      ['Customer', project?.customerName], ['Architect', project?.architect],
+      ['EOR', project?.eor], ['GC', project?.gcName],
+      ['Detailer', project?.detailer], ['Vendor', project?.vendorName],
+      ['Enquiry Date', project?.enquiryDate ? new Date(project.enquiryDate).toLocaleDateString() : '—'],
+      ['Submission Deadline', project?.submissionDeadline ? new Date(project.submissionDeadline).toLocaleDateString() : '—']]
+        .map(([l, v]) => `<div class="meta-row"><span class="ml">${l}</span><span class="mv">${v || '—'}</span></div>`).join('')}
   </div>
 </div>
 <div class="page-section">
   <h2>2 — Rates Snapshot</h2>
   <div class="rate-grid">
-    ${[['Steel $/lb','$'+n(rates?.steelPerLb,4)], ['Shop $/hr','$'+n(rates?.shopPerHr,2)],
-       ['Field $/hr','$'+n(rates?.fieldPerHr,2)], ['Galvanize $/lb','$'+n(rates?.galvanizePerLb,4)],
-       ['Powder Coat $/lb','$'+n(rates?.powderCoatPerLb,4)], ['Scrap %',n(rates?.scrapPct,1)+'%'],
-       ['Tax %',n(rates?.taxPct,2)+'%'], ['Anchor Bolt','$'+n(rates?.anchorBoltRate,4)],
-       ['Embedded Rate','$'+n(rates?.embeddedRate,2)], ['Anchored Rate','$'+n(rates?.anchoredRate,2)]]
-      .map(([l,v]) => `<div class="rate-pill"><div class="rate-label">${l}</div><div class="rate-val">${v}</div></div>`).join('')}
+    ${[['Steel $/lb', '$' + n(rates?.steelPerLb, 4)], ['Shop $/hr', '$' + n(rates?.shopPerHr, 2)],
+      ['Field $/hr', '$' + n(rates?.fieldPerHr, 2)], ['Galvanize $/lb', '$' + n(rates?.galvanizePerLb, 4)],
+      ['Powder Coat $/lb', '$' + n(rates?.powderCoatPerLb, 4)], ['Scrap %', n(rates?.scrapPct, 1) + '%'],
+      ['Tax %', n(rates?.taxPct, 2) + '%'], ['Anchor Bolt', '$' + n(rates?.anchorBoltRate, 4)],
+      ['Embedded Rate', '$' + n(rates?.embeddedRate, 2)], ['Anchored Rate', '$' + n(rates?.anchoredRate, 2)]]
+        .map(([l, v]) => `<div class="rate-pill"><div class="rate-label">${l}</div><div class="rate-val">${v}</div></div>`).join('')}
   </div>
 </div>
 <div class="page-section">
   <h2>3 — Project Summary</h2>
-  <table><thead>${tableRow(['Line Item','Stair','Rail','Platform','Total'],true)}</thead><tbody>
-  ${[['Steel lbs (base)', n(summary?.stairSteelLbs,0), n(summary?.railSteelLbs,0), n(summary?.platSteelLbs,0), n(summary?.stairSteelLbs + summary?.railSteelLbs + summary?.platSteelLbs,0)],
-     ['Scrap lbs', '—', '—', '—', n(summary?.totalScrapLbs,0)],
-     ['Steel Cost', '—', '—', '—', f(summary?.baseSteelCost)],
-     ['Scrap Cost', '—', '—', '—', f(summary?.scrapCost)],
-     ['Pans / Grating cost', f(summary?.pansCost + summary?.gratingCost), '—', '—', f(summary?.pansCost + summary?.gratingCost)],
-     ['Finish Cost', '—', '—', '—', f(summary?.finishCost)],
-     ['POR ROK', '—', '—', '—', f(summary?.porRokCost)],
-     ['Anchor Bolts', '—', '—', '—', f(summary?.anchorBoltsCost)],
-     ['Shop Labor', '—', '—', '—', f(summary?.shopLaborCost)],
-     ['Field Labor', '—', '—', '—', f(summary?.fieldLaborCost)],
-     ['Module sub-total', f(summary?.stairTotal), f(summary?.railTotal), f(summary?.platTotal), f((summary?.stairTotal||0)+(summary?.railTotal||0)+(summary?.platTotal||0))],
-     ['Sub-total w/o Tax', '—', '—', '—', f(summary?.subtotalWithoutTax)],
-     ['Tax', '—', '—', '—', f(summary?.taxAmount)],
-     ['GRAND TOTAL', '—', '—', '—', f(summary?.grandTotal)],
-     ['Total Risers', summary?.totalRisers, '—', '—', summary?.totalRisers],
-     ['Price / Riser', '—', '—', '—', f(summary?.pricePerRiser)]]
-    .map((r, i) => i === 13
-      ? `<tr class="grand">${r.map(c => `<td>${c ?? '—'}</td>`).join('')}</tr>`
-      : tableRow(r)
-    ).join('')}
+  <table><thead>${tableRow(['Line Item', 'Stair', 'Rail', 'Platform', 'Total'], true)}</thead><tbody>
+  ${[['Steel lbs (base)', n(summary?.stairSteelLbs, 0), n(summary?.railSteelLbs, 0), n(summary?.platSteelLbs, 0), n(summary?.stairSteelLbs + summary?.railSteelLbs + summary?.platSteelLbs, 0)],
+      ['Scrap lbs', '—', '—', '—', n(summary?.totalScrapLbs, 0)],
+      ['Steel Cost', '—', '—', '—', f(summary?.baseSteelCost)],
+      ['Scrap Cost', '—', '—', '—', f(summary?.scrapCost)],
+      ['Pans / Grating cost', f(summary?.pansCost + summary?.gratingCost), '—', '—', f(summary?.pansCost + summary?.gratingCost)],
+      ['Finish Cost', '—', '—', '—', f(summary?.finishCost)],
+      ['POR ROK', '—', '—', '—', f(summary?.porRokCost)],
+      ['Anchor Bolts', '—', '—', '—', f(summary?.anchorBoltsCost)],
+      ['Shop Labor', '—', '—', '—', f(summary?.shopLaborCost)],
+      ['Field Labor', '—', '—', '—', f(summary?.fieldLaborCost)],
+      ['Module sub-total', f(summary?.stairTotal), f(summary?.railTotal), f(summary?.platTotal), f((summary?.stairTotal || 0) + (summary?.railTotal || 0) + (summary?.platTotal || 0))],
+      ['Sub-total w/o Tax', '—', '—', '—', f(summary?.subtotalWithoutTax)],
+      ['Tax', '—', '—', '—', f(summary?.taxAmount)],
+      ['GRAND TOTAL', '—', '—', '—', f(summary?.grandTotal)],
+      ['Total Risers', summary?.totalRisers, '—', '—', summary?.totalRisers],
+      ['Price / Riser', '—', '—', '—', f(summary?.pricePerRiser)]]
+        .map((r, i) => i === 13
+          ? `<tr class="grand">${r.map(c => `<td>${c ?? '—'}</td>`).join('')}</tr>`
+          : tableRow(r)
+        ).join('')}
   </tbody></table>
 </div>
 ${stairs?.length ? `<h2>4 — Stair Detail</h2>
-<table><thead>${tableRow(['Stair','Type','Width','Risers','Connection','Stringer','Str.LF','Pan sqft','Steel lbs','Scrap lbs','Steel $','Pans $','Finish $','Scrap $','POR ROK','Anchor $','Shop Hrs','Field Hrs','Shop Labor $','Field Labor $','w/o Tax','Tax','Total','$/Riser'],true)}</thead><tbody>${stairRows}</tbody></table>` : ''}
+<table><thead>${tableRow(['Stair', 'Type', 'Width', 'Risers', 'Connection', 'Stringer', 'Str.LF', 'Pan sqft', 'Steel lbs', 'Scrap lbs', 'Steel $', 'Pans $', 'Finish $', 'Scrap $', 'POR ROK', 'Anchor $', 'Shop Hrs', 'Field Hrs', 'Shop Labor $', 'Field Labor $', 'w/o Tax', 'Tax', 'Total', '$/Riser'], true)}</thead><tbody>${stairRows}</tbody></table>` : ''}
 ${rails?.length ? `<h2>5 — Rail Detail</h2>
-<table><thead>${tableRow(['#','Rail Type','Stair','Mounting','Length ft','Posts','Steel $','Scrap $','Finish $','POR ROK','Anchor $','Shop Hrs','Field Hrs','Shop Labor $','Field Labor $','w/o Tax','Tax','Total'],true)}</thead><tbody>${railRows}</tbody></table>` : ''}
+<table><thead>${tableRow(['#', 'Rail Type', 'Stair', 'Mounting', 'Length ft', 'Posts', 'Steel $', 'Scrap $', 'Finish $', 'POR ROK', 'Anchor $', 'Shop Hrs', 'Field Hrs', 'Shop Labor $', 'Field Labor $', 'w/o Tax', 'Tax', 'Total'], true)}</thead><tbody>${railRows}</tbody></table>` : ''}
 ${platforms?.length ? `<h2>6 — Platform Detail</h2>
-<table><thead>${tableRow(['#','Type','Stair','Area sqft','Finish','Steel $','Finish $','Mounting $','Shop Hrs','Field Hrs','Shop Labor $','Field Labor $','w/o Tax','Tax','Total'],true)}</thead><tbody>${platRows}</tbody></table>` : ''}
+<table><thead>${tableRow(['#', 'Type', 'Stair', 'Area sqft', 'Finish', 'Steel $', 'Finish $', 'Mounting $', 'Shop Hrs', 'Field Hrs', 'Shop Labor $', 'Field Labor $', 'w/o Tax', 'Tax', 'Total'], true)}</thead><tbody>${platRows}</tbody></table>` : ''}
 </body></html>`;
 
     // Use Blob URL — opens as a real tab (never popup-blocked) and prints only its own content
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const tab  = window.open(url, '_blank');
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, '_blank');
     // Safety: if browser blocks even this, fall back to a data URI
     if (!tab) {
       const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
@@ -530,7 +533,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
   const handleNavWithDraftCheck = (path) => {
     const isNewEstimationItem = NAV_ITEMS.find(n => n.id === 'estimate')?.children.some(c => c.path === path);
-    
+
     if (isNewEstimationItem) {
       const savedInfo = localStorage.getItem(getContextKey(path));
       if (savedInfo) {
@@ -546,7 +549,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
           setLeaveProjectInfo({ path, projectName: parsed.projectName || 'a project' });
           setShowConfirmLeaveModal(true);
           return;
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     navigate(path);
@@ -555,12 +558,12 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
   const handleConfirmLeave = () => {
     if (!leaveProjectInfo) return;
     const { path } = leaveProjectInfo;
-    
+
     localStorage.removeItem(getContextKey(path));
     localStorage.removeItem('stair_draft_global');
     localStorage.removeItem('railings_draft_global');
-    setSelectedEstimation(null); 
-    
+    setSelectedEstimation(null);
+
     setShowConfirmLeaveModal(false);
     setLeaveProjectInfo(null);
     navigate(path);
@@ -584,7 +587,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
     localStorage.removeItem('railings_draft_global');
     setSelectedEstimation(null);
     if (location.pathname === pendingNav) {
-      window.location.reload(); 
+      window.location.reload();
     } else {
       navigate(pendingNav);
     }
@@ -604,12 +607,13 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
   const fetchRecentChats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads`, { credentials: 'include',
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads`, {
+        credentials: 'include',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
       if (data.success) setRecentChats(data.threads);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   // Listen for chat:refresh from Dashboard when a new conversation is saved
@@ -622,9 +626,10 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
   const handleDeleteChat = async (chatId) => {
     if (!window.confirm('Are you sure you want to delete this conversation?')) return;
-    
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads/${chatId}`, { credentials: 'include',
+      const res = await fetch(`${API_BASE_URL}/api/v1/agent/threads/${chatId}`, {
+        credentials: 'include',
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -682,7 +687,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
           }
         } catch (e) { }
       }
-      
+
       setSelectedEstimation(prev => {
         if (prev?.id === 'draft') return prev;
         console.log('MainLayout: Setting Draft context');
@@ -728,7 +733,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
         <div className="sidebar-top">
           <div className="sidebar-brand">
             <div className="sidebar-brand-icon">M</div>
-            <span className="sidebar-brand-name">MISC Pro</span>
+            <span className="sidebar-brand-name">CAL MISC</span>
           </div>
           <button
             className="sidebar-collapse-btn"
@@ -776,7 +781,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                       if (item.id === 'estimate') setEstimateOpen(o => !o);
                       else if (item.id === 'settings') setSettingsOpen(o => !o);
                       else if (item.id === 'superadmin_panel') setSuperAdminOpen(o => !o);
-                      
+
                       if (item.path) navigate(item.path);
                     }}
                   >
@@ -784,27 +789,26 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                     <span className="sidebar-item-label">{item.label}</span>
                     <ChevronRight
                       size={14}
-                      className={`sidebar-item-chevron ${
-                        (item.id === 'estimate' && estimateOpen) || 
-                        (item.id === 'settings' && settingsOpen) || 
-                        (item.id === 'superadmin_panel' && superAdminOpen) ? 'open' : ''
-                      }`}
+                      className={`sidebar-item-chevron ${(item.id === 'estimate' && estimateOpen) ||
+                          (item.id === 'settings' && settingsOpen) ||
+                          (item.id === 'superadmin_panel' && superAdminOpen) ? 'open' : ''
+                        }`}
                     />
                   </button>
                   <AnimatePresence>
-                    {((item.id === 'estimate' && estimateOpen) || 
-                      (item.id === 'settings' && settingsOpen) || 
+                    {((item.id === 'estimate' && estimateOpen) ||
+                      (item.id === 'settings' && settingsOpen) ||
                       (item.id === 'superadmin_panel' && superAdminOpen)) && (
-                       <SubMenu
-                        items={item.children.filter(c => {
-                          if (c.superAdminOnly) return user?.role === 'superadmin';
-                          if (c.adminOnly) return ['admin', 'owner', 'superadmin'].includes(user?.role);
-                          return true;
-                        })}
-                        activePath={activePath}
-                        onNavigate={handleNavWithDraftCheck}
-                      />
-                    )}
+                        <SubMenu
+                          items={item.children.filter(c => {
+                            if (c.superAdminOnly) return user?.role === 'superadmin';
+                            if (c.adminOnly) return ['admin', 'owner', 'superadmin'].includes(user?.role);
+                            return true;
+                          })}
+                          activePath={activePath}
+                          onNavigate={handleNavWithDraftCheck}
+                        />
+                      )}
                   </AnimatePresence>
                 </div>
               );
@@ -826,7 +830,7 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
           <div className="flex justify-between items-center pr-4 mt-4">
             <div className="sidebar-section-title" style={{ marginTop: 0 }}>Recent Estimations</div>
             {recentProjects.length > 5 && (
-              <button 
+              <button
                 onClick={() => setShowAllRecent(!showAllRecent)}
                 className="text-[10px] text-[#10a37f] hover:underline uppercase font-bold tracking-wider"
               >
@@ -859,8 +863,8 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
             </div>
           ) : (
             recentChats.slice(0, 10).map(chat => (
-              <div 
-                key={chat.id} 
+              <div
+                key={chat.id}
                 className="sidebar-recent-item flex items-center justify-between gap-2 group"
                 onClick={() => navigate(`/dashboard?chatId=${chat.id}`)}
               >
@@ -912,17 +916,14 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
         {/* Top header */}
         <header className="top-header" style={{ paddingLeft: collapsed ? 60 : 20 }}>
-          <button className="header-title-btn">
-            <span>MISC Pro</span>
-            <ChevronDown size={14} />
-          </button>
+
 
           {/* Centralized Navigation Pill Bar */}
           <HeaderTabBar navigate={navigate} activePath={activePath} />
 
           <div className="header-actions">
-            <button 
-              className={`header-btn ${isSaving ? 'header-btn-success' : 'header-btn-primary'}`} 
+            <button
+              className={`header-btn ${isSaving ? 'header-btn-success' : 'header-btn-primary'}`}
               onClick={triggerGlobalSave}
               title="Save changes (Ctrl+S)"
               id="header-save-btn"
@@ -952,21 +953,21 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                 {exportMenuOpen && (
                   <>
                     {/* click-away */}
-                    <div style={{ position:'fixed',inset:0,zIndex:9998 }} onClick={() => setExportMenuOpen(false)} />
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setExportMenuOpen(false)} />
                     <motion.div
-                      initial={{ opacity:0, y:-6, scale:0.97 }}
-                      animate={{ opacity:1, y:0, scale:1 }}
-                      exit={{ opacity:0, y:-4, scale:0.97 }}
-                      transition={{ duration:0.13 }}
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                      transition={{ duration: 0.13 }}
                       style={{
-                        position:'absolute', top:'calc(100% + 6px)', right:0,
-                        background:'var(--gpt-surface)', border:'1px solid var(--gpt-border)',
-                        borderRadius:10, boxShadow:'0 8px 30px rgba(0,0,0,0.16)',
-                        minWidth:200, zIndex:9999, overflow:'hidden', padding:'4px 0'
+                        position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                        background: 'var(--gpt-surface)', border: '1px solid var(--gpt-border)',
+                        borderRadius: 10, boxShadow: '0 8px 30px rgba(0,0,0,0.16)',
+                        minWidth: 200, zIndex: 9999, overflow: 'hidden', padding: '4px 0'
                       }}
                     >
                       {!currentProjectId && (
-                        <div style={{ padding:'10px 14px', fontSize:11, color:'var(--gpt-text-muted)', fontStyle:'italic' }}>
+                        <div style={{ padding: '10px 14px', fontSize: 11, color: 'var(--gpt-text-muted)', fontStyle: 'italic' }}>
                           No project loaded
                         </div>
                       )}
@@ -975,16 +976,16 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                         disabled={!currentProjectId}
                         onClick={handlePrintPDF}
                         style={{
-                          display:'flex', alignItems:'center', gap:9,
-                          width:'100%', padding:'9px 14px', background:'transparent',
-                          border:'none', cursor: currentProjectId ? 'pointer':'not-allowed',
-                          fontSize:13, color: currentProjectId ? 'var(--gpt-text-primary)':'var(--gpt-text-muted)',
-                          fontFamily:'inherit', transition:'background 0.12s'
+                          display: 'flex', alignItems: 'center', gap: 9,
+                          width: '100%', padding: '9px 14px', background: 'transparent',
+                          border: 'none', cursor: currentProjectId ? 'pointer' : 'not-allowed',
+                          fontSize: 13, color: currentProjectId ? 'var(--gpt-text-primary)' : 'var(--gpt-text-muted)',
+                          fontFamily: 'inherit', transition: 'background 0.12s'
                         }}
-                        onMouseEnter={e => { if(currentProjectId) e.currentTarget.style.background='var(--gpt-body-bg)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background='transparent'; }}
+                        onMouseEnter={e => { if (currentProjectId) e.currentTarget.style.background = 'var(--gpt-body-bg)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <Printer size={14} style={{ color:'#6366f1', flexShrink:0 }} />
+                        <Printer size={14} style={{ color: '#6366f1', flexShrink: 0 }} />
                         Print PDF Report
                       </button>
                       <button
@@ -992,16 +993,16 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
                         disabled={!currentProjectId || exporting}
                         onClick={handleExcelExport}
                         style={{
-                          display:'flex', alignItems:'center', gap:9,
-                          width:'100%', padding:'9px 14px', background:'transparent',
-                          border:'none', cursor: currentProjectId ? 'pointer':'not-allowed',
-                          fontSize:13, color: currentProjectId ? 'var(--gpt-text-primary)':'var(--gpt-text-muted)',
-                          fontFamily:'inherit', transition:'background 0.12s'
+                          display: 'flex', alignItems: 'center', gap: 9,
+                          width: '100%', padding: '9px 14px', background: 'transparent',
+                          border: 'none', cursor: currentProjectId ? 'pointer' : 'not-allowed',
+                          fontSize: 13, color: currentProjectId ? 'var(--gpt-text-primary)' : 'var(--gpt-text-muted)',
+                          fontFamily: 'inherit', transition: 'background 0.12s'
                         }}
-                        onMouseEnter={e => { if(currentProjectId) e.currentTarget.style.background='var(--gpt-body-bg)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background='transparent'; }}
+                        onMouseEnter={e => { if (currentProjectId) e.currentTarget.style.background = 'var(--gpt-body-bg)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <FileSpreadsheet size={14} style={{ color:'#10a37f', flexShrink:0 }} />
+                        <FileSpreadsheet size={14} style={{ color: '#10a37f', flexShrink: 0 }} />
                         {exporting ? 'Generating…' : 'BOM Excel (4 sheets)'}
                       </button>
                     </motion.div>
@@ -1041,8 +1042,8 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
       {/* ── Resume / Fresh Start Modal ── */}
       {/* ── Resume / Fresh Start Modal ── */}
       {showResumeModal && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <motion.div 
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -1063,19 +1064,19 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={handleResumeDraft}
                   className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all text-sm flex items-center justify-center gap-2"
                 >
                   <PenLine size={14} /> Resume Current Draft
                 </button>
-                <button 
+                <button
                   onClick={handleStartFresh}
                   className="w-full px-4 py-3 rounded-xl border border-rose-200 text-rose-600 font-semibold hover:bg-rose-50 transition-all text-sm flex items-center justify-center gap-2"
                 >
                   🗑️ Discard & Start New
                 </button>
-                <button 
+                <button
                   onClick={() => { setShowResumeModal(false); setPendingNav(null); }}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-all text-sm"
                 >
@@ -1089,8 +1090,8 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
 
       {/* ── Confirm Leave Project Modal ── */}
       {showConfirmLeaveModal && (
-        <div className="fixed inset-0 z-[2001] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <motion.div 
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100"
@@ -1121,13 +1122,13 @@ ${platforms?.length ? `<h2>6 — Platform Detail</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <button 
+                <button
                   onClick={() => { setShowConfirmLeaveModal(false); setLeaveProjectInfo(null); }}
                   className="px-6 py-4 rounded-2xl border-2 border-slate-100 text-slate-600 font-bold hover:bg-slate-50 hover:border-slate-200 transition-all text-sm uppercase tracking-wider"
                 >
                   Stay Here
                 </button>
-                <button 
+                <button
                   onClick={handleConfirmLeave}
                   className="px-6 py-4 rounded-2xl bg-rose-500 text-white font-extrabold hover:bg-rose-600 shadow-xl shadow-rose-100 hover:shadow-rose-200 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2"
                 >
@@ -1161,6 +1162,6 @@ function buildCrumbs(path) {
     '/reports': ['Reports'],
 
   };
-  return map[path] || ['MISC Pro'];
+  return map[path] || ['CALMISC'];
 }
 

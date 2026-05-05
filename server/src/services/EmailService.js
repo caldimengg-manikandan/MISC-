@@ -22,7 +22,7 @@ function getTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    tls: { 
+    tls: {
       rejectUnauthorized: false,
       minVersion: 'TLSv1.2'
     },
@@ -41,7 +41,7 @@ async function send(to, subject, html) {
   }
   try {
     await t.sendMail({
-      from: `"MISC Pro" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      from: `"CALMISC" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to,
       subject,
       html,
@@ -69,7 +69,7 @@ async function sendOTP(email, otp) {
         If you did not attempt to log in, your account may be compromised. Change your password immediately.
       </p>
     </div>`;
-  await send(email, 'MISC Pro — Login Verification Code', html);
+  await send(email, 'CALMISC — Login Verification Code', html);
 }
 
 // ── Admin invite / estimator invite email ────────────────────────────────────
@@ -77,7 +77,7 @@ async function sendAdminInvite(email, activationLink, licenseType, maxEstimators
   const html = `
     <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0f0f0f;border-radius:12px;color:#e5e5e5">
       <h2 style="color:#ffffff;font-size:20px;font-weight:600;margin-bottom:8px">
-        You've been invited to MISC Pro
+        You've been invited to CALMISC
       </h2>
       ${recipientName ? `<p style="color:#a0a0a0;font-size:14px">Hi ${recipientName},</p>` : ''}
       <p style="color:#a0a0a0;font-size:14px;margin-bottom:24px">
@@ -94,7 +94,7 @@ async function sendAdminInvite(email, activationLink, licenseType, maxEstimators
         This link expires in 48 hours. If you didn't expect this invitation, please ignore this email.
       </p>
     </div>`;
-  await send(email, 'MISC Pro — Activate Your Account', html);
+  await send(email, 'CALMISC — Activate Your Account', html);
 }
 
 // ── Password reset email ─────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ async function sendPasswordReset(email, resetLink) {
     <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0f0f0f;border-radius:12px;color:#e5e5e5">
       <h2 style="color:#ffffff;font-size:20px;font-weight:600;margin-bottom:8px">Reset Your Password</h2>
       <p style="color:#a0a0a0;font-size:14px;margin-bottom:24px">
-        Click the button below to reset your MISC Pro password. This link expires in 1 hour.
+        Click the button below to reset your CALMISC password. This link expires in 1 hour.
       </p>
       <a href="${resetLink}"
          style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;
@@ -114,7 +114,7 @@ async function sendPasswordReset(email, resetLink) {
         If you didn't request a password reset, ignore this email — your account is safe.
       </p>
     </div>`;
-  await send(email, 'MISC Pro — Password Reset', html);
+  await send(email, 'CALMISC — Password Reset', html);
 }
 
 module.exports = { sendOTP, sendAdminInvite, sendPasswordReset };

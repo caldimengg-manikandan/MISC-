@@ -24,11 +24,11 @@ const MFAModal = ({ mfaToken, onComplete, onCancel }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300"
         onClick={onCancel}
       />
-      
+
       {/* Modal */}
       <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="p-8">
@@ -79,11 +79,11 @@ const MFAModal = ({ mfaToken, onComplete, onCancel }) => {
             </button>
           </form>
         </div>
-        
+
         {/* Footer info */}
         <div className="bg-slate-800/30 p-4 border-t border-slate-800 text-center">
           <p className="text-xs text-slate-500">
-            Secure authentication provided by MISC Pro Security Engine
+            Secure authentication provided by CALMISC Security Engine
           </p>
         </div>
       </div>

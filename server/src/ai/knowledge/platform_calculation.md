@@ -1,4 +1,4 @@
-# Platform Calculation — MISC Pro Formula Reference
+# Platform Calculation — CALMISC Formula Reference
 
 ## Overview
 Platforms are horizontal steel surfaces (landings, mezzanines) that can be attached to stairs or standalone.

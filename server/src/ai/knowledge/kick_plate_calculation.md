@@ -1,4 +1,4 @@
-# Kick Plate Calculation — MISC Pro Formula Reference
+# Kick Plate Calculation — CALMISC Formula Reference
 
 ## Overview
 Kick plates (toe boards) are low-height steel plates installed at floor level along railings to prevent objects from rolling off edges.

@@ -83,6 +83,7 @@ export default function PricingSettings() {
     field_hourly_rate: 70.00,
     tax_rate: 0.06,
     galvanize_rate: 0.75,
+    primer_rate: 0.00,
     powder_coat_rate: 1.7587,
     mounting_embedded_rate: 5.00,
     mounting_anchored_rate: 6.00,
@@ -286,37 +287,47 @@ export default function PricingSettings() {
               icon={Layers}
               accentColor="#6366f1"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                <PremiumSettingInput 
-                  label='1-1/4" Bar / Welded' value={config.grating_factor_bar_125_welded}
-                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_125_welded: parseFloat(v)}))} 
-                  suffix="x Mult"
-                />
-                <PremiumSettingInput 
-                  label='1-1/4" Bar / Bolted' value={config.grating_factor_bar_125_bolted}
-                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_125_bolted: parseFloat(v)}))} 
-                  suffix="x Mult"
-                />
-                <PremiumSettingInput 
-                  label='1" Bar / Welded' value={config.grating_factor_bar_100_welded}
-                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_100_welded: parseFloat(v)}))} 
-                  suffix="x Mult"
-                />
-                <PremiumSettingInput 
-                  label='1" Bar / Bolted' value={config.grating_factor_bar_100_bolted}
-                  onChange={(v) => setConfig(p => ({...p, grating_factor_bar_100_bolted: parseFloat(v)}))} 
-                  suffix="x Mult"
-                />
-                <PremiumSettingInput 
-                  label="McNichols Treads" value={config.grating_factor_mcnichols}
-                  onChange={(v) => setConfig(p => ({...p, grating_factor_mcnichols: parseFloat(v)}))} 
-                  suffix="x Mult"
-                />
-                <PremiumSettingInput 
-                  label="Other Prefab Treads" value={config.grating_factor_prefab}
-                  onChange={(v) => setConfig(p => ({...p, grating_factor_prefab: parseFloat(v)}))} 
-                  suffix="x Mult"
-                />
+              <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-3">
+                <Info size={16} className="text-blue-500 mt-0.5" />
+                <div className="text-[11px] text-slate-500 leading-relaxed">
+                  <strong>Calculation Logic:</strong> Grating costs are calculated per tread/riser based on stair width. 
+                  Below each factor, you can see the <strong>Effective Price per Tread</strong> ($ baseline × multiplier) for standard widths.
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                {[
+                  { label: '1-1/4" Bar / Welded', key: 'grating_factor_bar_125_welded' },
+                  { label: '1-1/4" Bar / Bolted', key: 'grating_factor_bar_125_bolted' },
+                  { label: '1" Bar / Welded', key: 'grating_factor_bar_100_welded' },
+                  { label: '1" Bar / Bolted', key: 'grating_factor_bar_100_bolted' },
+                  { label: 'McNichols Treads', key: 'grating_factor_mcnichols' },
+                  { label: 'Other Prefab Treads', key: 'grating_factor_prefab' }
+                ].map(item => {
+                  const factor = config[item.key] || 1.0;
+                  return (
+                    <div key={item.key} className="space-y-3">
+                      <PremiumSettingInput 
+                        label={item.label} value={factor}
+                        onChange={(v) => setConfig(p => ({...p, [item.key]: parseFloat(v)}))} 
+                        suffix="x Mult"
+                      />
+                      <div className="grid grid-cols-4 gap-1 px-1">
+                        {[
+                          { w: "3'0\"", base: 56.10 },
+                          { w: "4'0\"", base: 64.12 },
+                          { w: "4'6\"", base: 72.15 },
+                          { w: "5'0\"", base: 80.15 }
+                        ].map(rate => (
+                          <div key={rate.w} className="flex flex-col items-center p-1.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase">{rate.w}</span>
+                            <span className="text-[10px] font-black text-slate-700">${(rate.base * factor).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </SettingSection>
           </div>
@@ -347,6 +358,13 @@ export default function PricingSettings() {
                     <PremiumSettingInput 
                       label="Galv Charge" icon={DollarSign} value={config.galvanize_rate}
                       onChange={(v) => setConfig(p => ({...p, galvanize_rate: parseFloat(v)}))} 
+                      suffix="/ lb"
+                    />
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                    <PremiumSettingInput 
+                      label="Primer Charge" icon={DollarSign} value={config.primer_rate}
+                      onChange={(v) => setConfig(p => ({...p, primer_rate: parseFloat(v)}))} 
                       suffix="/ lb"
                     />
                   </div>

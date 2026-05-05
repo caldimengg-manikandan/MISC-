@@ -1,4 +1,4 @@
-# Customer Master — MISC Pro Customer Management
+# Customer Master — CALMISC Customer Management
 
 ## Overview
 The Customer Master stores all client company records. Projects are linked to customers for tracking and reporting.

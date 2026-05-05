@@ -317,13 +317,20 @@ class StairCalculationService {
           const slopeDeg = geometry ? geometry.angle : 0;
           const panArea = (st.widthFt || widthFt) * totalRunFt;
 
+          let manualStringerLength = 0;
+          if (st.stringerLength && typeof st.stringerLength === 'object') {
+            manualStringerLength = st.stringerLength.unit === 'IN' ? parseFloat(st.stringerLength.value || 0) / 12 : parseFloat(st.stringerLength.value || 0);
+          } else {
+            manualStringerLength = parseToFeet(st.stringerLength) || 0;
+          }
+
           const nsBot = parseToFeet(st.nsStringerBot);
           const fsBot = parseToFeet(st.fsStringerBot);
           const nsTop = parseToFeet(st.nsStringerTop);
           const fsTop = parseToFeet(st.fsStringerTop);
 
-          const nsTrueLength = diagonalFt + nsBot + nsTop;
-          const fsTrueLength = diagonalFt + fsBot + fsTop;
+          const nsTrueLength = manualStringerLength > 0 ? manualStringerLength : (diagonalFt + nsBot + nsTop);
+          const fsTrueLength = manualStringerLength > 0 ? manualStringerLength : (diagonalFt + fsBot + fsTop);
           const totalLFBothStringers = nsTrueLength + fsTrueLength;
 
           return {
@@ -517,14 +524,20 @@ class StairCalculationService {
 
         const isGalv = (rail.finish || '').toUpperCase().includes('GALVANIZED') || (rail.finish || '').toUpperCase().includes('GALV');
         const isPowder = (rail.finish || '').toUpperCase().includes('POWDER');
+        const isPrimer = (rail.finish || '').toUpperCase().includes('PRIMER') || (!isGalv && !isPowder);
 
         let finishShopHrs = 0;
         let finishFieldHrs = 0;
         let finishTotalCost = 0;
 
+        let finishRate = 0;
+        if (isGalv) finishRate = getRate('galvanize_charge', 0.75);
+        else if (isPowder) finishRate = getRate('powder_coat_rate', 1.7587);
+        else if (isPrimer) finishRate = getRate('primer_rate', 0.00);
+        
+        finishTotalCost = baseWeight * finishRate;
+
         if (isGalv || isPowder) {
-          const finishRate = isGalv ? getRate('galvanize_charge', 0.75) : getRate('powder_coat_rate', 1.7587);
-          finishTotalCost = baseWeight * finishRate;
           
           if (isGalv || isPowder) {
             let finishShopRate = 0;
@@ -620,6 +633,7 @@ class StairCalculationService {
             scrapLbs: this.roundExcel(scrapLbs, 3),
             scrapFactorPct: scrapFactorPct,
             steelPriceBase: this.roundExcel(steelPriceBase, 2),
+            steelPricePerLb: this.roundExcel(steelPrice, 2),
             scrapPriceOnly: this.roundExcel(scrapPriceOnly, 2),
             finishTotalCost: this.roundExcel(finishTotalCost, 2),
             porRokCost: this.roundExcel(porRokCost, 2),
@@ -675,14 +689,18 @@ class StairCalculationService {
 
         const isGalv = (p.finish || '').toUpperCase().includes('GALVANIZED') || (p.finish || '').toUpperCase().includes('GALV');
         const isPowder = (p.finish || '').toUpperCase().includes('POWDER');
+        const isPrimer = (p.finish || '').toUpperCase().includes('PRIMER') || (!isGalv && !isPowder);
 
-        const finishRate = isGalv ? getRate('galvanize_charge', 0.7500) : getRate('powder_coat_rate', 1.7587);
-        let finishTotalCost = 0;
+        let finishRate = 0;
+        if (isGalv) finishRate = getRate('galvanize_charge', 0.7500);
+        else if (isPowder) finishRate = getRate('powder_coat_rate', 1.7587);
+        else if (isPrimer) finishRate = getRate('primer_rate', 0.00);
+
+        let finishTotalCost = baseWeight * finishRate;
         let finishFieldHrs = 0;
         let finishShopHrs = 0;
 
         if (isGalv || isPowder) {
-          finishTotalCost = baseWeight * finishRate;
           if (isGalv) {
             const galvMh = matchLabor(`${typeLabel} 10'-0" wide`);
             finishShopHrs = (area / 10) * galvMh.shop;
@@ -927,14 +945,20 @@ class StairCalculationService {
           const finishBaseLbs = stringerBaseWeight + panTotalWeight;
           const isGalv = /GALV/i.test(st.finish || '');
           const isPowder = /POWDER/i.test(st.finish || '');
+          const isPrimer = /PRIMER/i.test(st.finish || '') || (!isGalv && !isPowder);
 
           let finishTotalCost = 0;
           let galvShopHrs = 0;
           let galvFieldHrs = 0;
 
+          let finishRate = 0;
+          if (isGalv) finishRate = getRate('galvanize_charge', 0.7500);
+          else if (isPowder) finishRate = getRate('powder_coat_rate', 1.7587);
+          else if (isPrimer) finishRate = getRate('primer_rate', 0.00);
+
+          finishTotalCost = finishBaseLbs * finishRate;
+
           if (isGalv || isPowder) {
-            const finishRate = isGalv ? getRate('galvanize_charge', 0.7500) : getRate('powder_coat_rate', 1.7587);
-            finishTotalCost = finishBaseLbs * finishRate;
             const galvMh = matchLabor(st.stringerSize || stairTypeLabel);
             galvShopHrs = risers * galvMh.shop;
             galvFieldHrs = risers * galvMh.field;
@@ -1005,6 +1029,7 @@ class StairCalculationService {
               scrapLbs: this.roundExcel(scrapLbs, 3),
               scrapFactorPct: scrapFactorPct,
               steelPriceBase: this.roundExcel(steelPriceBase, 2),
+              steelPricePerLb: this.roundExcel(steelPrice, 2),
               scrapPriceOnly: this.roundExcel(scrapPriceOnly, 2),
               stairPansTotalPrice: this.roundExcel(panPriceTotal, 2),
               gratingTotalCost: this.roundExcel(gratingTotalCost, 2),

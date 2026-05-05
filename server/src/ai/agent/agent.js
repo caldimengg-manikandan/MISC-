@@ -11,12 +11,12 @@
  *   6. BLOCKED: return polite denial message
  */
 
-const { executeTool }                 = require('../tools/index');
-const rb                              = require('./responseBuilder');
-const chatRepo                        = require('./chatRepository');
-const CALCULATION_RULES               = require('./calculationRules');
+const { executeTool } = require('../tools/index');
+const rb = require('./responseBuilder');
+const chatRepo = require('./chatRepository');
+const CALCULATION_RULES = require('./calculationRules');
 const { classifyQuery, routeToTools } = require('./queryRouter');
-const { searchKnowledge }             = require('../search/knowledgeSearch');
+const { searchKnowledge } = require('../search/knowledgeSearch');
 const { classifySecurity, logSecurityAttempt, getRefusalMessage } = require('./securityClassifier');
 
 // In-memory conversation history (Session cache for faster lookups, but DB is source of truth)
@@ -52,10 +52,10 @@ async function runAgent(query, context) {
   if (GREETINGS.test(query.trim())) {
     await chatRepo.addMessage(activeChatId, { role: 'user', content: query });
     const firstName = context.userName ? context.userName.split(' ')[0] : '';
-    const greetingText = firstName 
-      ? `Hey ${firstName}! 👋 How can I help you with MISC Pro today?`
-      : "Hello! How can I help you with MISC Pro today?";
-      
+    const greetingText = firstName
+      ? `Hey ${firstName}! 👋 How can I help you with CALMISC today?`
+      : "Hello! How can I help you with CALMISC today?";
+
     await chatRepo.addMessage(activeChatId, { role: 'assistant', content: greetingText, intent: 'GREETING' });
     return { text: greetingText, intent: 'GREETING', chatId: activeChatId };
   }
@@ -76,18 +76,18 @@ async function runAgent(query, context) {
   if (security.blocked) {
     await logSecurityAttempt(userId, companyId, query, security.category, ip);
     const refusalText = getRefusalMessage(security.category);
-    
+
     // Save Assistant Message (Refusal)
-    await chatRepo.addMessage(activeChatId, { 
-      role: 'assistant', 
-      content: refusalText, 
-      intent: 'SECURITY_BLOCK' 
+    await chatRepo.addMessage(activeChatId, {
+      role: 'assistant',
+      content: refusalText,
+      intent: 'SECURITY_BLOCK'
     });
 
-    return { 
-      text: refusalText, 
-      intent: 'SECURITY_BLOCK', 
-      chatId: activeChatId 
+    return {
+      text: refusalText,
+      intent: 'SECURITY_BLOCK',
+      chatId: activeChatId
     };
   }
 
@@ -103,15 +103,15 @@ async function runAgent(query, context) {
   const classification = classifyQuery(query, role);
 
   let responseText = '';
-  let toolUsed     = null;
-  let sourceDocs   = null;
+  let toolUsed = null;
+  let sourceDocs = null;
 
   try {
     if (validationResult.isCalculation && validationResult.isValid) {
-       // Calculation triggered with valid data
-       responseText = rb.buildCalculationResponse(validationResult.rule, validationResult.extractedData);
-       classification.type = 'CALCULATION';
-    } 
+      // Calculation triggered with valid data
+      responseText = rb.buildCalculationResponse(validationResult.rule, validationResult.extractedData);
+      classification.type = 'CALCULATION';
+    }
     else if (classification.type === 'BLOCKED') {
       responseText = rb.buildBlockedResponse(query, classification.reason);
 
@@ -121,23 +121,23 @@ async function runAgent(query, context) {
     } else if (classification.type === 'STATIC') {
       const chunks = searchKnowledge(query, 5);
       responseText = rb.buildStaticResponse(chunks, query);
-      sourceDocs   = chunks.length > 0 ? chunks[0].source : null;
+      sourceDocs = chunks.length > 0 ? chunks[0].source : null;
 
     } else if (classification.type === 'DYNAMIC') {
       const toolRoutes = routeToTools(query, role);
-      const results    = await executeToolRoutes(toolRoutes, { userId, companyId, role });
+      const results = await executeToolRoutes(toolRoutes, { userId, companyId, role });
       responseText = formatToolResults(toolRoutes, results, query);
-      toolUsed     = toolRoutes.map(t => t.toolName).join(', ');
+      toolUsed = toolRoutes.map(t => t.toolName).join(', ');
 
     } else if (classification.type === 'MIXED') {
-      const chunks     = searchKnowledge(query, 3);
+      const chunks = searchKnowledge(query, 3);
       const toolRoutes = routeToTools(query, role);
-      const results    = await executeToolRoutes(toolRoutes, { userId, companyId, role });
+      const results = await executeToolRoutes(toolRoutes, { userId, companyId, role });
 
       const dbText = formatToolResults(toolRoutes, results, query);
       responseText = rb.buildMixedResponse(chunks, dbText, query);
-      toolUsed     = toolRoutes.map(t => t.toolName).join(', ');
-      sourceDocs   = chunks.length > 0 ? chunks[0].source : null;
+      toolUsed = toolRoutes.map(t => t.toolName).join(', ');
+      sourceDocs = chunks.length > 0 ? chunks[0].source : null;
     }
 
   } catch (err) {
@@ -146,20 +146,20 @@ async function runAgent(query, context) {
   }
 
   // Save Assistant Message
-  await chatRepo.addMessage(activeChatId, { 
-    role: 'assistant', 
-    content: responseText, 
-    tool: toolUsed, 
-    source: sourceDocs, 
-    intent: classification.type 
+  await chatRepo.addMessage(activeChatId, {
+    role: 'assistant',
+    content: responseText,
+    tool: toolUsed,
+    source: sourceDocs,
+    intent: classification.type
   });
 
   return {
-    text:     responseText,
-    tool:     toolUsed,
-    source:   sourceDocs,
-    intent:   classification.type,
-    chatId:   activeChatId
+    text: responseText,
+    tool: toolUsed,
+    source: sourceDocs,
+    intent: classification.type,
+    chatId: activeChatId
   };
 }
 
@@ -168,10 +168,10 @@ async function runAgent(query, context) {
  */
 function validateCalculationQuery(query) {
   const normalized = query.toLowerCase();
-  
+
   const hasNumbers = /\d/.test(normalized);
   const isExplicitAction = /\b(calculate|compute)\b/.test(normalized);
-  
+
   if (!hasNumbers && !isExplicitAction) {
     return { isCalculation: false };
   }
@@ -179,7 +179,7 @@ function validateCalculationQuery(query) {
   // Find matching rule
   const ruleKey = Object.keys(CALCULATION_RULES).find(key => {
     const rule = CALCULATION_RULES[key];
-    return normalized.includes('calculate') && normalized.includes(key.toLowerCase().replace('_',' '));
+    return normalized.includes('calculate') && normalized.includes(key.toLowerCase().replace('_', ' '));
   }) || (normalized.includes('scrap') ? 'SCRAP' : null);
 
   if (!ruleKey) return { isCalculation: false };
@@ -244,15 +244,15 @@ function formatToolResults(toolRoutes, results, query) {
   }
 
   switch (primaryTool) {
-    case 'get_estimate_summary':  return rb.buildEstimateSummaryResponse(data, query);
-    case 'get_project_detail':    return rb.buildEstimateSummaryResponse(data, query);
-    case 'get_my_projects':       return rb.buildProjectListResponse(data, query);
+    case 'get_estimate_summary': return rb.buildEstimateSummaryResponse(data, query);
+    case 'get_project_detail': return rb.buildEstimateSummaryResponse(data, query);
+    case 'get_my_projects': return rb.buildProjectListResponse(data, query);
     case 'get_upcoming_deadlines': return rb.buildDeadlinesResponse(data, query);
-    case 'get_company_metrics':   return rb.buildCompanyMetricsResponse(data);
-    case 'get_customers':         return rb.buildCustomersResponse(data);
-    case 'get_rates':             return rb.buildRatesResponse(data);
-    case 'get_activity_log':      return rb.buildActivityResponse(data);
-    case 'search_projects':       return rb.buildSearchResponse(data, query);
+    case 'get_company_metrics': return rb.buildCompanyMetricsResponse(data);
+    case 'get_customers': return rb.buildCustomersResponse(data);
+    case 'get_rates': return rb.buildRatesResponse(data);
+    case 'get_activity_log': return rb.buildActivityResponse(data);
+    case 'search_projects': return rb.buildSearchResponse(data, query);
     default:
       return `Data retrieved: ${JSON.stringify(data).substring(0, 300)}`;
   }
@@ -278,26 +278,26 @@ function getHistory(sessionId) {
 }
 
 async function getChatThreads(userId) {
-    return chatRepo.getRecentChats(userId);
+  return chatRepo.getRecentChats(userId);
 }
 
 async function getThreadHistory(chatId) {
-    return chatRepo.getChatHistory(chatId);
+  return chatRepo.getChatHistory(chatId);
 }
 
 async function deleteThread(chatId) {
-    return chatRepo.deleteChat(chatId);
+  return chatRepo.deleteChat(chatId);
 }
 
 function clearHistory(sessionId) {
   conversationHistory.delete(sessionId);
 }
 
-module.exports = { 
-    runAgent, 
-    getHistory, 
-    clearHistory,
-    getChatThreads,
-    getThreadHistory,
-    deleteThread
+module.exports = {
+  runAgent,
+  getHistory,
+  clearHistory,
+  getChatThreads,
+  getThreadHistory,
+  deleteThread
 };

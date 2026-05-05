@@ -42,6 +42,7 @@ const noteRoutes       = require('./src/routes/notes');
 const customerRoutes   = require('./src/routes/customer.routes');
 const reportRoutes     = require('./src/routes/reportRoutes');
 const agentRoutes      = require('./src/routes/agentRoutes');
+const attachmentRoutes = require('./src/routes/attachmentRoutes');
 const mfaRoutes        = require('./src/routes/mfaRoutes');
 
 // New Phase 4+5 routes
@@ -338,6 +339,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth/mfa', mfaRoutes);
 
 // Protected routes — auth + license check (I4)
+app.use('/api/v1/projects',      authMiddleware, licenseCheck, attachmentRoutes);
 app.use('/api/v1/projects',      authMiddleware, licenseCheck, projectRoutes);
 app.use('/api/v1/projects',      authMiddleware, licenseCheck, workflowRoutes);
 app.use('/api/v1/notifications', authMiddleware, notificationRoutes);

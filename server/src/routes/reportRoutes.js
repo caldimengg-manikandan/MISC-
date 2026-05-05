@@ -74,7 +74,8 @@ router.get('/:projectId/live', async (req, res) => {
     const project = rows[0];
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
 
-    project.stairs = tryParse(project.stairs) || [];
+    const parsedStairs = tryParse(project.stairs);
+    project.stairs = Array.isArray(parsedStairs) ? parsedStairs : [];
     project.estimationResult = tryParse(project.estimationResult);
 
     // ── Rates Snapshot ──────────────────────────────────────────────────────
@@ -262,7 +263,7 @@ router.get('/:projectId/live', async (req, res) => {
         id: project.id,
         projectNumber: project.projectNumber,
         projectName: project.projectName,
-        customerName: project.customer_name || project.linkedCustomerName || '—',
+        customerName: project.linkedCustomerName || project.customer_name || '—',
         projectLocation: project.project_location || '—',
         architect: project.architect || '—',
         eor: project.eor || '—',
@@ -604,7 +605,8 @@ async function fetchLiveData(projectId, userId) {
   const project = rows[0];
   if (!project) return { success: false };
 
-  project.stairs = tryParse(project.stairs) || [];
+  const parsedStairs = tryParse(project.stairs);
+  project.stairs = Array.isArray(parsedStairs) ? parsedStairs : [];
   project.estimationResult = tryParse(project.estimationResult);
 
   const rates = {
@@ -785,7 +787,7 @@ async function fetchLiveData(projectId, userId) {
         id: project.id,
         projectNumber: project.projectNumber,
         projectName: project.projectName,
-        customerName: project.customer_name || project.linkedCustomerName || '—',
+        customerName: project.linkedCustomerName || project.customer_name || '—',
         projectLocation: project.project_location || '—',
         architect: project.architect || '—',
         eor: project.eor || '—',

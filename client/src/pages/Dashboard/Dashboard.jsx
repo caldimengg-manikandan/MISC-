@@ -647,7 +647,7 @@ export default function EstimationDashboard() {
               <FolderOpen size={14} /> New project
             </button>
             {displayedRecentProjects.map(p => (
-              <div key={p.id} className="mcs-list-item" onClick={() => navigate(`/project-info?id=${p.id}`)}>
+              <div key={p.id} className="mcs-list-item" onClick={() => navigate(`/project/${p.id}/estimate/stair-railings`)}>
                 <FolderOpen size={14} /> <span>{p.projectName || 'Project'}</span>
               </div>
             ))}
@@ -818,7 +818,7 @@ export default function EstimationDashboard() {
                     <h4 className="cal-details-title">Details for {format(selectedDate, 'dd MMMM')}</h4>
                     <ul className="cal-details-list">
                       {estimations.filter(p => p.dueDate && isSameDay(new Date(p.dueDate), selectedDate)).map(p => (
-                        <li key={p.id} className="cal-detail-item" onClick={(e) => { e.stopPropagation(); navigate('/project-info?id=' + p.id); }}>
+                        <li key={p.id} className="cal-detail-item" onClick={(e) => { e.stopPropagation(); navigate(`/project/${p.id}/estimate/stair-railings`); }}>
                           <span className={`status-dot dot-${p.status?.toLowerCase()}`} />
                           <span className="detail-name">{p.projectName}</span>
                           <span className="detail-status">{p.status}</span>
@@ -855,10 +855,10 @@ export default function EstimationDashboard() {
                         estimations.slice(0, 8).map(p => (
                           <tr key={p.id}>
                             <td className="t-name">{p.projectName}</td>
-                            <td>{p.customer_name || '—'}</td>
+                            <td>{p.LinkedCustomerName || p.customer_name || '—'}</td>
                             <td><span className={`status-badge badge-${p.status?.toLowerCase()}`}>{p.status}</span></td>
                             <td className="t-date">{p.dueDate ? format(new Date(p.dueDate), 'dd-MMM') : '—'}</td>
-                            <td><button className="btn-go" onClick={() => navigate('/project-info?id=' + p.id)}><ArrowRight size={14} /></button></td>
+                            <td><button className="btn-go" onClick={() => navigate(`/project/${p.id}/estimate/stair-railings`)}><ArrowRight size={14} /></button></td>
                           </tr>
                         ))
                       )}

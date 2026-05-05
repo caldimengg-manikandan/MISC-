@@ -1,4 +1,4 @@
-# Rail Calculation — MISC Pro Formula Reference
+# Rail Calculation — CALMISC Formula Reference
 
 ## Overview
 Rail calculations cover Wall Rail, Guard Rail, Grab Rail, Cane Rail, and Kick Plate. Each type has unique lbs/LF factors, post spacing rules, and labor rates.

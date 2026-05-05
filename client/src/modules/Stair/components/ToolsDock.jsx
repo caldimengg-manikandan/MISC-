@@ -7,6 +7,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEstimation } from '../../../contexts/EstimationContext';
 import JobberCalculatorModal from './JobberCalculatorModal';
+import API_BASE_URL from '../../../config/api';
+import toast from 'react-hot-toast';
 import './ToolsDock.css';
 
 export default function ToolsDock() {
@@ -65,26 +67,129 @@ export default function ToolsDock() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const processDropFiles = (files) => {
-    files.forEach(file => {
-      const isImg = file.type.startsWith('image/');
-      const obj = { 
-        id: Math.random().toString(36).substr(2, 9), 
-        name: file.name, 
-        url: URL.createObjectURL(file),
-        size: formatFileSize(file.size),
-        type: file.type
-      };
-      if (isImg) setLocalAttachments(p => ({ ...p, images: [...p.images, obj] }));
-      else setLocalAttachments(p => ({ ...p, documents: [...p.documents, obj] }));
-    });
+  // Fetch attachments on load
+  useEffect(() => {
+    if (!selectedEstimation?.id || selectedEstimation.id === 'draft') {
+      setLocalAttachments({ images: [], documents: [] });
+      return;
+    }
+
+    const fetchAttachments = async () => {
+      try {
+        const token = localStorage.getItem('steel_token');
+        const response = await fetch(`${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments`, {
+          credentials: 'include',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          const images = [];
+          const documents = [];
+          data.data.forEach(file => {
+            // ── null guard: file_type can be null for edge-case uploads ──
+            const isImg = file.file_type?.startsWith('image/');
+            const obj = {
+              id: file.id,
+              name: file.file_name,
+              // Serve through auth endpoint instead of raw static URL
+              serveUrl: `${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments/${file.id}/serve`,
+              downloadUrl: `${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments/${file.id}/download`,
+              size: formatFileSize(file.file_size),
+              type: file.file_type
+            };
+            if (isImg) images.push(obj);
+            else documents.push(obj);
+          });
+          setLocalAttachments({ images, documents });
+        }
+      } catch (err) {
+        console.error("Failed to fetch attachments", err);
+      }
+    };
+
+    fetchAttachments();
+  }, [selectedEstimation?.id]);
+
+  const processDropFiles = async (files) => {
+    if (!selectedEstimation?.id || selectedEstimation.id === 'draft') {
+      toast.error("Please save your estimation first to upload attachments.");
+      return;
+    }
+
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    const loadingToast = toast.loading("Uploading files...");
+    try {
+      const token = localStorage.getItem('steel_token');
+      const response = await fetch(`${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success("Files uploaded successfully", { id: loadingToast });
+        const newImages = [];
+        const newDocs = [];
+        data.data.forEach(file => {
+          // ── null guard ──────────────────────────────────────────────────
+          const isImg = file.file_type?.startsWith('image/');
+          const obj = {
+            id: file.id,
+            name: file.file_name,
+            serveUrl: `${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments/${file.id}/serve`,
+            downloadUrl: `${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments/${file.id}/download`,
+            size: formatFileSize(file.file_size),
+            type: file.file_type
+          };
+          if (isImg) newImages.push(obj);
+          else newDocs.push(obj);
+        });
+
+        setLocalAttachments(p => ({
+          images: [...p.images, ...newImages],
+          documents: [...p.documents, ...newDocs]
+        }));
+      } else {
+        toast.error(data.error || "Failed to upload files", { id: loadingToast });
+      }
+    } catch (err) {
+      console.error("Upload error", err);
+      toast.error("Network error during upload", { id: loadingToast });
+    }
   };
 
-  const removeAttachment = (type, id) => {
-    setLocalAttachments(p => ({
-      ...p,
-      [type]: p[type].filter(f => f.id !== id)
-    }));
+  const removeAttachment = async (type, id) => {
+    if (!selectedEstimation?.id || selectedEstimation.id === 'draft') return;
+    
+    try {
+      const token = localStorage.getItem('steel_token');
+      const response = await fetch(`${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setLocalAttachments(p => ({
+          ...p,
+          [type]: p[type].filter(f => f.id !== id)
+        }));
+      } else {
+        toast.error("Failed to delete attachment");
+      }
+    } catch (err) {
+      console.error("Delete error", err);
+      toast.error("Network error while deleting");
+    }
   };
 
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
@@ -126,7 +231,11 @@ export default function ToolsDock() {
   }, [themeMode]);
 
   const handleAddNote = async () => {
-    // Note: We no longer return early if !selectedEstimation?.id, allowing notes in Draft Mode
+    // Prevent adding notes to drafts because they get orphaned/cause DB errors
+    if (!selectedEstimation?.id || selectedEstimation.id === 'draft') {
+      alert("Please save your estimation first. Notes cannot be attached to unsaved drafts.");
+      return;
+    }
     
     // Add cascading offset so multiple notes don't spawn completely invisible under each other
     const noteCount = notes?.length || 0;
@@ -137,7 +246,7 @@ export default function ToolsDock() {
     const spawnY = Math.round(window.innerHeight / 2 - 120) + cascadeOffset;
     try {
       await addNote({
-        projectId: selectedEstimation?.id || null,
+        projectId: selectedEstimation.id,
         title: 'New Note',
         content: '',
         note_type: 'personal',
@@ -418,7 +527,12 @@ export default function ToolsDock() {
                           style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
                           title="Remove image"
                         ><X size={12} /></button>
-                        <div className="tdk-img-ph" style={{ backgroundImage: `url(${img.url})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 1, border: 'none' }}></div>
+                        {/* Click image thumbnail to open full-size in new tab via auth-aware /serve endpoint */}
+                        <div
+                          className="tdk-img-ph"
+                          onClick={() => window.open(img.serveUrl, '_blank', 'noopener,noreferrer')}
+                          style={{ backgroundImage: `url(${img.serveUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 1, border: 'none', cursor: 'zoom-in' }}
+                        ></div>
                         <div className="tdk-img-lbl">
                           <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{img.name}</div>
                           <div style={{ fontSize: '10px', color: 'var(--gpt-sidebar-muted)' }}>{img.size}</div>
@@ -444,7 +558,13 @@ export default function ToolsDock() {
                             style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
                             title="Remove document"
                           ><X size={12} /></button>
-                          <div className="tdk-doc-cover" style={{ background: colors[i % colors.length] }}>
+                          {/* Click cover to open document via auth-aware /serve endpoint */}
+                          <div
+                            className="tdk-doc-cover"
+                            onClick={() => window.open(doc.serveUrl, '_blank', 'noopener,noreferrer')}
+                            style={{ background: colors[i % colors.length], cursor: 'pointer' }}
+                            title={`Open ${doc.name}`}
+                          >
                             <FileCode2 size={28} color="rgba(255,255,255,0.9)" />
                           </div>
                           <div className="tdk-doc-lbl">

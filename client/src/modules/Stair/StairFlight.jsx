@@ -11,14 +11,29 @@ import toast from 'react-hot-toast';
 
 // Fallback hardcoded lists (used while loading or if API fails)
 const DEFAULT_STAIR_TYPES = [
-  { value: 'pan-concrete',  label: 'PAN PLATE CONC. FILLED' },
+  { value: 'pan-concrete', label: 'PAN PLATE CONC. FILLED' },
   { value: 'grating-tread', label: 'GRATING TREAD' },
-  { value: 'non-metal',     label: 'NON METAL STAIR' },
+  { value: 'non-metal', label: 'NON METAL STAIR' },
 ];
 
-const DEFAULT_STRINGER_SIZES  = ['W8x31', 'W10x33', 'W12x35', 'W12x40', 'W12x50', 'W14x43', 'MC12x10.6', 'C12x20.7', 'C15x33.9'];
+const DEFAULT_STRINGER_SIZES = [
+  'MC12x10.6',
+  'MC12x14.3',
+  'C12x20.7',
+  'C15x33.9',
+  'MC10x8.4',
+  'MC8x8.5',
+  'W8x31',
+  'W10x33',
+  'W12x35',
+  'W12x40',
+  'W12x50',
+  'W14x43',
+  'HSS12x2x3/16',
+  'HSS12x2x1/4'
+];
 const DEFAULT_CONNECTION_TYPES = ['Welded', 'Bolted'];
-const DEFAULT_FINISH_OPTIONS   = ['Primer', 'Painted', 'Galvanized', 'Galv+Painted', 'Powder Coated'];
+const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv+Painted', 'Powder Coated'];
 
 const DEFAULT_GRATING_TYPES = [
   '1 1/4" Bar grating/Welded',
@@ -31,13 +46,25 @@ const DEFAULT_GRATING_TYPES = [
 
 // ── Internal Helpers (Defined outside to prevent Focus Loss) ─────────
 
-const UnitInput = ({ id, value, label, onChange, placeholder, hint, dtTag, dtClass }) => {
-  const { value: val, unit } = value;
-  
+const UnitInput = ({ id, value, label, onChange, placeholder, hint, dtTag, dtClass, isInputOnly = false }) => {
+  // 🛡️ SAFETY CHECK: Ensure value is always an object to prevent destructuring crash
+  const { value: val, unit } = value || { value: '', unit: 'FT' };
+
   return (
     <div className="form-field">
       <label className="form-label">
-        {label} {dtTag && <span className={`data-badge ${dtClass}`}></span>}
+        {label} 
+        {dtTag && <span className={`data-badge ${dtClass}`}></span>}
+        {isInputOnly && (
+          <span style={{ 
+            display: 'inline-block', 
+            width: '6px', 
+            height: '6px', 
+            borderRadius: '50%', 
+            background: '#f59e0b', 
+            marginLeft: '8px' 
+          }} title="Reference input - Not yet included in computation"></span>
+        )}
       </label>
       <div className="form-input-with-unit">
         <input
@@ -49,7 +76,7 @@ const UnitInput = ({ id, value, label, onChange, placeholder, hint, dtTag, dtCla
           onFocus={e => e.target.select()}
           placeholder={placeholder || '0'}
         />
-        <button 
+        <button
           type="button"
           className="form-input-unit unit-active"
           style={{ cursor: 'pointer', border: 'none' }}
@@ -72,13 +99,13 @@ const ConnBlock = ({ label, propName, value, options, onChange, style = {} }) =>
         const name = `${propName}-${label.replace(/\s+/g, '-')}-${value?.slice(-6)}`;
         const isSelected = value?.toLowerCase() === val?.toLowerCase();
         return (
-          <label 
+          <label
             key={val}
-            className={`radio-option ${isSelected ? 'selected' : ''}`}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
+            className={`radio-option ${isSelected ? 'selected active-radio-highlight' : ''}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
               cursor: 'pointer',
               padding: '6px 12px',
               borderRadius: '8px',
@@ -108,7 +135,7 @@ const ConnBlock = ({ label, propName, value, options, onChange, style = {} }) =>
   </div>
 );
 
-export default function StairConfig({ stair = {}, onChange = () => {}, isFlightMode = false, onFocus = () => {} }) {
+export default function StairConfig({ stair = {}, onChange = () => { }, isFlightMode = false, onFocus = () => { } }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'superadmin';
 
@@ -132,7 +159,8 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
     const fetchList = async (category) => {
       try {
         const token = localStorage.getItem('steel_token');
-        const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, { credentials: 'include',
+        const res = await fetch(`${API_BASE_URL}/api/v1/dictionary/${category}`, {
+          credentials: 'include',
           headers: { Authorization: `Bearer ${token}` },
           credentials: 'include'
         });
@@ -176,42 +204,74 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
   const unit = 'ft / in';
 
   const [form, setForm] = useState({
-    stairNumber:     stair.stairNumber   || '',
-    stairCategory:   stair.stairCategory || 'Commercial', 
-    stairType:       stair.stairType     || 'pan-concrete', 
-    panPlThk:        stair.panPlThk      || { value: '0', unit: 'IN' },
-    gratingType:     stair.gratingType   || '',
-    stairWidth:      (stair.stairWidth && typeof stair.stairWidth === 'object') ? stair.stairWidth : { value: stair.stairWidth || '', unit: 'FT' },
-    run:             stair.run           || { value: '', unit: 'IN' },
-    rise:            stair.rise          || { value: '', unit: 'IN' },
-    totalHeight:     (stair.totalHeight && typeof stair.totalHeight === 'object') ? stair.totalHeight : { value: stair.totalHeight || '', unit: 'FT' },
-    numRisers:       stair.numRisers     || '',
-    slope:           stair.slope         || '',
-    angle:           stair.angle         || '',
-    stringerType:    stair.stringerType  || 'Rolled', 
-    stringerSize:    stair.stringerSize  || '',
-    steelGrade:      stair.steelGrade    || 'A36',
-    plateThk:        stair.plateThk      || '',
-    plateWidth:      stair.plateWidth    || '',
-    nsStringerBot:   (stair.nsStringerBot && typeof stair.nsStringerBot === 'object') ? stair.nsStringerBot : { value: stair.nsStringerBot || '', unit: 'FT' },
+    ...stair,
+    stairNumber: stair.stairNumber || '',
+    stairCategory: stair.stairCategory || 'Commercial',
+    stairType: stair.stairType || 'pan-concrete',
+    panPlThk: (stair.panPlThk && stair.panPlThk.value) ? stair.panPlThk : { value: '12ga', unit: 'IN' },
+    gratingType: stair.gratingType || '',
+    stairWidth: (stair.stairWidth && typeof stair.stairWidth === 'object') ? stair.stairWidth : { value: stair.stairWidth || '', unit: 'FT' },
+    run: stair.run || { value: '', unit: 'IN' },
+    rise: stair.rise || { value: '', unit: 'IN' },
+    totalHeight: (stair.totalHeight && typeof stair.totalHeight === 'object') ? stair.totalHeight : { value: stair.totalHeight || '', unit: 'FT' },
+    numRisers: stair.numRisers || '',
+    slope: stair.slope || '',
+    angle: stair.angle || '',
+    stringerType: stair.stringerType || 'Rolled',
+    stringerSize: stair.stringerSize || '',
+    steelGrade: stair.steelGrade || 'A36',
+    plateThk: stair.plateThk || '',
+    plateWidth: stair.plateWidth || '',
+    nsStringerBot: (stair.nsStringerBot && typeof stair.nsStringerBot === 'object') ? stair.nsStringerBot : { value: stair.nsStringerBot || '', unit: 'FT' },
     nsStringerConnBot: stair.nsStringerConnBot || 'Welded',
-    fsStringerBot:   (stair.fsStringerBot && typeof stair.fsStringerBot === 'object') ? stair.fsStringerBot : { value: stair.fsStringerBot || '', unit: 'FT' },
+    fsStringerBot: (stair.fsStringerBot && typeof stair.fsStringerBot === 'object') ? stair.fsStringerBot : { value: stair.fsStringerBot || '', unit: 'FT' },
     fsStringerConnBot: stair.fsStringerConnBot || 'Welded',
-    nsStringerTop:   (stair.nsStringerTop && typeof stair.nsStringerTop === 'object') ? stair.nsStringerTop : { value: stair.nsStringerTop || '', unit: 'FT' },
+    nsStringerTop: (stair.nsStringerTop && typeof stair.nsStringerTop === 'object') ? stair.nsStringerTop : { value: stair.nsStringerTop || '', unit: 'FT' },
     nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
-    fsStringerTop:   (stair.fsStringerTop && typeof stair.fsStringerTop === 'object') ? stair.fsStringerTop : { value: stair.fsStringerTop || '', unit: 'FT' },
+    fsStringerTop: (stair.fsStringerTop && typeof stair.fsStringerTop === 'object') ? stair.fsStringerTop : { value: stair.fsStringerTop || '', unit: 'FT' },
     fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
-    finish:          stair.finish         || 'Primer',
-    mountingType:    stair.mountingType   || '',
-    selectionSource: (stair.selectionSource) || (stair.stringerSize && stair.stringerSize !== '' ? 'manual' : 'auto'),
-
-    ...stair
+    stringerLength: (stair.stringerLength && typeof stair.stringerLength === 'object') ? stair.stringerLength : { value: stair.stringerLength || '', unit: 'FT' },
+    finish: stair.finish || 'Primer',
+    mountingType: stair.mountingType || '',
+    selectionSource: (stair.selectionSource) || (stair.stringerSize && stair.stringerSize !== '' ? 'manual' : 'auto')
   });
 
   // Sync state if stair data changes from outside (duplication/undo)
   useEffect(() => {
     if (stair) {
-      setForm(f => ({ ...f, ...stair }));
+      setForm(f => {
+        // 🛡️ DEEP MERGE PROTECTION: Do not overwrite valid {value, unit} objects with undefined
+        const safeMerge = (key, defaultUnit) => {
+          if (stair[key] && typeof stair[key] === 'object' && 'value' in stair[key]) return stair[key];
+          return f[key] || { value: '', unit: defaultUnit };
+        };
+
+        // 🛡️ DEFAULT VALUE PROTECTION: Ensure critical fields don't revert to empty/undefined when synced
+        const withDefault = (key, fallback) => {
+          return (stair[key] !== undefined && stair[key] !== null && stair[key] !== '') ? stair[key] : (f[key] || fallback);
+        };
+
+        return {
+          ...f,
+          ...stair,
+          stairWidth: safeMerge('stairWidth', 'FT'),
+          run: safeMerge('run', 'IN'),
+          rise: safeMerge('rise', 'IN'),
+          totalHeight: safeMerge('totalHeight', 'FT'),
+          nsStringerBot: safeMerge('nsStringerBot', 'FT'),
+          fsStringerBot: safeMerge('fsStringerBot', 'FT'),
+          nsStringerTop: safeMerge('nsStringerTop', 'FT'),
+          fsStringerTop: safeMerge('fsStringerTop', 'FT'),
+          stringerLength: safeMerge('stringerLength', 'FT'),
+          panPlThk: safeMerge('panPlThk', 'IN'),
+          // Fix for "not preselected" issue: ensure these fields have values
+          stairCategory: withDefault('stairCategory', 'Commercial'),
+          stairType: withDefault('stairType', 'pan-concrete'),
+          stringerType: withDefault('stringerType', 'Rolled'),
+          steelGrade: withDefault('steelGrade', 'A36'),
+          finish: withDefault('finish', 'Primer')
+        };
+      });
     }
   }, [stair]);
 
@@ -231,18 +291,22 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
   // --- Smart Auto-Suggest for Rolled Stringer Size ---
   const widthVal = parseFloat(form.stairWidth?.value) || 0;
   const stairWidthFt = form.stairWidth?.unit === 'IN' ? widthVal / 12 : widthVal;
-  
+
   const risersCount = parseFloat(form.systemCalc?.risers) || 0;
-  
+
   const riseVal = parseFloat(form.rise?.value) || 0;
   const riseIn = form.rise?.unit === 'FT' ? riseVal * 12 : riseVal;
-  
+
   const runVal = parseFloat(form.run?.value) || 0;
   const runIn = form.run?.unit === 'FT' ? runVal * 12 : runVal;
 
   const totalHeightIn = risersCount * riseIn;
   const totalRunIn = risersCount * runIn;
-  const stringerLengthFt = risersCount > 0 ? (Math.sqrt(Math.pow(totalHeightIn, 2) + Math.pow(totalRunIn, 2)) / 12) : 0;
+  
+  const manualStringerVal = parseFloat(form.stringerLength?.value) || 0;
+  const stringerLengthFt = manualStringerVal > 0 
+    ? (form.stringerLength?.unit === 'IN' ? manualStringerVal / 12 : manualStringerVal)
+    : (risersCount > 0 ? (Math.sqrt(Math.pow(totalHeightIn, 2) + Math.pow(totalRunIn, 2)) / 12) : 0);
 
   // Resolve Buckets
   let widthBucket = null;
@@ -272,11 +336,11 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
   }
 
   const recommendedStringerStr = bestMatch ? (bestMatch.label || bestMatch.value) : null;
-  
+
   // 🛠️ AUTO-SUGGEST FIX: Automatically apply recommendation ONLY if selectionSource is 'auto'
   useEffect(() => {
     if (!recommendedStringerStr) return;
-    
+
     // CASE A: User has NOT manually overridden. Silently update to match new geometry.
     if (form.selectionSource === 'auto' && form.stringerSize !== recommendedStringerStr) {
       console.log("🛠️ Auto-applying recommended stringer:", recommendedStringerStr);
@@ -311,31 +375,31 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
   return (
     <div onPointerDown={onFocus}>
       {/* ── Identification ─────────────────────────────────────────── */}
-      <div className="form-section">
-        <div className="form-section-title">Identification</div>
-        <div className="form-grid form-grid-5">
+      <div className="subtle-group">
+        <div className="group-header">Identification</div>
+        <div className="form-grid form-grid-4">
           <div className="form-field">
             <label className="form-label">Stair Category</label>
             <div className="radio-group" style={{ display: 'flex', gap: '12px' }}>
               {['Commercial', 'Industrial'].map(cat => (
                 <label key={cat}
-                     className={`radio-option ${form.stairCategory === cat ? 'selected' : ''}`}
-                     style={{ 
-                       display: 'flex', 
-                       alignItems: 'center', 
-                       gap: '8px', 
-                       cursor: 'pointer', 
-                       flex: 1,
-                       padding: '10px',
-                       borderRadius: '8px',
-                       border: '1.5px solid #E2E8F0',
-                       borderColor: form.stairCategory === cat ? '#3B82F6' : '#E2E8F0',
-                       background: form.stairCategory === cat ? '#EFF6FF' : '#FFFFFF',
-                       fontSize: '13px',
-                       fontWeight: 700,
-                       transition: 'all 0.2s',
-                       color: form.stairCategory === cat ? '#1D4ED8' : '#64748B'
-                     }}
+                  className={`radio-option ${form.stairCategory === cat ? 'selected active-radio-highlight' : ''}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #E2E8F0',
+                    borderColor: form.stairCategory === cat ? '#3B82F6' : '#E2E8F0',
+                    background: form.stairCategory === cat ? '#EFF6FF' : '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    color: form.stairCategory === cat ? '#1D4ED8' : '#64748B'
+                  }}
                 >
                   <input
                     type="radio"
@@ -355,16 +419,16 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             <label className="form-label">
               Stair Type <span className="data-badge dt-string"></span>
               {isAdmin && (
-                <button 
-                  onClick={(e) => openManage('stair_type', 'Stair Types', e)} 
-                  className="quick-edit-btn" 
+                <button
+                  onClick={(e) => openManage('stair_type', 'Stair Types', e)}
+                  className="quick-edit-btn"
                   title="Manage Options"
                 >
                   <Settings size={14} />
                 </button>
               )}
             </label>
-            <SearchableSelect 
+            <SearchableSelect
               options={dropdowns.stairTypes}
               valueKey="value"
               displayKey="label"
@@ -377,13 +441,13 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
 
           {/* ── Conditional Pan / Tread Inputs (Same Line) ─────────────────────────────────── */}
           {isPanStair && (
-            <UnitInput 
-              id="pan-thk" 
-              label="Pan Pl. Thk" 
-              value={form.panPlThk || { value: '0', unit: 'IN' }} 
-              onChange={v => set('panPlThk', v)} 
-              dtTag="DIM" 
-              dtClass="dt-float" 
+            <UnitInput
+              id="pan-thk"
+              label="Pan Pl. Thk"
+              value={form.panPlThk}
+              onChange={v => set('panPlThk', v)}
+              dtTag="DIM"
+              dtClass="dt-float"
             />
           )}
 
@@ -392,16 +456,16 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
               <label className="form-label">
                 Grating Tread Type <span className="data-badge dt-string"></span>
                 {isAdmin && (
-                  <button 
-                    onClick={(e) => openManage('grating_type', 'Grating Types', e)} 
-                    className="quick-edit-btn" 
+                  <button
+                    onClick={(e) => openManage('grating_type', 'Grating Types', e)}
+                    className="quick-edit-btn"
                     title="Manage Options"
                   >
                     <Settings size={14} />
                   </button>
                 )}
               </label>
-              <SearchableSelect 
+              <SearchableSelect
                 options={dropdowns.gratingTypes.map(g => ({ value: g, label: g }))}
                 valueKey="value"
                 displayKey="label"
@@ -416,16 +480,16 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             <label className="form-label">
               Finish Specification
               {isAdmin && (
-                <button 
-                  onClick={(e) => openManage('finish_option', 'Finish Options', e)} 
-                  className="quick-edit-btn" 
+                <button
+                  onClick={(e) => openManage('finish_option', 'Finish Options', e)}
+                  className="quick-edit-btn"
                   title="Manage Options"
                 >
                   <Settings size={14} />
                 </button>
               )}
             </label>
-            <SearchableSelect 
+            <SearchableSelect
               options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
               valueKey="value"
               displayKey="label"
@@ -434,41 +498,23 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
               placeholder="— Select Finish —"
             />
           </div>
-
-          <div className="form-field">
-            <label className="form-label">
-              Mounting Type
-              {isAdmin && (
-                <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
-                  <Settings size={14} />
-                </button>
-              )}
-            </label>
-            <SearchableSelect 
-              options={dropdowns.mountingTypes.map(m => ({ value: m.value || m, label: m.label || m }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.mountingType}
-              onSelect={opt => set('mountingType', opt?.value || '')}
-              placeholder="— Select Mounting —"
-            />
-          </div>
         </div>
       </div>
 
       {/* ── Geometry ───────────────────────────────────────────────── */}
-      <div className={`form-section ${isNonMetalStair ? 'section-faded' : ''}`}>
-        <div className="form-section-title">Stair Geometry</div>
-        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(8, 1fr)', gap: '12px' }}>
+      <div className={`subtle-group ${isNonMetalStair ? 'section-faded' : ''}`}>
+        <div className="group-header">Stair Geometry</div>
+        <div className="form-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
           <UnitInput id="stair-width" label="Stair Width" value={form.stairWidth} onChange={v => set('stairWidth', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <UnitInput id="stair-run"   label="Run"         value={form.run} onChange={v => set('run', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <UnitInput id="stair-rise"  label="Rise"        value={form.rise} onChange={v => set('rise', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <UnitInput id="stair-height" label="Total Height" value={form.totalHeight} onChange={v => set('totalHeight', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          <UnitInput id="stair-run" label="Run" value={form.run} onChange={v => set('run', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          <UnitInput id="stair-rise" label="Rise" value={form.rise} onChange={v => set('rise', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           
-          <div className="form-field logic-connector">
+          <div className="form-field">
             <label className="form-label">Risers</label>
-            <input className="form-input auto-calculation" type="number" value={form.systemCalc?.risers || ''} readOnly placeholder="Auto" />
+            <input className="form-input" type="number" value={form.numRisers || ''} onChange={e => set('numRisers', e.target.value)} placeholder="0" />
           </div>
+
+          <UnitInput id="total-stringer-length" label="Total Stringer length" value={form.stringerLength} onChange={v => set('stringerLength', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
 
           <div className="form-field">
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -476,175 +522,43 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
 
             </label>
             <div className="relative flex items-center">
-               <div className={`form-input-with-unit w-full ${form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'field-auto' : 'warning-glow') : ''}`}
-                    style={{ 
-                      borderColor: form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'var(--accent-blue)' : '#F59E0B') : 'var(--input-border)',
-                      background: form.systemCalc?.slope && form.systemCalc.isCompliant ? 'var(--color-secondary-50)' : '#FFFFFF'
-                    }}
-               >
-                  <input 
-                    id="stair-slope-deg" 
-                    className="auto-calculation field-auto" 
-                    type="number" 
-                    step="0.01" 
-                    value={form.systemCalc?.slope || ''} 
-                    readOnly 
-                    placeholder="Auto" 
-                    style={{ color: form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'var(--color-secondary-800)' : '#F59E0B') : 'inherit' }}
-                  />
-                  <span className="form-input-unit">deg</span>
-               </div>
-               {form.systemCalc?.slope && (
-                 <div className="absolute right-12 flex items-center">
-                   {form.systemCalc.isCompliant ? (
-                     <Check size={16} className="text-[#10B981]" />
-                   ) : (
-                     <AlertTriangle size={16} className="text-[#F59E0B]" />
-                   )}
-                 </div>
-               )}
-            </div>
-          </div>
-
-          <div className="form-field flex flex-col items-center justify-center p-3 border border-slate-200 rounded-xl bg-slate-50" style={{ gridColumn: 'span 2' }}>
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3">Computed Geometry Profile</div>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-              {form.angle ? (() => {
-                const angle = Number(form.systemCalc?.angle || form.angle || 32);
-                const rad = angle * Math.PI / 180;
-                // Triangle corners: right-angle at bottom-left
-                const ox = 14, oy = 72;  // origin (bottom-left)
-                const bx = 86, by = 72;  // bottom-right
-                const tx = 14, ty = 72 - Math.round(72 * Math.tan(rad) / (1 + Math.tan(rad) * 0.6));
-                // Clamped top point
-                const topY = Math.max(10, 72 - Math.round((bx - ox) * Math.tan(rad)));
-                const topYFinal = Math.max(8, topY);
-                return (
-                  <svg width="110" height="86" viewBox="0 0 110 86" style={{ transition: 'all 0.4s ease', flexShrink: 0 }}>
-                    {/* Grid background - engineering paper */}
-                    <defs>
-                      <pattern id="eng-grid" width="8" height="8" patternUnits="userSpaceOnUse">
-                        <path d="M 8 0 L 0 0 0 8" fill="none" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5"/>
-                      </pattern>
-                    </defs>
-                    <rect x="0" y="0" width="110" height="86" fill="url(#eng-grid)" rx="4"/>
-
-                    {/* Triangle fill */}
-                    <polygon
-                      points={`${ox},${72} ${bx},${72} ${ox},${topYFinal}`}
-                      fill="rgba(59,130,246,0.07)"
-                      stroke="none"
-                    />
-
-                    {/* Stringer (hypotenuse) — bold accent */}
-                    <line x1={bx} y1={72} x2={ox} y2={topYFinal}
-                      stroke="#3B82F6" strokeWidth="2" strokeLinecap="round"/>
-
-                    {/* Height (vertical side) */}
-                    <line x1={ox} y1={72} x2={ox} y2={topYFinal}
-                      stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3,2"/>
-
-                    {/* Run (horizontal base) */}
-                    <line x1={ox} y1={72} x2={bx} y2={72}
-                      stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3,2"/>
-
-                    {/* Right-angle box at origin */}
-                    <path d={`M ${ox} ${72 - 7} L ${ox + 7} ${72 - 7} L ${ox + 7} ${72}`}
-                      fill="none" stroke="#64748B" strokeWidth="1" strokeLinecap="round"/>
-
-                    {/* Angle arc at bottom-right corner */}
-                    <path
-                      d={`M ${bx - 14} ${72} A 14 14 0 0 0 ${bx - 14 * Math.cos(rad)} ${72 - 14 * Math.sin(rad)}`}
-                      fill="rgba(59,130,246,0.12)" stroke="#3B82F6" strokeWidth="1" fillRule="evenodd"
-                    />
-
-                    {/* Angle label */}
-                    <text
-                      x={bx - 26}
-                      y={72 - 4}
-                      fontSize="7"
-                      fontWeight="700"
-                      fill="#3B82F6"
-                      fontFamily="'Geist Mono', monospace"
-                      textAnchor="middle"
-                    >
-                      {angle.toFixed(1)}°
-                    </text>
-
-                    {/* Side labels */}
-                    {/* Height label (left of vertical) */}
-                    <text x={ox - 3} y={(72 + topYFinal) / 2} fontSize="6" fill="#10B981" fontWeight="700"
-                      fontFamily="sans-serif" textAnchor="end" dominantBaseline="middle">H</text>
-                    {/* Run label (below horizontal) */}
-                    <text x={(ox + bx) / 2} y={80} fontSize="6" fill="#F59E0B" fontWeight="700"
-                      fontFamily="sans-serif" textAnchor="middle">R</text>
-                    {/* Stringer label (along hypotenuse) */}
-                    <text
-                      x={(ox + bx) / 2 + 4}
-                      y={(topYFinal + 72) / 2 - 6}
-                      fontSize="6"
-                      fill="#3B82F6"
-                      fontWeight="700"
-                      fontFamily="sans-serif"
-                      textAnchor="middle"
-                      transform={`rotate(${-angle}, ${(ox + bx) / 2 + 4}, ${(topYFinal + 72) / 2 - 6})`}
-                    >S</text>
-                  </svg>
-                );
-              })() : (
-                <div className="h-10 w-14 flex items-center justify-center text-slate-300 text-xs">—</div>
-              )}
-
-              {/* Dimension values */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '10.5px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: '#10B981', flexShrink: 0 }}/>
-                  <span style={{ color: 'var(--gpt-text-muted)', minWidth: '52px' }}>Height:</span>
-                  <strong style={{ color: 'var(--gpt-text-primary)', fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{(totalHeightIn / 12).toFixed(2)} ft</strong>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: '#F59E0B', flexShrink: 0 }}/>
-                  <span style={{ color: 'var(--gpt-text-muted)', minWidth: '52px' }}>Run:</span>
-                  <strong style={{ color: 'var(--gpt-text-primary)', fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{(totalRunIn / 12).toFixed(2)} ft</strong>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: '#3B82F6', flexShrink: 0 }}/>
-                  <span style={{ color: 'var(--gpt-text-muted)', minWidth: '52px' }}>Stringer:</span>
-                  <strong style={{ color: 'var(--gpt-text-primary)', fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{stringerLengthFt.toFixed(2)} ft</strong>
-                </div>
+              <div className={`form-input-with-unit w-full ${form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'field-auto' : 'warning-glow') : ''}`}
+                style={{
+                  borderColor: form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'var(--accent-blue)' : '#F59E0B') : 'var(--input-border)',
+                  background: form.systemCalc?.slope && form.systemCalc.isCompliant ? 'var(--color-secondary-50)' : '#FFFFFF'
+                }}
+              >
+                <input
+                  id="stair-slope-deg"
+                  className="auto-calculation field-auto"
+                  type="number"
+                  step="0.01"
+                  value={form.systemCalc?.slope || ''}
+                  readOnly
+                  placeholder="Auto"
+                  style={{ color: form.systemCalc?.slope ? (form.systemCalc.isCompliant ? 'var(--color-secondary-800)' : '#F59E0B') : 'inherit' }}
+                />
+                <span className="form-input-unit">deg</span>
               </div>
+              {form.systemCalc?.slope && (
+                <div className="absolute right-12 flex items-center">
+                  {form.systemCalc.isCompliant ? (
+                    <Check size={16} className="text-[#10B981]" />
+                  ) : (
+                    <AlertTriangle size={16} className="text-[#F59E0B]" />
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Extents moved from bottom stringer section to here per user request */}
-          <UnitInput id="ns-top" label="N/S Extent @Top" value={form.nsStringerTop} onChange={v => set('nsStringerTop', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <UnitInput id="fs-top" label="F/S Extent @Top" value={form.fsStringerTop} onChange={v => set('fsStringerTop', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <UnitInput id="ns-bot" label="N/S Extent @Bot" value={form.nsStringerBot} onChange={v => set('nsStringerBot', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          <UnitInput id="fs-bot" label="F/S Extent @Bot" value={form.fsStringerBot} onChange={v => set('fsStringerBot', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
-          
-          <div style={{ gridColumn: 'span 2' }}>
-            <ConnBlock 
-              label="Connection (All)" 
-              propName="shared-conn" 
-              value={form.nsStringerConnTop} 
-              options={dropdowns.connections} 
-              onChange={v => {
-                const updated = { 
-                  ...form, 
-                  nsStringerConnTop: v, fsStringerConnTop: v,
-                  nsStringerConnBot: v, fsStringerConnBot: v 
-                };
-                setForm(updated);
-                onChange(updated);
-              }} 
-            />
-          </div>
+
         </div>
       </div>
 
       {/* ── Stringers ──────────────────────────────────────────────── */}
-      <div className={`form-section ${isNonMetalStair ? 'section-faded' : ''}`}>
-        <div className="form-section-title">Stringer Configuration</div>
+      <div className={`subtle-group ${isNonMetalStair ? 'section-faded' : ''}`}>
+        <div className="group-header">Stringer Configuration</div>
         <div className="form-grid form-grid-5" style={{ marginBottom: '16px' }}>
           <div className="form-field">
             <label className="form-label">Stringer Profile Type</label>
@@ -653,35 +567,35 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                 { value: 'Rolled', label: 'Rolled shapes' },
                 { value: 'Plate', label: 'Plate Profile' }
               ].map(opt => (
-              <label 
-                key={opt.value}
-                className={`radio-option ${form.stringerType === opt.value ? 'selected' : ''}`}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  cursor: 'pointer',
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #E2E8F0',
-                  borderColor: form.stringerType === opt.value ? '#3B82F6' : '#E2E8F0',
-                  background: form.stringerType === opt.value ? '#F0F9FF' : '#FFFFFF',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  transition: 'all 0.2s',
-                  color: form.stringerType === opt.value ? '#0369A1' : '#64748B'
-                }}
-              >
-                <input
-                  type="radio"
-                  name={`stringerType-${stair?.id || 'default'}`}
-                  value={opt.value}
-                  checked={form.stringerType === opt.value}
-                  onChange={() => set('stringerType', opt.value)}
-                  style={{ accentColor: '#0EA5E9' }}
-                />
-                {opt.label}
-              </label>
+                <label
+                  key={opt.value}
+                  className={`radio-option ${form.stringerType === opt.value ? 'selected active-radio-highlight' : ''}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #E2E8F0',
+                    borderColor: form.stringerType === opt.value ? '#3B82F6' : '#E2E8F0',
+                    background: form.stringerType === opt.value ? '#F0F9FF' : '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                    color: form.stringerType === opt.value ? '#0369A1' : '#64748B'
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name={`stringerType-${stair?.id || 'default'}`}
+                    value={opt.value}
+                    checked={form.stringerType === opt.value}
+                    onChange={() => set('stringerType', opt.value)}
+                    style={{ accentColor: '#0EA5E9' }}
+                  />
+                  {opt.label}
+                </label>
               ))}
             </div>
           </div>
@@ -690,16 +604,16 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             <label className="form-label">
               Steel Grade <span className="data-badge dt-string"></span>
               {isAdmin && (
-                <button 
-                  onClick={(e) => openManage('steel_grade_stair', 'Stair Steel Grades', e)} 
-                  className="quick-edit-btn" 
+                <button
+                  onClick={(e) => openManage('steel_grade_stair', 'Stair Steel Grades', e)}
+                  className="quick-edit-btn"
                   title="Manage Options"
                 >
                   <Settings size={14} />
                 </button>
               )}
             </label>
-            <SearchableSelect 
+            <SearchableSelect
               options={dropdowns.steelGrades.map(s => ({ value: s, label: s }))}
               valueKey="value"
               displayKey="label"
@@ -719,9 +633,9 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                   </span>
                 )}
                 {isAdmin && (
-                  <button 
-                    onClick={(e) => openManage('stringer_size', 'Stringer Sizes', e)} 
-                    className="quick-edit-btn" 
+                  <button
+                    onClick={(e) => openManage('stringer_size', 'Stringer Sizes', e)}
+                    className="quick-edit-btn"
                     title="Manage Options"
                   >
                     <Settings size={14} />
@@ -730,11 +644,11 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
               </label>
 
               {stringerWarning && (
-                <div style={{ 
-                  margin: '4px 0 8px 0', 
-                  padding: '8px 12px', 
-                  fontSize: '11px', 
-                  borderRadius: '6px', 
+                <div style={{
+                  margin: '4px 0 8px 0',
+                  padding: '8px 12px',
+                  fontSize: '11px',
+                  borderRadius: '6px',
                   fontWeight: 600,
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -745,16 +659,16 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                 }}>
                   <div style={{ whiteSpace: 'pre-line' }}>{stringerWarning}</div>
                   {stringerWarningType === 'warning' && bestMatch && form.stringerSize !== recommendedStringerStr && (
-                    <button 
-                      onClick={(e) => { 
-                        e.preventDefault(); 
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
                         const updated = { ...form, stringerSize: recommendedStringerStr, selectionSource: 'auto' };
                         setForm(updated);
                         onChange(updated);
                         toast.success(`Applied ${recommendedStringerStr}`);
                       }}
-                      style={{ 
-                        background: '#3B82F6', color: 'white', border: 'none', 
+                      style={{
+                        background: '#3B82F6', color: 'white', border: 'none',
                         padding: '6px 12px', borderRadius: '6px', cursor: 'pointer',
                         fontSize: '11px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
                         transition: 'all 0.2s'
@@ -768,14 +682,14 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
                 </div>
               )}
 
-              <SearchableSelect 
+              <SearchableSelect
                 options={dropdowns.stringerSizes.map(lbl => {
                   const spec = stringerData.find(s => (s.label || s.value) === lbl);
                   const isRec = lbl === recommendedStringerStr;
-                  return { 
-                    value: lbl, 
+                  return {
+                    value: lbl,
                     label: `${lbl}${isRec ? ' ★ (REC)' : ''}`,
-                    isRec 
+                    isRec
                   };
                 })}
                 valueKey="value"
@@ -794,22 +708,22 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
             <>
               <div className="form-field fade-in">
                 <label className="form-label">Plate Thickness <span className="data-badge dt-string"></span></label>
-                <input 
-                  className="form-input data-type-string" 
-                  value={form.plateThk} 
-                  onChange={e => set('plateThk', e.target.value)} 
+                <input
+                  className="form-input data-type-string"
+                  value={form.plateThk}
+                  onChange={e => set('plateThk', e.target.value)}
                   onFocus={e => e.target.select()}
-                  placeholder="e.g. 1/2" 
+                  placeholder="e.g. 1/2"
                 />
               </div>
               <div className="form-field fade-in" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Plate Width <span className="data-badge dt-string"></span></label>
-                <input 
-                  className="form-input data-type-string" 
-                  value={form.plateWidth} 
-                  onChange={e => set('plateWidth', e.target.value)} 
+                <input
+                  className="form-input data-type-string"
+                  value={form.plateWidth}
+                  onChange={e => set('plateWidth', e.target.value)}
                   onFocus={e => e.target.select()}
-                  placeholder="e.g. 12" 
+                  placeholder="e.g. 12"
                 />
               </div>
             </>
@@ -824,16 +738,17 @@ export default function StairConfig({ stair = {}, onChange = () => {}, isFlightM
       {/* ── Real-time Preview Engine Results (EXCEL MISC ALIGNED) ─────────────────────── */}
       {form.systemCalc && (form.stringerType === 'Rolled' ? (form.stringerSize && form.stringerSize !== '') : (form.plateThk && form.plateWidth)) && (
         <div className={`mt-6 ${form.stairType === 'non-metal' ? 'section-faded' : ''}`}>
-          <EstimationPreviewCard 
-            systemCalc={form.systemCalc} 
-            totalCost={form.totalCost} 
+          <EstimationPreviewCard
+            systemCalc={form.systemCalc}
+            totalCost={form.totalCost}
             stairType={form.stairType}
             finishName={form.finish}
+            hidePorRok={true}
           />
         </div>
       )}
 
-      <QuickManageModal 
+      <QuickManageModal
         isOpen={quickModal.isOpen}
         onClose={() => setQuickModal({ ...quickModal, isOpen: false })}
         category={quickModal.category}

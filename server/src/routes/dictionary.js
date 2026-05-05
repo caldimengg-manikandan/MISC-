@@ -187,17 +187,29 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
     const adminOwnerId = resolveAdminOwnerId(req);
 
-    // Security: only allow deleting own entries, not global defaults
+    // Security: only allow deleting own entries, or global defaults if user is admin/superadmin
     const [check] = await db.query('SELECT id, admin_owner_id FROM dictionary WHERE id = ?', [req.params.id]);
     if (check.length === 0) return res.status(404).json({ success: false, message: 'Entry not found' });
-    if (check[0].admin_owner_id === null) {
-      return res.status(403).json({ success: false, message: 'Cannot delete a system default entry' });
-    }
-    if (check[0].admin_owner_id != adminOwnerId) {
-      return res.status(403).json({ success: false, message: 'Cannot delete another tenant\'s dictionary entry' });
+    
+    const isGlobalDefault = check[0].admin_owner_id === null;
+    const isOwner = check[0].admin_owner_id == adminOwnerId;
+    const isSuperAdmin = req.user.role === 'superadmin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'owner';
+
+    if (isGlobalDefault) {
+      // Allow admin or superadmin to delete global defaults
+      if (!isAdmin && !isSuperAdmin) {
+        return res.status(403).json({ success: false, message: 'Only admins can delete system default entries' });
+      }
+      await db.query('DELETE FROM dictionary WHERE id = ? AND admin_owner_id IS NULL', [req.params.id]);
+    } else {
+      // Tenant-specific. Only the owner or a superadmin can delete.
+      if (!isOwner && !isSuperAdmin) {
+        return res.status(403).json({ success: false, message: 'Cannot delete another tenant\'s dictionary entry' });
+      }
+      await db.query('DELETE FROM dictionary WHERE id = ?', [req.params.id]);
     }
 
-    await db.query('DELETE FROM dictionary WHERE id = ? AND admin_owner_id = ?', [req.params.id, adminOwnerId]);
     res.json({ success: true, message: 'Deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

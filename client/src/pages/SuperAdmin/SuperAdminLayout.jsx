@@ -2,13 +2,13 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Key, 
-  Users, 
-  History, 
-  Settings, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Key,
+  Users,
+  History,
+  Settings,
+  LogOut,
   ChevronRight,
   ShieldAlert
 } from 'lucide-react';
@@ -37,7 +37,7 @@ const SuperAdminLayout = () => {
               <ShieldAlert className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">MISC Pro</h1>
+              <h1 className="text-xl font-bold text-white tracking-tight">CAL MISC</h1>
               <p className="text-xs text-indigo-400 font-medium tracking-widest uppercase">SuperAdmin Control</p>
             </div>
           </div>
@@ -52,8 +52,8 @@ const SuperAdminLayout = () => {
                   to={item.path}
                   className={`
                     flex items-center justify-between px-4 py-3 rounded-xl transition-all group
-                    ${isActive 
-                      ? 'bg-indigo-600/10 text-white border border-indigo-500/20 shadow-inner' 
+                    ${isActive
+                      ? 'bg-indigo-600/10 text-white border border-indigo-500/20 shadow-inner'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
                     }
                   `}
@@ -85,8 +85,8 @@ const SuperAdminLayout = () => {
               </div>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 rounded-xl transition-all group"
           >
@@ -110,7 +110,7 @@ const SuperAdminLayout = () => {
               {navItems.find(i => location.pathname === i.path)?.label || 'Dashboard'}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
               System Active
