@@ -23,7 +23,18 @@ async function migrate() {
       ELSE PRINT 'ℹ️ MFA columns already exist.';
     `);
 
-    // 2. Create Attachments Table
+    // 2. Add additionalCosts to Projects
+    console.log('--- Checking Projects columns ---');
+    await db.query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('projects') AND name = 'additionalCosts')
+      BEGIN
+          ALTER TABLE projects ADD additionalCosts NVARCHAR(MAX) NULL;
+          PRINT '✅ Added additionalCosts column to projects table.';
+      END
+      ELSE PRINT 'ℹ️ additionalCosts column already exists.';
+    `);
+
+    // 3. Create Attachments Table
     console.log('--- Checking Attachments table ---');
     await db.query(`
       IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID('project_attachments') AND type = 'U')
