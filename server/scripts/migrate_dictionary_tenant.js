@@ -7,7 +7,8 @@ const db = require('../src/config/mssql');
 const fs = require('fs');
 
 async function migrate() {
-    console.log('🔧 Starting dictionary tenant migration...');
+    const isClean = process.argv.includes('--clean');
+    console.log(`🔧 Starting dictionary tenant migration... ${isClean ? '(CLEAN MODE)' : ''}`);
     
     try {
         const filePath = require('path').join(__dirname, '../dictionary_data.json');
@@ -18,6 +19,14 @@ async function migrate() {
 
         const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         console.log(`📦 Loaded ${data.length} dictionary entries.`);
+
+        if (isClean) {
+            const categories = [...new Set(data.map(d => d.category))];
+            console.log(`🧹 Cleaning categories: ${categories.join(', ')}`);
+            for (const cat of categories) {
+                await db.query('DELETE FROM dictionary WHERE category = ?', [cat]);
+            }
+        }
 
         for (const entry of data) {
             // We use category + value + admin_owner_id as the unique key
