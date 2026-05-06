@@ -34,23 +34,27 @@ async function migrate() {
       ELSE PRINT 'ℹ️ additionalCosts column already exists.';
     `);
 
-    // 3. Add calculation columns to Dictionary
+    // 3. Add calculation columns to Dictionary (Individual Checks)
     console.log('--- Checking Dictionary columns ---');
-    await db.query(`
-      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dictionary') AND name = 'price')
-      BEGIN
-          ALTER TABLE dictionary ADD 
-              steelLbsLf FLOAT NULL,
-              shopLaborMhLf FLOAT NULL,
-              fieldLaborMhLf FLOAT NULL,
-              widthMax FLOAT NULL,
-              spanMin FLOAT NULL,
-              spanMax FLOAT NULL,
-              price FLOAT NULL;
-          PRINT '✅ Added calculation columns to dictionary table.';
-      END
-      ELSE PRINT 'ℹ️ Dictionary calculation columns already exist.';
-    `);
+    const dictColumns = [
+        { name: 'steelLbsLf', type: 'FLOAT NULL' },
+        { name: 'shopLaborMhLf', type: 'FLOAT NULL' },
+        { name: 'fieldLaborMhLf', type: 'FLOAT NULL' },
+        { name: 'widthMax', type: 'FLOAT NULL' },
+        { name: 'spanMin', type: 'FLOAT NULL' },
+        { name: 'spanMax', type: 'FLOAT NULL' },
+        { name: 'price', type: 'FLOAT NULL' }
+    ];
+
+    for (const col of dictColumns) {
+        await db.query(`
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dictionary') AND name = '${col.name}')
+            BEGIN
+                ALTER TABLE dictionary ADD ${col.name} ${col.type};
+                PRINT '✅ Added ${col.name} column to dictionary table.';
+            END
+        `);
+    }
 
     // 4. Create Attachments Table
     console.log('--- Checking Attachments table ---');
