@@ -22,7 +22,7 @@ async function migrate() {
         for (const entry of data) {
             // We use category + value + admin_owner_id as the unique key
             // admin_owner_id IS NULL means it's a global default.
-            const { category, label, value, description, [order]: orderVal, isActive, admin_owner_id, 
+            const { category, label, value, description, order: orderVal, isActive, admin_owner_id, 
                     steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price } = entry;
 
             const [existing] = await db.query(
