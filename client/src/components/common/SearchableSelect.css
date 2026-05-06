@@ -214,3 +214,16 @@
   font-weight: 700;
   text-transform: uppercase;
 }
+
+.ss-recommended-badge {
+  font-size: 9px;
+  background: #10B981;
+  color: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  width: fit-content;
+  letter-spacing: 0.05em;
+}

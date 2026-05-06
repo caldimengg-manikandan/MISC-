@@ -107,11 +107,12 @@ class StairFlightCalculationService {
       fieldLaborHrs += componentArea * 0.02;
     } else if (stairType === 'grating-tread' || stairType === '77') {
       // ID 77 (GRATING TREAD): Tiered pricing based on Width (Standard matrix)
-      let unitPrice = 80.15; // Default for <= 5.0
-      if (stairWidthFt <= 3.5) unitPrice = 56.10;
-      else if (stairWidthFt <= 4.0) unitPrice = 64.12;
-      else if (stairWidthFt <= 4.5) unitPrice = 72.15;
-      else if (stairWidthFt <= 5.0) unitPrice = 80.15;
+      // 🔄 EXCEL PARITY: Updated base rates per user request ($71.10, $78.60, $87.80, $95.30)
+      let unitPrice = 95.30; 
+      if (stairWidthFt <= 3.51) unitPrice = 71.10;
+      else if (stairWidthFt <= 4.01) unitPrice = 78.60;
+      else if (stairWidthFt <= 4.51) unitPrice = 87.80;
+      else if (stairWidthFt <= 5.01) unitPrice = 95.30;
       
       gratingTreadCost = unitPrice * numRisers;
     }

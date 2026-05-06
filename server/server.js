@@ -25,7 +25,9 @@ const crypto = require('crypto');
 const logger = require('./src/utils/logger');
 const { initCron } = require('./src/utils/cron');
 
-// Import routes
+const app = express();
+
+// ── SECURITY MIDDLEWARE ──────────────────────────────────────────────────────
 const projectRoutes     = require('./src/routes/projects');
 const estimationsRoutes = require('./src/routes/estimations');
 const dictionaryRoutes  = require('./src/routes/dictionary');
@@ -87,8 +89,6 @@ configManager.loadConfigs();
 // Initialize Cron Jobs
 initCron();
 
-const app = express();
-
 // Trust first proxy (e.g. Nginx/Hostinger) for correct IP tracking and rate limiting
 app.set('trust proxy', 1);
 
@@ -102,7 +102,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3000'],
+      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000", "https://*.cloudflarestorage.com", "blob:", "data:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -238,7 +238,7 @@ app.use(cookieParser());
 
 // Body parsing with enhanced limits and validation
 app.use(express.json({
-  limit: '50mb',
+  limit: '205mb',
   verify: (req, res, buf) => {
     try {
       JSON.parse(buf);
@@ -250,7 +250,7 @@ app.use(express.json({
 
 app.use(express.urlencoded({
   extended: true,
-  limit: '50mb',
+  limit: '205mb',
   parameterLimit: 5000 // Limit number of parameters
 }));
 
@@ -339,6 +339,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth/mfa', mfaRoutes);
 
 // Protected routes — auth + license check (I4)
+// ORDER MATTERS: Put attachments BEFORE workflow to catch specific sub-routes
 app.use('/api/v1/projects',      authMiddleware, licenseCheck, attachmentRoutes);
 app.use('/api/v1/projects',      authMiddleware, licenseCheck, projectRoutes);
 app.use('/api/v1/projects',      authMiddleware, licenseCheck, workflowRoutes);

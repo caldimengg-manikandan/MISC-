@@ -15,9 +15,10 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
   const [widthMax, setWidthMax] = useState('');
   const [spanMin, setSpanMin] = useState('');
   const [spanMax, setSpanMax] = useState('');
+  const [price, setPrice] = useState('');
   
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ label: '', steelLbsLf: '', shopLaborMhLf: '', fieldLaborMhLf: '', description: '', widthMax: '', spanMin: '', spanMax: '' });
+  const [editForm, setEditForm] = useState({ label: '', steelLbsLf: '', shopLaborMhLf: '', fieldLaborMhLf: '', description: '', widthMax: '', spanMin: '', spanMax: '', price: '' });
 
   const hasBenchmarkFields = category && (
     category.toLowerCase().includes('rail_type') || 
@@ -26,6 +27,14 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
     category === 'grating_type' ||
     category === 'stringer_size'
   );
+  
+  const getGridColumns = () => {
+    if (category === 'platform_type') return '40px 1fr 100px 100px 100px 100px 100px 80px';
+    if (category === 'stringer_size') return '40px 1fr 100px 80px 80px 80px 80px 80px 80px 80px';
+    if (hasBenchmarkFields) return '40px 1fr 100px 100px 100px 100px 80px';
+    return '40px 1fr 80px';
+  };
+  const gridColumns = getGridColumns();
 
   const [dragPos, setDragPos] = useState(() => {
     const saved = localStorage.getItem('quickModalPos');
@@ -170,7 +179,8 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           description: (category === 'platform_type') ? description : null,
           widthMax: category === 'stringer_size' && widthMax !== '' ? parseFloat(widthMax) : null,
           spanMin: category === 'stringer_size' && spanMin !== '' ? parseFloat(spanMin) : null,
-          spanMax: category === 'stringer_size' && spanMax !== '' ? parseFloat(spanMax) : null
+          spanMax: category === 'stringer_size' && spanMax !== '' ? parseFloat(spanMax) : null,
+          price: price !== '' ? parseFloat(price) : null
         })
       });
       
@@ -185,6 +195,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         setWidthMax('');
         setSpanMin('');
         setSpanMax('');
+        setPrice('');
         fetchEntries();
         if (onUpdate) onUpdate();
       } else {
@@ -224,7 +235,8 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
       description: entry.description || '',
       widthMax: entry.widthMax ?? '',
       spanMin: entry.spanMin ?? '',
-      spanMax: entry.spanMax ?? ''
+      spanMax: entry.spanMax ?? '',
+      price: entry.price || ''
     });
   };
 
@@ -249,6 +261,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           spanMax: editForm.spanMax !== '' ? parseFloat(editForm.spanMax) : null,
           category,
           value: editForm.label.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-'),
+          price: editForm.price !== '' ? parseFloat(editForm.price) : null,
           isActive: true
         })
       });
@@ -281,7 +294,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           <form onSubmit={handleAdd} className="quick-add-form">
             <input 
               className="form-input"
-              style={{ gridColumn: hasBenchmarkFields ? (category === 'stringer_size' ? 'span 6' : 'span 3') : 'span 2' }}
+              style={{ gridColumn: hasBenchmarkFields ? (category === 'stringer_size' ? 'span 5' : 'span 2') : 'span 2' }}
               placeholder="Enter New Option (Display Name)"
               value={newLabel} 
               onChange={e => setNewLabel(e.target.value)}
@@ -313,6 +326,14 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                   onChange={e => setFieldLaborMhLf(e.target.value)}
                   className="form-input"
                   title="Field Labor (MH/LF)"
+                />
+                <input 
+                  type="number" step="0.01"
+                  placeholder="PRICE ($)" 
+                  value={price} 
+                  onChange={e => setPrice(e.target.value)}
+                  className="form-input"
+                  title="Fixed Unit Price ($)"
                 />
                 {category === 'stringer_size' && (
                   <>
@@ -355,7 +376,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
               </>
             )}
 
-            <button type="submit" className="add-btn" style={{ gridColumn: (hasBenchmarkFields && category !== 'platform_type') ? (category === 'stringer_size' ? 'span 6' : 'span 3') : 'auto' }}>
+            <button type="submit" className="add-btn" style={{ gridColumn: (hasBenchmarkFields && category !== 'platform_type') ? (category === 'stringer_size' ? 'span 6' : 'span 2') : 'auto' }}>
               <Plus size={16} /> Add {categoryLabel.replace(' Types', '')}
             </button>
           </form>
@@ -363,7 +384,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
           <div className="quick-entries-list">
             <div className="list-header" style={{ 
               display: 'grid', 
-              gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 80px' : (category === 'stringer_size' ? '40px 1fr 100px 80px 80px 80px 80px 80px 80px' : '40px 1fr 140px 140px 140px 80px'), 
+              gridTemplateColumns: gridColumns, 
               padding: '8px 14px', 
               fontSize: '10px',
               position: 'sticky',
@@ -380,6 +401,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                   <span style={{ textAlign: 'center' }}>STEEL ({category === 'platform_type' ? 'LBS/SF' : 'LBS/LF'})</span>
                   <span style={{ textAlign: 'center' }}>SHOP HOURS</span>
                   <span style={{ textAlign: 'center' }}>FIELD HOURS</span>
+                  <span style={{ textAlign: 'center' }}>PRICE ($)</span>
                   {category === 'platform_type' && <span style={{ textAlign: 'center' }}>PAN RISER</span>}
                   {category === 'stringer_size' && (
                     <>
@@ -400,7 +422,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                   return (
                     <div key={entry.id || entry._id || `idx-${index}`} className={`quick-entry-item ${isEditing ? 'is-editing' : ''} ${isDefault ? 'default-item' : ''}`} style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: category === 'platform_type' ? '40px 1fr 100px 100px 100px 100px 80px' : (category === 'stringer_size' ? '40px 1fr 100px 80px 80px 80px 80px 80px 80px' : '40px 1fr 140px 140px 140px 80px'), 
+                      gridTemplateColumns: gridColumns, 
                       fontSize: '12px',
                       alignItems: 'center',
                       opacity: isDefault ? 0.7 : 1
@@ -434,6 +456,12 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                                 type="number" step="0.001"
                                 value={editForm.fieldLaborMhLf}
                                 onChange={e => setEditForm({ ...editForm, fieldLaborMhLf: e.target.value })}
+                              />
+                              <input 
+                                className="edit-input center"
+                                type="number" step="0.01"
+                                value={editForm.price}
+                                onChange={e => setEditForm({ ...editForm, price: e.target.value })}
                               />
                               {category === 'platform_type' && (
                                 <input 
@@ -480,6 +508,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
                               <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.steelLbsLf || 0)}</div>
                               <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.shopLaborMhLf || 0)}</div>
                               <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.fieldLaborMhLf || 0)}</div>
+                              <div style={{ textAlign: 'center', color: '#10b981', fontWeight: 700 }}>{entry.price != null ? `$${Number(entry.price).toFixed(2)}` : '-'}</div>
                               {category === 'platform_type' && (
                                 <div style={{ textAlign: 'center', color: '#0f172a', fontWeight: 600 }}>{Number(entry.description || 0)}</div>
                               )}

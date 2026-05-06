@@ -92,8 +92,8 @@ const RAIL_CONFIGS = {
 // ── Suggestion Engine Helpers ──────────────────────────────────────────
 const parseRailAttributes = (label) => {
   if (!label || label.includes("Optional Kick Plate")) return null;
-  // Wall/Grab Rails check
-  if (label.toLowerCase().includes('wall bolted') || label.toLowerCase().includes('on guardrail')) return null;
+  // Wall/Grab Rails check - removed to allow parsing line counts for auto-settings
+  // if (label.toLowerCase().includes('wall bolted') || label.toLowerCase().includes('on guardrail')) return null;
 
   return {
     lines: label.match(/^(\d+)-Line/)?.[1] ? parseInt(label.match(/^(\d+)-Line/)[1]) : null,
@@ -221,15 +221,16 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     railLength: data?.railLength || { value: '', unit: 'FT' },
     steelGrade: data?.steelGrade || 'A36',
     mountingType: data?.mountingType || '',
-    intermediateRails: data?.intermediateRails || (type === 'caneRail' ? '0' : ''),
+    intermediateRails: (data?.intermediateRails !== undefined && data?.intermediateRails !== null) ? data.intermediateRails : (type === 'caneRail' ? '0' : ''),
     postSpacing: data?.postSpacing || { value: '4', unit: 'FT' },
-    postQty: data?.postQty || '',
+    postQty: (data?.postQty !== undefined && data?.postQty !== null) ? data.postQty : '',
     toeplateRequired: data?.toeplateRequired || 'No',
     toeplateLength: data?.toeplateLength || { value: '', unit: 'FT' },
     finish: data?.finish || 'Primer',
     selectionSource: data?.selectionSource || (data?.railType ? 'manual' : null),
-    filters: data?.filters || { lines: null, pipeSize: null, postType: null, infill: null },
+    filters: data?.filters || { lines: 2, pipeSize: '1.25', postType: 'SCH40', infill: 'pipe' },
     intRailSource: data?.intRailSource || (data?.intermediateRails !== undefined && data?.intermediateRails !== '' ? 'manual' : 'auto'),
+    postQtySource: data?.postQtySource || (data?.postQty !== undefined && data?.postQty !== '' ? 'manual' : 'auto'),
     ...data
   });
 
@@ -328,7 +329,12 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
           const suggestedInt = (lines - 1).toString();
           // Always auto-set when type changes; respect 'manual' only if type didn't change
           if (typeChanged || form.intRailSource !== 'manual') {
-            const updated = { ...form, intermediateRails: suggestedInt, intRailSource: 'auto' };
+            const updated = { 
+              ...form, 
+              intermediateRails: suggestedInt, 
+              intRailSource: 'auto',
+              postQtySource: typeChanged ? 'auto' : form.postQtySource 
+            };
             setForm(updated);
             if (onChange) onChange(updated);
           }
@@ -336,6 +342,16 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       }
     }
   }, [form.railType, parsedTypes, type]);
+  
+  // Sync background-calculated posts to local state when in auto mode
+  useEffect(() => {
+    if (form.postQtySource === 'auto' && data?.systemCalc?.posts !== undefined) {
+      const autoVal = data.systemCalc.posts.toString();
+      if (form.postQty !== autoVal) {
+        setForm(f => ({ ...f, postQty: autoVal }));
+      }
+    }
+  }, [data?.systemCalc?.posts, form.postQtySource]);
 
   const handleManualSelection = (val) => {
     const updated = { ...form, railType: val, selectionSource: 'manual' };
@@ -376,13 +392,13 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               <div className="filter-group">
                 <label>Lines</label>
                 <div className="segmented-control">
-                  {[null, 1, 2, 3, 8].map(v => (
+                  {[1, 2, 3, 8].map(v => (
                     <button
-                      key={v === null ? 'any' : v}
+                      key={v}
                       className={form.filters.lines === v ? 'active' : ''}
                       onClick={() => set('filters', { ...form.filters, lines: v })}
                     >
-                      {v === null ? 'Any' : `${v}-Line`}
+                      {`${v}-Line`}
                     </button>
                   ))}
                 </div>
@@ -390,13 +406,13 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               <div className="filter-group">
                 <label>Pipe Size</label>
                 <div className="segmented-control">
-                  {[null, '1.25', '1.5'].map(v => (
+                  {['1.25', '1.5'].map(v => (
                     <button
-                      key={v === null ? 'any' : v}
+                      key={v}
                       className={form.filters.pipeSize === v ? 'active' : ''}
                       onClick={() => set('filters', { ...form.filters, pipeSize: v })}
                     >
-                      {v === null ? 'Any' : (v === '1.25' ? '1 1/4"' : '1 1/2"')}
+                      {v === '1.25' ? '1 1/4"' : '1 1/2"'}
                     </button>
                   ))}
                 </div>
@@ -404,13 +420,13 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               <div className="filter-group">
                 <label>Post Type</label>
                 <div className="segmented-control">
-                  {[null, 'SCH40', 'SCH80'].map(v => (
+                  {['SCH40', 'SCH80'].map(v => (
                     <button
-                      key={v === null ? 'any' : v}
+                      key={v}
                       className={form.filters.postType === v ? 'active' : ''}
                       onClick={() => set('filters', { ...form.filters, postType: v })}
                     >
-                      {v === null ? 'Any' : (v === 'SCH40' ? 'SCH 40' : 'SCH 80')}
+                      {v === 'SCH40' ? 'SCH 40' : 'SCH 80'}
                     </button>
                   ))}
                 </div>
@@ -418,13 +434,13 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               <div className="filter-group">
                 <label>Infill</label>
                 <div className="segmented-control wrapable" data-group="infill">
-                  {[null, 'pipe', 'picket_half', 'picket_three_quarter', 'mesh'].map(v => (
+                  {['pipe', 'picket_half', 'picket_three_quarter', 'mesh'].map(v => (
                     <button
-                      key={v === null ? 'any' : v}
+                      key={v}
                       className={form.filters.infill === v ? 'active' : ''}
                       onClick={() => set('filters', { ...form.filters, infill: v })}
                     >
-                      {v === null ? 'Any' : (v === 'pipe' ? 'Pipe' : v === 'picket_half' ? '½" Picket' : v === 'picket_three_quarter' ? '¾" Picket' : 'Mesh')}
+                      {v === 'pipe' ? 'Pipe' : v === 'picket_half' ? '½" Picket' : v === 'picket_three_quarter' ? '¾" Picket' : 'Mesh'}
                     </button>
                   ))}
                 </div>
@@ -632,11 +648,23 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               Post Qty
             </label>
             <input
-              className="form-input auto-calculation field-auto"
+              className={`form-input ${form.postQtySource === 'manual' ? '' : 'auto-calculation field-auto'}`}
               type="number"
-              value={data?.systemCalc?.posts || 0}
-              readOnly
+              value={form.postQty || ''}
+              onChange={(e) => {
+                const updated = { ...form, postQty: e.target.value, postQtySource: 'manual' };
+                setForm(updated);
+                if (onChange) onChange(updated);
+              }}
+              onFocus={e => e.target.select()}
+              placeholder="0"
             />
+            {/* Manual override indicator */}
+            {form.postQtySource === 'manual' && (
+              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic', background: '#fffbeb', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
+                Custom count — cost/weight adjusted accordingly
+              </span>
+            )}
           </div>
 
           {config.hasBrackets && (

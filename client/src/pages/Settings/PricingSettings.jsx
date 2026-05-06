@@ -97,12 +97,14 @@ export default function PricingSettings() {
     bolted_shop_mh: 1.0,
     bolted_field_mh: 0.5,
     grating_factor_bar_125_welded: 1.0,
-    grating_factor_bar_100_welded: 1.0,
-    grating_factor_mcnichols: 1.0,
     grating_factor_bar_125_bolted: 1.0,
+    grating_factor_bar_100_welded: 1.0,
     grating_factor_bar_100_bolted: 1.0,
-    grating_factor_prefab: 1.0
+    grating_factor_mcnichols: 1.0,
+    grating_factor_prefab: 1.0,
   });
+
+  const [gratingTypes, setGratingTypes] = useState([]);
 
   useEffect(() => {
     fetchConfig();
@@ -124,6 +126,16 @@ export default function PricingSettings() {
       const data = await res.json();
       if (data.success) {
         setConfig(prev => ({ ...prev, ...data.data }));
+      }
+
+      // Fetch dynamic grating types from dictionary
+      const dictRes = await fetch(`${API_BASE_URL}/api/v1/dictionary/grating_type`, {
+        credentials: 'include',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dictData = await dictRes.json();
+      if (dictData.success) {
+        setGratingTypes(dictData.data || []);
       }
     } catch (error) {
       toast.error("Cloud parameters unreachable");
@@ -296,38 +308,79 @@ export default function PricingSettings() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                {[
-                  { label: '1-1/4" Bar / Welded', key: 'grating_factor_bar_125_welded' },
-                  { label: '1-1/4" Bar / Bolted', key: 'grating_factor_bar_125_bolted' },
-                  { label: '1" Bar / Welded', key: 'grating_factor_bar_100_welded' },
-                  { label: '1" Bar / Bolted', key: 'grating_factor_bar_100_bolted' },
-                  { label: 'McNichols Treads', key: 'grating_factor_mcnichols' },
-                  { label: 'Other Prefab Treads', key: 'grating_factor_prefab' }
-                ].map(item => {
-                  const factor = config[item.key] || 1.0;
-                  return (
-                    <div key={item.key} className="space-y-3">
-                      <PremiumSettingInput 
-                        label={item.label} value={factor}
-                        onChange={(v) => setConfig(p => ({...p, [item.key]: parseFloat(v)}))} 
-                        suffix="x Mult"
-                      />
-                      <div className="grid grid-cols-4 gap-1 px-1">
-                        {[
-                          { w: "3'0\"", base: 56.10 },
-                          { w: "4'0\"", base: 64.12 },
-                          { w: "4'6\"", base: 72.15 },
-                          { w: "5'0\"", base: 80.15 }
-                        ].map(rate => (
-                          <div key={rate.w} className="flex flex-col items-center p-1.5 bg-white border border-slate-100 rounded-lg shadow-sm">
-                            <span className="text-[8px] font-bold text-slate-400 uppercase">{rate.w}</span>
-                            <span className="text-[10px] font-black text-slate-700">${(rate.base * factor).toFixed(2)}</span>
-                          </div>
-                        ))}
+                {(() => {
+                  const getBaseSpec = (label) => {
+                    if (!label) return '';
+                    return label.replace(/\s+x?\s*\d+'-\d+"?.*$/, '').trim();
+                  };
+
+                  const groups = {};
+                  gratingTypes.forEach(gt => {
+                    const base = getBaseSpec(gt.label);
+                    if (!groups[base]) groups[base] = [];
+                    groups[base].push(gt);
+                  });
+
+                  // Define mapping for legacy keys to preserve existing configuration values
+                  const legacyMapping = {
+                    '1-1/4" Bar / Welded': 'grating_factor_bar_125_welded',
+                    '1-1/4" Bar / Bolted': 'grating_factor_bar_125_bolted',
+                    '1" Bar / Welded': 'grating_factor_bar_100_welded',
+                    '1" Bar / Bolted': 'grating_factor_bar_100_bolted',
+                    'McNichols': 'grating_factor_mcnichols',
+                    'Prefab': 'grating_factor_prefab'
+                  };
+
+                  return Object.entries(groups).map(([label, items]) => {
+                    // Try to find a matching legacy key for stability
+                    let key = null;
+                    for (const [legacyLabel, legacyKey] of Object.entries(legacyMapping)) {
+                      if (label.toLowerCase().includes(legacyLabel.toLowerCase())) {
+                        key = legacyKey;
+                        break;
+                      }
+                    }
+                    
+                    // Fallback to dynamic slug if no legacy match
+                    if (!key) {
+                      const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                      key = `grating_factor_${slug}`;
+                    }
+
+                    const factor = config[key] || 1.0;
+                    const getPriceForWidth = (width) => {
+                      const match = items.find(i => i.label.includes(width));
+                      return match ? parseFloat(match.price) : 0;
+                    };
+
+                    const standardWidths = [
+                      { w: "3'6\"", base: getPriceForWidth("3'-6\"") },
+                      { w: "4'0\"", base: getPriceForWidth("4'-0\"") },
+                      { w: "4'6\"", base: getPriceForWidth("4'-6\"") },
+                      { w: "5'0\"", base: getPriceForWidth("5'-0\"") }
+                    ];
+
+                    return (
+                      <div key={key} className="space-y-3">
+                        <PremiumSettingInput 
+                          label={label} value={factor}
+                          onChange={(v) => setConfig(p => ({...p, [key]: parseFloat(v)}))} 
+                          suffix="x Mult"
+                        />
+                        <div className="grid grid-cols-4 gap-1 px-1">
+                          {standardWidths.map(rate => (
+                            <div key={rate.w} className="flex flex-col items-center p-1.5 bg-white border border-slate-100 rounded-lg shadow-sm">
+                              <span className="text-[8px] font-bold text-slate-400 uppercase">{rate.w}</span>
+                              <span className="text-[10px] font-black text-slate-700">
+                                ${rate.base > 0 ? (rate.base * factor).toFixed(2) : '—'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </SettingSection>
           </div>

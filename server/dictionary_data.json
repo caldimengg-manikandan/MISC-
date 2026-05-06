@@ -14,7 +14,9 @@
     "fieldLaborMhLf": 1,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "77",
@@ -31,7 +33,9 @@
     "fieldLaborMhLf": 1,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "78",
@@ -48,109 +52,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
-  },
-  {
-    "id": "79",
-    "category": "grating_type",
-    "label": "1 1/4\" Bar grating/Welded",
-    "value": "1 1/4\" Bar grating/Welded",
-    "sort_order": 0,
-    "is_active": true,
-    "order": 1,
-    "isActive": true,
-    "description": null,
-    "steelLbsLf": null,
-    "shopLaborMhLf": null,
-    "fieldLaborMhLf": null,
-    "widthMax": null,
-    "spanMin": null,
-    "spanMax": null
-  },
-  {
-    "id": "80",
-    "category": "grating_type",
-    "label": "1 1/4\" Bar grating/Bolted",
-    "value": "1 1/4\" Bar grating/Bolted",
-    "sort_order": 0,
-    "is_active": true,
-    "order": 2,
-    "isActive": true,
-    "description": null,
-    "steelLbsLf": null,
-    "shopLaborMhLf": null,
-    "fieldLaborMhLf": null,
-    "widthMax": null,
-    "spanMin": null,
-    "spanMax": null
-  },
-  {
-    "id": "81",
-    "category": "grating_type",
-    "label": "1\" Bar grating/Welded",
-    "value": "1\" Bar grating/Welded",
-    "sort_order": 0,
-    "is_active": true,
-    "order": 3,
-    "isActive": true,
-    "description": null,
-    "steelLbsLf": null,
-    "shopLaborMhLf": null,
-    "fieldLaborMhLf": null,
-    "widthMax": null,
-    "spanMin": null,
-    "spanMax": null
-  },
-  {
-    "id": "82",
-    "category": "grating_type",
-    "label": "1\" Bar grating/Bolted",
-    "value": "1\" Bar grating/Bolted",
-    "sort_order": 0,
-    "is_active": true,
-    "order": 4,
-    "isActive": true,
-    "description": null,
-    "steelLbsLf": null,
-    "shopLaborMhLf": null,
-    "fieldLaborMhLf": null,
-    "widthMax": null,
-    "spanMin": null,
-    "spanMax": null
-  },
-  {
-    "id": "83",
-    "category": "grating_type",
-    "label": "McNichols treads",
-    "value": "McNichols treads",
-    "sort_order": 0,
-    "is_active": true,
-    "order": 5,
-    "isActive": true,
-    "description": null,
-    "steelLbsLf": null,
-    "shopLaborMhLf": null,
-    "fieldLaborMhLf": null,
-    "widthMax": null,
-    "spanMin": null,
-    "spanMax": null
-  },
-  {
-    "id": "84",
-    "category": "grating_type",
-    "label": "Other Pre-fabricated Treads",
-    "value": "Other Pre-fabricated Treads",
-    "sort_order": 0,
-    "is_active": true,
-    "order": 6,
-    "isActive": true,
-    "description": null,
-    "steelLbsLf": null,
-    "shopLaborMhLf": null,
-    "fieldLaborMhLf": null,
-    "widthMax": null,
-    "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "85",
@@ -167,7 +71,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "86",
@@ -184,7 +90,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "87",
@@ -201,7 +109,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "88",
@@ -218,7 +128,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "89",
@@ -235,7 +147,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "90",
@@ -252,7 +166,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "91",
@@ -269,7 +185,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "92",
@@ -286,7 +204,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "93",
@@ -303,7 +223,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "94",
@@ -320,7 +242,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "95",
@@ -337,7 +261,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "96",
@@ -354,7 +280,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "97",
@@ -371,7 +299,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "98",
@@ -388,7 +318,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "99",
@@ -405,7 +337,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "100",
@@ -422,7 +356,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "101",
@@ -439,7 +375,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "102",
@@ -456,7 +394,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "103",
@@ -473,7 +413,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "104",
@@ -490,7 +432,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "105",
@@ -507,7 +451,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "106",
@@ -524,7 +470,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "107",
@@ -541,7 +489,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "152",
@@ -558,7 +508,9 @@
     "fieldLaborMhLf": null,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "201",
@@ -575,7 +527,9 @@
     "fieldLaborMhLf": 0.28,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "202",
@@ -592,7 +546,9 @@
     "fieldLaborMhLf": 0.28,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "203",
@@ -609,7 +565,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "204",
@@ -626,7 +584,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "205",
@@ -643,7 +603,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "206",
@@ -660,7 +622,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "207",
@@ -677,7 +641,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "208",
@@ -694,7 +660,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "209",
@@ -711,7 +679,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "210",
@@ -728,7 +698,9 @@
     "fieldLaborMhLf": 0.375,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "211",
@@ -745,7 +717,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "212",
@@ -762,7 +736,9 @@
     "fieldLaborMhLf": 0.375,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "213",
@@ -779,7 +755,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "214",
@@ -796,7 +774,9 @@
     "fieldLaborMhLf": 0.375,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "215",
@@ -813,7 +793,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "216",
@@ -830,7 +812,9 @@
     "fieldLaborMhLf": 0.385,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "217",
@@ -847,7 +831,9 @@
     "fieldLaborMhLf": 0.55,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "218",
@@ -864,7 +850,9 @@
     "fieldLaborMhLf": 0.6,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "219",
@@ -881,7 +869,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "220",
@@ -898,7 +888,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "221",
@@ -915,7 +907,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "222",
@@ -932,7 +926,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "223",
@@ -949,7 +945,9 @@
     "fieldLaborMhLf": 0.425,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "224",
@@ -966,7 +964,9 @@
     "fieldLaborMhLf": 0.45,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "225",
@@ -983,7 +983,9 @@
     "fieldLaborMhLf": 0.425,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "226",
@@ -1000,7 +1002,9 @@
     "fieldLaborMhLf": 0.45,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "227",
@@ -1017,7 +1021,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "228",
@@ -1034,7 +1040,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "229",
@@ -1051,7 +1059,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "230",
@@ -1068,7 +1078,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "231",
@@ -1085,7 +1097,9 @@
     "fieldLaborMhLf": 0.425,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "232",
@@ -1102,7 +1116,9 @@
     "fieldLaborMhLf": 0.45,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "233",
@@ -1119,7 +1135,9 @@
     "fieldLaborMhLf": 0.425,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "234",
@@ -1136,7 +1154,9 @@
     "fieldLaborMhLf": 0.45,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "235",
@@ -1153,7 +1173,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "236",
@@ -1170,7 +1192,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "237",
@@ -1187,7 +1211,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "238",
@@ -1204,7 +1230,9 @@
     "fieldLaborMhLf": 0.4,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "239",
@@ -1221,7 +1249,9 @@
     "fieldLaborMhLf": 0.05,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "240",
@@ -1238,7 +1268,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "241",
@@ -1255,7 +1287,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "242",
@@ -1272,7 +1306,9 @@
     "fieldLaborMhLf": 0.28,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "243",
@@ -1289,7 +1325,9 @@
     "fieldLaborMhLf": 0.28,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "244",
@@ -1301,12 +1339,14 @@
     "order": 1,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 25.32,
+    "steelLbsLf": 10.6,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 1,
     "widthMax": 4,
     "spanMin": 0,
-    "spanMax": 14
+    "spanMax": 14,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "245",
@@ -1318,12 +1358,14 @@
     "order": 2,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 71.8,
+    "steelLbsLf": 14.3,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 1,
     "widthMax": 4,
     "spanMin": 14,
-    "spanMax": 19
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "246",
@@ -1335,12 +1377,14 @@
     "order": 3,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 45.52,
+    "steelLbsLf": 20.7,
     "shopLaborMhLf": 1.75,
     "fieldLaborMhLf": 1,
     "widthMax": 4,
     "spanMin": 19,
-    "spanMax": 999
+    "spanMax": 999,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "247",
@@ -1357,7 +1401,9 @@
     "fieldLaborMhLf": 1,
     "widthMax": 4,
     "spanMin": 14,
-    "spanMax": 999
+    "spanMax": 999,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "248",
@@ -1374,7 +1420,9 @@
     "fieldLaborMhLf": 1,
     "widthMax": 4,
     "spanMin": 14,
-    "spanMax": 19
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "249",
@@ -1386,12 +1434,14 @@
     "order": 6,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 25.32,
+    "steelLbsLf": 10.6,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 1,
     "widthMax": 5,
     "spanMin": 0,
-    "spanMax": 14
+    "spanMax": 14,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "250",
@@ -1408,7 +1458,9 @@
     "fieldLaborMhLf": 1,
     "widthMax": 5,
     "spanMin": 14,
-    "spanMax": 14
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "251",
@@ -1425,7 +1477,9 @@
     "fieldLaborMhLf": 1,
     "widthMax": 5,
     "spanMin": 14,
-    "spanMax": 19
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "252",
@@ -1437,12 +1491,14 @@
     "order": 9,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 45.52,
+    "steelLbsLf": 20.7,
     "shopLaborMhLf": 1.75,
     "fieldLaborMhLf": 1,
     "widthMax": 5,
     "spanMin": 19,
-    "spanMax": 999
+    "spanMax": 999,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "253",
@@ -1454,12 +1510,14 @@
     "order": 10,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 85.8,
+    "steelLbsLf": 10.6,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 1,
     "widthMax": 6,
     "spanMin": 0,
-    "spanMax": 14
+    "spanMax": 14,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "254",
@@ -1471,12 +1529,14 @@
     "order": 11,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 89.2,
+    "steelLbsLf": 14.3,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 1,
     "widthMax": 6,
     "spanMin": 14,
-    "spanMax": 19
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "255",
@@ -1488,12 +1548,14 @@
     "order": 12,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 106,
+    "steelLbsLf": null,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 1,
     "widthMax": 6,
     "spanMin": 19,
-    "spanMax": 999
+    "spanMax": 999,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "256",
@@ -1505,12 +1567,14 @@
     "order": 13,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 23.2,
+    "steelLbsLf": 10.6,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 0.75,
     "widthMax": 4,
     "spanMin": 0,
-    "spanMax": 14
+    "spanMax": 14,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "257",
@@ -1522,12 +1586,14 @@
     "order": 14,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 30.6,
+    "steelLbsLf": 14.3,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 0.75,
     "widthMax": 4,
     "spanMin": 14,
-    "spanMax": 19
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "258",
@@ -1539,12 +1605,14 @@
     "order": 15,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 43.4,
+    "steelLbsLf": null,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 0.75,
     "widthMax": 4,
     "spanMin": 19,
-    "spanMax": 999
+    "spanMax": 999,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "259",
@@ -1556,12 +1624,14 @@
     "order": 16,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 23.2,
+    "steelLbsLf": 10.6,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 0.75,
     "widthMax": 5,
     "spanMin": 0,
-    "spanMax": 14
+    "spanMax": 14,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "260",
@@ -1573,12 +1643,14 @@
     "order": 17,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 30.6,
+    "steelLbsLf": 14.3,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 0.75,
     "widthMax": 5,
     "spanMin": 14,
-    "spanMax": 19
+    "spanMax": 19,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "261",
@@ -1590,12 +1662,14 @@
     "order": 18,
     "isActive": true,
     "description": null,
-    "steelLbsLf": 23.2,
+    "steelLbsLf": null,
     "shopLaborMhLf": 1.5,
     "fieldLaborMhLf": 0.75,
     "widthMax": 5,
     "spanMin": 19,
-    "spanMax": 999
+    "spanMax": 999,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "262",
@@ -1612,7 +1686,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "263",
@@ -1629,7 +1705,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "264",
@@ -1646,7 +1724,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "265",
@@ -1663,7 +1743,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "266",
@@ -1680,7 +1762,9 @@
     "fieldLaborMhLf": 0.25,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "329",
@@ -1697,7 +1781,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "330",
@@ -1714,7 +1800,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "331",
@@ -1731,7 +1819,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "332",
@@ -1748,7 +1838,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "333",
@@ -1765,7 +1857,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "334",
@@ -1782,7 +1876,9 @@
     "fieldLaborMhLf": 0.375,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "335",
@@ -1799,7 +1895,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "336",
@@ -1816,7 +1914,9 @@
     "fieldLaborMhLf": 0.375,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "337",
@@ -1833,7 +1933,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "338",
@@ -1850,7 +1952,9 @@
     "fieldLaborMhLf": 0.375,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "339",
@@ -1867,7 +1971,9 @@
     "fieldLaborMhLf": 0.35,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "340",
@@ -1884,7 +1990,9 @@
     "fieldLaborMhLf": 0.385,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "341",
@@ -1901,7 +2009,9 @@
     "fieldLaborMhLf": 0.55,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
   },
   {
     "id": "342",
@@ -1918,6 +2028,122 @@
     "fieldLaborMhLf": 0.6,
     "widthMax": null,
     "spanMin": null,
-    "spanMax": null
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
+  },
+  {
+    "id": "347",
+    "category": "mounting_type",
+    "label": "new item",
+    "value": "new-item",
+    "sort_order": 0,
+    "is_active": true,
+    "order": 7,
+    "isActive": true,
+    "description": "",
+    "steelLbsLf": null,
+    "shopLaborMhLf": null,
+    "fieldLaborMhLf": null,
+    "widthMax": null,
+    "spanMin": null,
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": null
+  },
+  {
+    "id": "348",
+    "category": "grating_type",
+    "label": " 1 1/2\" Bar grating/Welded",
+    "value": "1-12-bar-gratingwelded",
+    "sort_order": 0,
+    "is_active": true,
+    "order": 7,
+    "isActive": true,
+    "description": "",
+    "steelLbsLf": null,
+    "shopLaborMhLf": null,
+    "fieldLaborMhLf": null,
+    "widthMax": null,
+    "spanMin": null,
+    "spanMax": null,
+    "admin_owner_id": 15,
+    "price": null
+  },
+  {
+    "id": "349",
+    "category": "grating_type",
+    "label": "1 1/2 x 3/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1/8\"x 3'-6\"",
+    "value": "1-12-x-316-19-w4-smooth-mill-finish-treads-with-ab",
+    "sort_order": 0,
+    "is_active": true,
+    "order": 99,
+    "isActive": true,
+    "description": null,
+    "steelLbsLf": null,
+    "shopLaborMhLf": null,
+    "fieldLaborMhLf": null,
+    "widthMax": null,
+    "spanMin": null,
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": 71.1
+  },
+  {
+    "id": "350",
+    "category": "grating_type",
+    "label": "1 1/2 x 3/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1/8\"x 4'-0\"",
+    "value": "1-12-x-316-19-w4-smooth-mill-finish-treads-with-ab",
+    "sort_order": 0,
+    "is_active": true,
+    "order": 99,
+    "isActive": true,
+    "description": null,
+    "steelLbsLf": null,
+    "shopLaborMhLf": null,
+    "fieldLaborMhLf": null,
+    "widthMax": null,
+    "spanMin": null,
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": 78.6
+  },
+  {
+    "id": "351",
+    "category": "grating_type",
+    "label": "1 1/2 x 3/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1/8\"x 4'-6\"",
+    "value": "1-12-x-316-19-w4-smooth-mill-finish-treads-with-ab",
+    "sort_order": 0,
+    "is_active": true,
+    "order": 99,
+    "isActive": true,
+    "description": null,
+    "steelLbsLf": null,
+    "shopLaborMhLf": null,
+    "fieldLaborMhLf": null,
+    "widthMax": null,
+    "spanMin": null,
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": 87.8
+  },
+  {
+    "id": "352",
+    "category": "grating_type",
+    "label": "1 1/2 x 3/16 19 W4 Smooth Mill Finish Treads with ABN and End end Plates Galvanized 12 1/8\"x 5'-0\"",
+    "value": "1-12-x-316-19-w4-smooth-mill-finish-treads-with-ab",
+    "sort_order": 0,
+    "is_active": true,
+    "order": 99,
+    "isActive": true,
+    "description": null,
+    "steelLbsLf": null,
+    "shopLaborMhLf": null,
+    "fieldLaborMhLf": null,
+    "widthMax": null,
+    "spanMin": null,
+    "spanMax": null,
+    "admin_owner_id": null,
+    "price": 95.3
   }
 ]

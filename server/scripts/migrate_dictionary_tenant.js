@@ -1,83 +1,67 @@
 /**
- * Migration: Add admin_owner_id column to dictionary table for multi-tenant isolation.
- *
- * Rules after migration:
- *   - admin_owner_id IS NULL  → Global system default (visible to ALL tenants)
- *   - admin_owner_id = X      → Custom entry for admin X (visible only to X + their estimators)
- *
- * Run this once on both local and VPS:
- *   node server/scripts/migrate_dictionary_tenant.js
+ * migrate_dictionary_tenant.js
+ * Safely migrates dictionary (dropdown) data from local to VPS without deleting user data.
  */
-
-process.env.MSSQL_TRUST_SERVER_CERTIFICATE = 'true';
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const db = require('../src/config/mssql');
+const fs = require('fs');
 
-async function run() {
-  console.log('🔧 Starting dictionary tenant migration...');
+async function migrate() {
+    console.log('🔧 Starting dictionary tenant migration...');
+    
+    try {
+        const filePath = require('path').join(__dirname, '../dictionary_data.json');
+        if (!fs.existsSync(filePath)) {
+            console.error('❌ Error: dictionary_data.json not found! Export it locally first.');
+            return;
+        }
 
-  // 1. Add admin_owner_id column if it doesn't exist
-  try {
-    await db.query(`
-      IF NOT EXISTS (
-        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'dictionary' AND COLUMN_NAME = 'admin_owner_id'
-      )
-      BEGIN
-        ALTER TABLE dictionary ADD admin_owner_id INT NULL;
-        PRINT 'Column admin_owner_id added.';
-      END
-      ELSE
-      BEGIN
-        PRINT 'Column admin_owner_id already exists.';
-      END
-    `);
-    console.log('✅ Step 1: admin_owner_id column verified.');
-  } catch (e) {
-    console.error('❌ Step 1 failed:', e.message);
-    process.exit(1);
-  }
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        console.log(`📦 Loaded ${data.length} dictionary entries.`);
 
-  // 2. All EXISTING entries become global defaults (admin_owner_id = NULL)
-  //    This preserves backward compatibility — existing data is shared with everyone.
-  try {
-    const [result] = await db.query(`
-      UPDATE dictionary SET admin_owner_id = NULL
-      WHERE admin_owner_id IS NOT NULL
-    `);
-    console.log(`✅ Step 2: Existing entries set as global defaults.`);
-  } catch (e) {
-    console.error('❌ Step 2 failed:', e.message);
-    process.exit(1);
-  }
+        for (const entry of data) {
+            // We use category + value + admin_owner_id as the unique key
+            // admin_owner_id IS NULL means it's a global default.
+            const { category, label, value, description, [order]: orderVal, isActive, admin_owner_id, 
+                    steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price } = entry;
 
-  // 3. Add index for performance
-  try {
-    await db.query(`
-      IF NOT EXISTS (
-        SELECT 1 FROM sys.indexes
-        WHERE name = 'IX_dictionary_category_tenant' AND object_id = OBJECT_ID('dictionary')
-      )
-      BEGIN
-        CREATE INDEX IX_dictionary_category_tenant ON dictionary (category, admin_owner_id, isActive);
-        PRINT 'Index created.';
-      END
-    `);
-    console.log('✅ Step 3: Index verified.');
-  } catch (e) {
-    // Non-fatal - index is for performance only
-    console.warn('⚠️  Step 3 (index creation) skipped:', e.message);
-  }
+            const [existing] = await db.query(
+                `SELECT id FROM dictionary 
+                 WHERE category = ? AND value = ? AND (admin_owner_id = ? OR (admin_owner_id IS NULL AND ? IS NULL))`,
+                [category, value, admin_owner_id, admin_owner_id]
+            );
 
-  console.log('');
-  console.log('✅ Migration complete!');
-  console.log('   • All existing entries are now global defaults (visible to everyone).');
-  console.log('   • New entries added via QuickManageModal will be tenant-specific.');
-  console.log('');
-  process.exit(0);
+            if (existing.length > 0) {
+                // Update existing
+                await db.query(
+                    `UPDATE dictionary 
+                     SET label = ?, description = ?, [order] = ?, isActive = ?, 
+                         steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, 
+                         widthMax = ?, spanMin = ?, spanMax = ?, price = ?
+                     WHERE id = ?`,
+                    [label, description, orderVal || 0, isActive === false ? 0 : 1, 
+                     steelLbsLf, shopLaborMhLf, fieldLaborMhLf, 
+                     widthMax, spanMin, spanMax, price, existing[0].id]
+                );
+            } else {
+                // Insert new
+                await db.query(
+                    `INSERT INTO dictionary 
+                     (category, label, value, description, [order], isActive, admin_owner_id,
+                      steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [category, label, value, description, orderVal || 0, isActive === false ? 0 : 1, admin_owner_id,
+                     steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price]
+                );
+            }
+        }
+
+        console.log('✨ SUCCESS: Dictionary synchronized safely.');
+    } catch (err) {
+        console.error('❌ Migration Error:', err.message);
+    } finally {
+        process.exit(0);
+    }
 }
 
-run().catch(e => {
-  console.error('Migration failed:', e);
-  process.exit(1);
-});
+migrate();

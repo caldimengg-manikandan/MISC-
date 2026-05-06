@@ -1061,6 +1061,7 @@ export default function StairEstimation() {
       {
         id: makeId(),
         label: 'Stair 1',
+        stairType: 'pan-concrete',
         flights: [],
         landings: [],
         rails: [],
@@ -1298,7 +1299,7 @@ export default function StairEstimation() {
             numRisers: parseInt(stair.numRisers || stair.systemCalc?.numRisers) || 0,
             stringerSize: stair.stringerSize || '',
             stringerType: stair.stringerType || 'Rolled',
-            stairType: stair.stairType || 'pan-concrete',
+            stairType: stair.stairType !== undefined ? stair.stairType : 'PAN PLATE CONC. FILLED',
             gratingTreadType: stair.gratingType || '',
             // 🛡️ DUMMY FIELDS: Extents are for reference only and must not affect estimation
             nsStringerBot: 0,
@@ -1427,11 +1428,12 @@ export default function StairEstimation() {
             rise: stair.rise,
             totalHeight: stair.totalHeight,
             width: stair.stairWidth,
-            stairType: stair.stairType || 'pan-concrete',
+            stairType: stair.stairType !== undefined ? stair.stairType : 'PAN PLATE CONC. FILLED',
             panPlThk: stair.panPlThk,
             gratingTreadType: stair.gratingType || '',
             stringerSize: stair.stringerSize || '',
             stringerType: stair.stringerType || 'Rolled',
+            stringerLength: stair.stringerLength,
             // 🛡️ DUMMY FIELDS: Extents are for reference only and must not affect estimation
             nsStringerBot: { value: '0', unit: 'FT' },
             fsStringerBot: { value: '0', unit: 'FT' },
@@ -1449,6 +1451,7 @@ export default function StairEstimation() {
               rise: toInches(f.rise),
               run: toInches(f.run),
               totalHeight: toInches(f.totalHeight),
+              stringerLength: f.stringerLength,
               // 🛡️ DUMMY FIELDS: Extents are for reference only and must not affect estimation
               nsStringerBot: { value: '0', unit: 'FT' },
               fsStringerBot: { value: '0', unit: 'FT' },

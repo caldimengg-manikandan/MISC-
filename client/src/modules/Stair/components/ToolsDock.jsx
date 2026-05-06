@@ -23,7 +23,11 @@ export default function ToolsDock() {
   // Close any open popover when clicking outside the dock
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (activePopover && dockRef.current && !dockRef.current.contains(e.target)) {
+      // Don't close if clicking inside the dock OR inside the modal
+      const isInsideDock = dockRef.current && dockRef.current.contains(e.target);
+      const isInsideModal = e.target.closest('.tdk-modal-content');
+      
+      if (activePopover && !isInsideDock && !isInsideModal) {
         setActivePopover(null);
       }
     };
@@ -112,33 +116,41 @@ export default function ToolsDock() {
   }, [selectedEstimation?.id]);
 
   const processDropFiles = async (files) => {
+    console.log("!!! VERSION 5 - UPLOAD CODE RUNNING !!!");
+    window.DEBUG_PROCESS_FILES = processDropFiles;
+    
     if (!selectedEstimation?.id || selectedEstimation.id === 'draft') {
-      toast.error("Please save your estimation first to upload attachments.");
+      toast.error("Please save your project first before uploading attachments.");
       return;
     }
 
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-
-    const loadingToast = toast.loading("Uploading files...");
+    const loadingToast = toast.loading(`Uploading ${files.length} file(s)...`);
+    
     try {
       const token = localStorage.getItem('steel_token');
-      const response = await fetch(`${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments`, {
+      const formData = new FormData();
+      files.forEach(f => formData.append('files', f));
+
+      const targetUrl = `${API_BASE_URL}/api/v1/projects/${selectedEstimation.id}/attachments`;
+      
+      const response = await fetch(targetUrl, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`
         },
         body: formData
       });
 
+
       const data = await response.json();
+
       if (data.success) {
-        toast.success("Files uploaded successfully", { id: loadingToast });
+        toast.success(`Successfully uploaded ${data.data?.length || files.length} files`, { id: loadingToast });
+        
         const newImages = [];
         const newDocs = [];
-        data.data.forEach(file => {
-          // ── null guard ──────────────────────────────────────────────────
+        
+        (data.data || []).forEach(file => {
           const isImg = file.file_type?.startsWith('image/');
           const obj = {
             id: file.id,
@@ -157,10 +169,11 @@ export default function ToolsDock() {
           documents: [...p.documents, ...newDocs]
         }));
       } else {
-        toast.error(data.error || "Failed to upload files", { id: loadingToast });
+        toast.error(data.error || "Upload failed", { id: loadingToast });
       }
     } catch (err) {
       console.error("Upload error", err);
+      alert("BROWSER ERROR: " + err.message); // This will show up on your screen
       toast.error("Network error during upload", { id: loadingToast });
     }
   };
@@ -488,6 +501,7 @@ export default function ToolsDock() {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
+                  onClick={() => document.getElementById('file-upload-input-unique').click()}
                   style={{
                     border: `2px dashed ${isDragging ? 'var(--gpt-accent)' : 'var(--gpt-sidebar-border)'}`,
                     backgroundColor: isDragging ? 'rgba(56, 189, 248, 0.05)' : 'var(--gpt-surface)',
@@ -508,13 +522,12 @@ export default function ToolsDock() {
                   <div style={{ fontSize: '14px', color: 'var(--gpt-text-primary)' }}>
                     <span style={{ fontWeight: 600, color: 'var(--gpt-accent)' }}>Click to upload</span> or drag and drop
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--gpt-sidebar-muted)' }}>SVG, PNG, JPG, PDF or Excel (max. 25MB)</div>
+                  <div style={{ fontSize: '12px', color: 'var(--gpt-sidebar-muted)' }}>SVG, PNG, JPG, PDF or Excel (max. 200MB)</div>
                   
-                  <input type="file" multiple style={{ display: 'none' }} id="file-drop-input" onChange={(e) => {
+                  <input type="file" multiple style={{ display: 'none' }} id="file-upload-input-unique" onChange={(e) => {
                     if (e.target.files.length > 0) processDropFiles(Array.from(e.target.files));
-                    e.target.value = null; // reset to allow same file retry
+                    e.target.value = null;
                   }} />
-                  <label htmlFor="file-drop-input" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, cursor: 'pointer' }}></label>
                 </div>
                 
                 <div className="tdk-attachments-content">

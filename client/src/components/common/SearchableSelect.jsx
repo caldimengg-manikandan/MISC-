@@ -133,6 +133,7 @@ const SearchableSelect = ({
                   >
                     <div className="ss-opt-main">
                       <span className="ss-opt-label">{opt[displayKey]}</span>
+                      {opt.isRecommended && <span className="ss-recommended-badge">Recommended</span>}
                       {opt.contactPerson && (
                         <span className="ss-opt-sub">
                           <User size={10} style={{ marginRight: 4 }} />

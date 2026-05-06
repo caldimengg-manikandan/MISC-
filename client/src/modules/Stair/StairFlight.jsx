@@ -6,7 +6,7 @@ import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import QuickManageModal from '../../components/common/QuickManageModal';
 import { calculateStairGeometry, debounce } from '../../services/estimationService';
-import { normalizeToInches, normalizeToFeet, parseArchitecturalInput } from '../../utils/mathUtils';
+import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils';
 import toast from 'react-hot-toast';
 
 // Fallback hardcoded lists (used while loading or if API fails)
@@ -207,7 +207,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
     ...stair,
     stairNumber: stair.stairNumber || '',
     stairCategory: stair.stairCategory || 'Commercial',
-    stairType: stair.stairType || 'pan-concrete',
+    stairType: (stair.stairType && stair.stairType !== '') ? stair.stairType : 'pan-concrete',
     panPlThk: (stair.panPlThk && stair.panPlThk.value) ? stair.panPlThk : { value: '12ga', unit: 'IN' },
     gratingType: stair.gratingType || '',
     stairWidth: (stair.stairWidth && typeof stair.stairWidth === 'object') ? stair.stairWidth : { value: stair.stairWidth || '', unit: 'FT' },
@@ -246,9 +246,12 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
           return f[key] || { value: '', unit: defaultUnit };
         };
 
-        // 🛡️ DEFAULT VALUE PROTECTION: Ensure critical fields don't revert to empty/undefined when synced
+        // 🛡️ DEFAULT VALUE PROTECTION: Ensure critical fields don't revert to undefined when synced
         const withDefault = (key, fallback) => {
-          return (stair[key] !== undefined && stair[key] !== null && stair[key] !== '') ? stair[key] : (f[key] || fallback);
+          // Allow empty string to represent a cleared selection
+          if (stair[key] !== undefined && stair[key] !== null && stair[key] !== '') return stair[key];
+          if (f[key] !== undefined && f[key] !== null) return f[key];
+          return fallback;
         };
 
         return {
@@ -266,7 +269,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
           panPlThk: safeMerge('panPlThk', 'IN'),
           // Fix for "not preselected" issue: ensure these fields have values
           stairCategory: withDefault('stairCategory', 'Commercial'),
-          stairType: withDefault('stairType', 'pan-concrete'),
+          stairType: (stair.stairType && stair.stairType !== '') ? stair.stairType : (f.stairType || 'pan-concrete'),
           stringerType: withDefault('stringerType', 'Rolled'),
           steelGrade: withDefault('steelGrade', 'A36'),
           finish: withDefault('finish', 'Primer')
@@ -274,6 +277,58 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
       });
     }
   }, [stair]);
+
+  const [gratingSelectionSource, setGratingSelectionSource] = useState(null);
+
+  // --- Grating Filtering & Auto-Suggest ---
+  const extractGratingWidth = useCallback((description) => {
+    if (!description) return null;
+    // Match patterns like 4'-0", 4'-6", 4', or 4-1/2'
+    const matches = description.match(/(\d+'(?:-?\d*(?:\/\d+)?")?)/g);
+    // The stair width is typically the last measurement in the string
+    return matches ? matches[matches.length - 1] : null;
+  }, []);
+
+  const standardizeWidth = useCallback((stairWidthFt) => {
+    if (!stairWidthFt) return null;
+    const stairWidthInches = Math.round(stairWidthFt * 12);
+    const feet = Math.floor(stairWidthInches / 12);
+    const inches = stairWidthInches % 12;
+    if (inches === 0) {
+      return `${feet}'-0"`;
+    } else {
+      return `${feet}'-${inches}"`;
+    }
+  }, []);
+
+  const stairWidthFt = parseToFeet(form.stairWidth);
+  const stairWidthStandard = standardizeWidth(stairWidthFt);
+
+  const allGratingOptions = dropdowns.gratingTypes.map(grating => {
+    const gWidth = extractGratingWidth(grating);
+    const isWidthMatch = gWidth && stairWidthStandard && (gWidth === stairWidthStandard || gWidth === stairWidthStandard.replace("'-0\"", "'"));
+    
+    // Also check for stringer profile match for higher specificity
+    const profileMatch = form.stringerSize ? (grating.includes(form.stringerSize) || grating.includes('Standard') || grating.includes('Ohio')) : true;
+    
+    return { 
+      value: grating, 
+      label: grating, 
+      isRecommended: isWidthMatch && profileMatch 
+    };
+  });
+
+  const recommendedGratings = allGratingOptions.filter(o => o.isRecommended).map(o => o.value);
+
+  useEffect(() => {
+    const isGrating = ['grating-tread', '77'].includes(form.stairType) || form.stairType.toLowerCase().includes('grating');
+    if (!isGrating || !stairWidthStandard) return;
+
+    // We no longer auto-apply the grating type here to allow users to see the recommendation banner 
+    // and make an explicit choice, preventing automatic calculation before a selection is made.
+    // The 'Apply Recommendation' banner will handle the one-click selection if desired.
+  }, [stairWidthStandard, form.stringerSize, form.stairType, recommendedGratings, form.gratingType]);
+
 
   // Remove old isStringerPreferred function
 
@@ -289,24 +344,11 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
   const isNonMetalStair = form.stairType?.toLowerCase().trim() === 'non-metal' || form.stairType?.toLowerCase().trim().includes('non metal');
 
   // --- Smart Auto-Suggest for Rolled Stringer Size ---
-  const widthVal = parseFloat(form.stairWidth?.value) || 0;
-  const stairWidthFt = form.stairWidth?.unit === 'IN' ? widthVal / 12 : widthVal;
-
-  const risersCount = parseFloat(form.systemCalc?.risers) || 0;
-
-  const riseVal = parseFloat(form.rise?.value) || 0;
-  const riseIn = form.rise?.unit === 'FT' ? riseVal * 12 : riseVal;
-
+  const risersCount = parseFloat(form.systemCalc?.risers) || parseFloat(form.numRisers) || 0;
   const runVal = parseFloat(form.run?.value) || 0;
   const runIn = form.run?.unit === 'FT' ? runVal * 12 : runVal;
-
-  const totalHeightIn = risersCount * riseIn;
-  const totalRunIn = risersCount * runIn;
-  
-  const manualStringerVal = parseFloat(form.stringerLength?.value) || 0;
-  const stringerLengthFt = manualStringerVal > 0 
-    ? (form.stringerLength?.unit === 'IN' ? manualStringerVal / 12 : manualStringerVal)
-    : (risersCount > 0 ? (Math.sqrt(Math.pow(totalHeightIn, 2) + Math.pow(totalRunIn, 2)) / 12) : 0);
+  // 📏 SPAN CALCULATION FIX: Total Horizontal Run = (Risers - 1) * Run per step
+  const totalRunFt = risersCount > 0 ? ((risersCount - 1) * runIn) / 12 : 0;
 
   // Resolve Buckets
   let widthBucket = null;
@@ -320,19 +362,40 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
   const stringerData = dropdowns.stringerSizesData || [];
   const scoredStringers = stringerData.map(opt => {
     let score = 0;
-    if (opt.widthMax !== null && opt.widthMax === widthBucket) score += 1;
-    if (opt.spanMin !== null && opt.spanMax !== null && stringerLengthFt >= opt.spanMin && stringerLengthFt < opt.spanMax) score += 1;
+    const label = (opt.label || opt.value || '').toLowerCase();
+    const isGrating = ['grating-tread', '77'].includes(form.stairType) || form.stairType?.toLowerCase().includes('grating');
+    
+    // 🛡️ CRITICAL: Type Mismatch Penalty (Prevents Pan stringers on Grating stairs and vice-versa)
+    const labelIsGrating = label.includes('grating');
+    const labelIsPan = label.includes('pan');
+    if (isGrating && labelIsPan) score -= 100;
+    if (!isGrating && labelIsGrating) score -= 100;
+
+    // Primary matches: Width and Span (Horizontal Run)
+    if (opt.widthMax !== null && opt.widthMax === widthBucket) score += 20;
+    if (opt.spanMin !== null && opt.spanMax !== null && totalRunFt >= opt.spanMin && totalRunFt < opt.spanMax) score += 20;
+
+    // Secondary match: Specific keyword boost
+    if (isGrating && labelIsGrating) score += 10;
+    if (!isGrating && labelIsPan) score += 10;
+
     return { ...opt, score };
   });
 
-  const bestMatchList = scoredStringers.filter(s => s.score === 2);
+  // Find best match (highest score)
   let bestMatch = null;
-  if (bestMatchList.length > 0) {
-    bestMatch = bestMatchList.reduce((prev, curr) => {
-      const prevDiff = Math.abs(prev.spanMin - stringerLengthFt);
-      const currDiff = Math.abs(curr.spanMin - stringerLengthFt);
-      return currDiff < prevDiff ? curr : prev;
-    });
+  const hasGeometry = stairWidthFt > 0 && risersCount > 0;
+  if (hasGeometry && scoredStringers.length > 0) {
+    const maxScore = Math.max(...scoredStringers.map(s => s.score));
+    if (maxScore >= 20) { // Must at least match Width and Span buckets
+      const topMatches = scoredStringers.filter(s => s.score === maxScore);
+      bestMatch = topMatches.reduce((prev, curr) => {
+        // If multiple top matches, pick the one with spanMin closest to totalRunFt
+        const prevDiff = Math.abs(prev.spanMin - totalRunFt);
+        const currDiff = Math.abs(curr.spanMin - totalRunFt);
+        return currDiff < prevDiff ? curr : prev;
+      });
+    }
   }
 
   const recommendedStringerStr = bestMatch ? (bestMatch.label || bestMatch.value) : null;
@@ -350,7 +413,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
       // Actually, it's better to call it to sync with parent.
       onChange({ ...form, stringerSize: recommendedStringerStr });
     }
-  }, [recommendedStringerStr, form.selectionSource]); // Removed form.stringerSize to avoid oscillation
+  }, [recommendedStringerStr, form.selectionSource, form.gratingType]); // Added form.gratingType to trigger on grating changes
 
   let stringerWarning = null;
   let stringerWarningType = 'info';
@@ -367,9 +430,29 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
   } else if (stairWidthFt > 6) {
     stringerWarning = `Width exceeds catalogue (max 6 ft). Add a custom stringer type to proceed.`;
     stringerWarningType = 'warning';
-  } else if (stringerLengthFt > 0) {
+  } else if (totalRunFt > 0) {
     stringerWarning = `No exact match — select manually or add a custom type in Manage Stringer Sizes`;
     stringerWarningType = 'warning';
+  }
+
+  // --- Grating Warning Logic ---
+  const recommendedGrating = recommendedGratings.length > 0 ? recommendedGratings[0] : null;
+  let gratingWarning = null;
+  let gratingWarningType = 'info';
+
+  if (isGratingStair) {
+    if (recommendedGrating) {
+      if (!form.gratingType || !recommendedGratings.includes(form.gratingType)) {
+        gratingWarning = `Selected grating may not match stair width (${stairWidthStandard}).\nSuggested: ${recommendedGrating}`;
+        gratingWarningType = 'warning';
+      } else {
+        gratingWarning = `Correct width for ${stairWidthStandard} stair`;
+        gratingWarningType = 'success';
+      }
+    } else if (stairWidthFt > 0 && !form.gratingType) {
+      gratingWarning = `No standard grating found for ${stairWidthStandard} width. Select manually.`;
+      gratingWarningType = 'warning';
+    }
   }
 
   return (
@@ -465,14 +548,63 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
                   </button>
                 )}
               </label>
+
+              {gratingWarning && (
+                <div className="fade-in" style={{
+                  marginBottom: '8px',
+                  padding: '8px 12px',
+                  fontSize: '11px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: gratingWarningType === 'success' ? '#ECFDF5' : '#FFFBEB',
+                  color: gratingWarningType === 'success' ? '#059669' : '#D97706',
+                  border: `1px solid ${gratingWarningType === 'success' ? '#A7F3D0' : '#FDE68A'}`
+                }}>
+                  <div style={{ whiteSpace: 'pre-line' }}>{gratingWarning}</div>
+                  {gratingWarningType === 'warning' && recommendedGrating && form.gratingType !== recommendedGrating && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const updated = { ...form, gratingType: recommendedGrating };
+                        setForm(updated);
+                        onChange(updated);
+                        setGratingSelectionSource('auto');
+                        toast.success(`Applied ${recommendedGrating}`);
+                      }}
+                      style={{
+                        background: '#3B82F6', color: 'white', border: 'none',
+                        padding: '6px 12px', borderRadius: '6px', cursor: 'pointer',
+                        fontSize: '11px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#2563EB'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#3B82F6'}
+                    >
+                      Apply Recommendation
+                    </button>
+                  )}
+                </div>
+              )}
+
               <SearchableSelect
-                options={dropdowns.gratingTypes.map(g => ({ value: g, label: g }))}
+                options={allGratingOptions}
                 valueKey="value"
                 displayKey="label"
                 value={form.gratingType}
-                onSelect={opt => set('gratingType', opt?.value || '')}
+                onSelect={opt => {
+                  set('gratingType', opt?.value || '');
+                  setGratingSelectionSource('manual');
+                }}
                 placeholder="— Select Grating Type —"
               />
+              {gratingSelectionSource === 'auto' && (
+                <div style={{ marginTop: '8px', padding: '6px 10px', background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: '6px', fontSize: '11px', color: '#B45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={12} /> Auto-suggested based on stair width
+                </div>
+              )}
             </div>
           )}
 
@@ -684,12 +816,11 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
 
               <SearchableSelect
                 options={dropdowns.stringerSizes.map(lbl => {
-                  const spec = stringerData.find(s => (s.label || s.value) === lbl);
                   const isRec = lbl === recommendedStringerStr;
                   return {
                     value: lbl,
-                    label: `${lbl}${isRec ? ' ★ (REC)' : ''}`,
-                    isRec
+                    label: lbl,
+                    isRecommended: isRec
                   };
                 })}
                 valueKey="value"
@@ -729,15 +860,85 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             </>
           )}
         </div>
-
       </div>
-
-
 
 
       {/* ── Real-time Preview Engine Results (EXCEL MISC ALIGNED) ─────────────────────── */}
       {form.systemCalc && (form.stringerType === 'Rolled' ? (form.stringerSize && form.stringerSize !== '') : (form.plateThk && form.plateWidth)) && (
         <div className={`mt-6 ${form.stairType === 'non-metal' ? 'section-faded' : ''}`}>
+          
+          {/* New Grating & Stringer Detailed Breakdown */}
+          {form.systemCalc.separatedCosts && (
+            <div style={{ marginBottom: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 16px', fontFamily: "'Geist Mono', 'SF Mono', monospace", fontSize: '11px', color: '#334155' }}>
+              <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: '4px', letterSpacing: '0.05em' }}>STRINGERS</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>{form.systemCalc.separatedCosts.stringer.type} (2 stringers)</span>
+                <span>{Number(form.systemCalc.separatedCosts.stringer.weight).toFixed(1)} lbs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Stringer Base Cost:</span>
+                <span>${Number(form.systemCalc.separatedCosts.stringer.cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              </div>
+
+              {form.systemCalc.separatedCosts.grating && (
+                <>
+                  <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '10px', marginBottom: '4px', letterSpacing: '0.05em' }}>GRATING TREADS</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.systemCalc.separatedCosts.grating.type}</span>
+                    <span>{Number(form.systemCalc.separatedCosts.grating.weight).toFixed(1)} lbs</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span>Quantity: {form.systemCalc.separatedCosts.grating.quantity} treads</span>
+                    <span>Cost: ${Number(form.systemCalc.separatedCosts.grating.cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                  </div>
+                </>
+              )}
+
+              {form.systemCalc.separatedCosts.panPlate && (
+                <>
+                  <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '10px', marginBottom: '4px', letterSpacing: '0.05em' }}>PAN PLATE TREADS</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.systemCalc.separatedCosts.panPlate.area} sq.ft @ {form.systemCalc.panPlatePsf || 5} psf</span>
+                    <span>{Number(form.systemCalc.separatedCosts.panPlate.weight).toFixed(1)} lbs</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span>Quantity: {form.systemCalc.separatedCosts.panPlate.quantity} treads</span>
+                    <span>Cost: ${(Number(form.systemCalc.separatedCosts.panPlate.weight) * Number(form.systemCalc.steelPricePerLb || 0.75)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (included in steel)</span>
+                  </div>
+                </>
+              )}
+
+              <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '10px', marginBottom: '4px', letterSpacing: '0.05em' }}>HARDWARE & SCRAP</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Connections / Hardware Weight:</span>
+                <span>{(form.systemCalc.separatedCosts.total.weight - form.systemCalc.separatedCosts.stringer.weight - (form.systemCalc.separatedCosts.grating?.weight || 0) - (form.systemCalc.separatedCosts.panPlate?.weight || 0)).toFixed(1)} lbs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Connections / Bolts Cost:</span>
+                <span>${(Number(form.systemCalc.anchorBoltsCost || 0) + Number(form.systemCalc.porRokCost || 0)).toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Scrap Allowance ({form.systemCalc.scrapFactorPct}%):</span>
+                <span>${Number(form.systemCalc.scrapPriceOnly).toFixed(2)}</span>
+              </div>
+
+              <div style={{ borderTop: '1px dashed #CBD5E1', margin: '8px 0' }}></div>
+              <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: '4px', letterSpacing: '0.05em' }}>TOTAL SUMMARY</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Total Net Weight:</span>
+                <span>{Number(form.systemCalc.separatedCosts.total.weight).toFixed(1)} lbs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <span>Gross Weight (incl. Scrap):</span>
+                <span>{(Number(form.systemCalc.separatedCosts.total.weight) + Number(form.systemCalc.separatedCosts.total.scrapWeight)).toFixed(1)} lbs</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Material Sub-Total:</span>
+                <span style={{ color: '#1D9E75', fontWeight: 700 }}>${Number(form.systemCalc.separatedCosts.total.materialCost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              </div>
+            </div>
+          )}
+
           <EstimationPreviewCard
             systemCalc={form.systemCalc}
             totalCost={form.totalCost}

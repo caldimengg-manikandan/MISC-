@@ -27,6 +27,14 @@ function getS3Client() {
         DeleteObjectCommand = D;
         getSignedUrl        = GSU;
 
+        const cleanEndpoint = process.env.S3_ENDPOINT ? process.env.S3_ENDPOINT.replace(/\/$/, '') : null;
+
+        logger.info('S3 client initialised', {
+            endpoint: process.env.S3_ENDPOINT || 'AWS default',
+            bucket:   process.env.S3_BUCKET,
+            region:   process.env.AWS_REGION || 'auto',
+        });
+
         s3Client = new S3Client({
             region:      process.env.AWS_REGION || 'auto',
             credentials: {
@@ -34,9 +42,9 @@ function getS3Client() {
                 secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
             },
             // S3-compatible endpoint (Cloudflare R2, MinIO, Backblaze, etc.)
-            ...(process.env.S3_ENDPOINT && {
-                endpoint:       process.env.S3_ENDPOINT,
-                forcePathStyle: true,
+            ...(cleanEndpoint && {
+                endpoint:       cleanEndpoint,
+                forcePathStyle: true, // Path-style is more reliable for S3-compatible providers
             }),
         });
 
@@ -91,12 +99,18 @@ const adapter = {
                 bucket:      BUCKET,
                 // Never make files public — always gated behind signed URL
                 contentType: multerS3.AUTO_CONTENT_TYPE,
-                key:         (req, file, cb) => cb(null, s3Key(req, file)),
-                metadata:    (req, file, cb) => cb(null, {
-                    uploadedBy:   String(req.userId),
-                    projectId:    req.params.projectId,
-                    originalName: file.originalname,
-                }),
+                key:         (req, file, cb) => {
+                    const key = s3Key(req, file);
+                    logger.info('Generating S3 key for upload', { originalName: file.originalname, key });
+                    cb(null, key);
+                },
+                metadata:    (req, file, cb) => {
+                    cb(null, {
+                        uploadedBy:   String(req.userId || 'unknown'),
+                        projectId:    String(req.params.projectId || 'unknown'),
+                        originalName: file.originalname,
+                    });
+                },
             });
         }
 

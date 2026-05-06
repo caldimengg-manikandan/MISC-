@@ -24,6 +24,17 @@ const { query } = require('../config/mssql');
 const logger    = require('../utils/logger');
 const storage   = require('../services/storageAdapter');  // ← unified local/S3 adapter
 const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
+const rateLimit = require('express-rate-limit');
+
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
+
+const uploadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // limit each IP to 50 uploads per window
+    message: { success: false, error: 'Too many uploads from this IP, please try again after 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // ── Allowed Types ─────────────────────────────────────────────────────────────
 
@@ -94,7 +105,7 @@ const fileFilter = (_req, file, cb) => {
 
 const upload = multer({
     storage:  multerStorage,
-    limits:   { fileSize: 25 * 1024 * 1024, files: 10 },
+    limits:   { fileSize: 200 * 1024 * 1024, files: 10 },
     fileFilter,
 });
 
@@ -104,6 +115,8 @@ async function ownershipGuard(req, res, next) {
     try {
         const { projectId } = req.params;
         const { userId, companyId, userRole } = req;
+
+        logger.info(`Ownership check: ${req.method} project ${projectId}`, { userId, role: userRole });
 
         if (!projectId || !userId) {
             return res.status(403).json({ success: false, error: 'Access denied' });
@@ -185,14 +198,20 @@ router.get('/:projectId/attachments', ownershipGuard, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 // POST /:projectId/attachments
 // ═══════════════════════════════════════════════════════════════════════════
-router.post('/:projectId/attachments', ownershipGuard, upload.array('files', 10), async (req, res) => {
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /:projectId/attachments
+// ═══════════════════════════════════════════════════════════════════════════
+router.post('/:projectId/attachments', uploadLimiter, ownershipGuard, upload.array('files', 10), async (req, res) => {
     const { projectId } = req.params;
     const { userId }    = req;
     const files         = req.files;
 
     if (!files || files.length === 0) {
+        logger.warn('Upload attempt with no files', { projectId, userId });
         return res.status(400).json({ success: false, error: 'No files uploaded' });
     }
+
+    logger.info(`Processing ${files.length} uploads for project ${projectId}`, { userId });
 
     const uploaded = [];
     const failed   = [];
@@ -200,6 +219,8 @@ router.post('/:projectId/attachments', ownershipGuard, upload.array('files', 10)
     await Promise.allSettled(
         files.map(async (file) => {
             try {
+                logger.info(`Validating file: ${file.originalname}`, { size: file.size, mime: file.mimetype });
+
                 // Magic-byte validation (local only — S3 files aren't on disk)
                 if (!storage.isS3) {
                     validateMagicBytes(file.path);
@@ -208,6 +229,8 @@ router.post('/:projectId/attachments', ownershipGuard, upload.array('files', 10)
                 // Pull consistent metadata from the adapter
                 const { storageKey, filePath, filename, storedMime } =
                     storage.extractFileMeta(file, projectId);
+                
+                logger.info(`Saving metadata to DB: ${filename}`, { storageKey });
 
                 const ownerAdminId = await resolveOwnerAdminId(req);
                 const [result] = await query(
@@ -364,6 +387,50 @@ router.get('/:projectId/attachments/:attachmentId/download', ownershipGuard, asy
             error: error.message,
         });
         res.status(500).json({ success: false, error: 'Failed to download file' });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /:projectId/attachments/bulk-delete
+// ═══════════════════════════════════════════════════════════════════════════
+router.post('/:projectId/attachments/bulk-delete', ownershipGuard, async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { attachmentIds } = req.body;
+
+        if (!attachmentIds || !Array.isArray(attachmentIds) || attachmentIds.length === 0) {
+            return res.status(400).json({ success: false, error: 'No attachment IDs provided' });
+        }
+
+        // Fetch records to ensure they exist and belong to the project
+        const [attachments] = await query(
+            `SELECT id, file_path, storage_key FROM project_attachments 
+             WHERE projectId = @projectId AND id IN (${attachmentIds.map((_, i) => `@id${i}`).join(',')})
+               AND (is_deleted = 0 OR is_deleted IS NULL)`,
+            { projectId, ...attachmentIds.reduce((acc, id, i) => ({ ...acc, [`id${i}`]: id }), {}) }
+        );
+
+        if (!attachments || attachments.length === 0) {
+            return res.status(404).json({ success: false, error: 'No matching attachments found' });
+        }
+
+        // Step 1: Soft delete in DB
+        await query(
+            `UPDATE project_attachments SET is_deleted = 1 
+             WHERE projectId = @projectId AND id IN (${attachmentIds.map((_, i) => `@id${i}`).join(',')})`,
+            { projectId, ...attachmentIds.reduce((acc, id, i) => ({ ...acc, [`id${i}`]: id }), {}) }
+        );
+
+        // Step 2: Delete from storage (async)
+        attachments.forEach(att => {
+            storage.deleteFile(att).catch(err => logger.warn('Bulk delete storage error', { id: att.id, error: err.message }));
+        });
+
+        logger.info('Bulk attachments deleted', { count: attachments.length, projectId, userId: req.userId });
+        res.json({ success: true, message: `${attachments.length} attachments deleted` });
+    } catch (error) {
+        logger.error('Bulk delete error', { projectId: req.params.projectId, error: error.message });
+        res.status(500).json({ success: false, error: 'Failed to perform bulk delete' });
     }
 });
 

@@ -144,7 +144,14 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(true, true)}>
         <SectionHeader title="Steel & structure" />
         <div style={cellRowStyle(true)}>
-          <StatCell label={`Steel lbs / ${unitType === 'SF' ? 'SF' : (unitType === 'LF' ? 'LF' : 'riser')}`} value={steelLbsPerRiser} />
+          {(systemCalc.panPlateWeight > 0 || systemCalc.gratingWeight > 0) ? (
+            <StatCell 
+              label={systemCalc.gratingWeight > 0 ? "Grating weight" : "Pan plate weight"} 
+              value={formatNum(systemCalc.gratingWeight > 0 ? systemCalc.gratingWeight : systemCalc.panPlateWeight, 3)} 
+            />
+          ) : (
+            <div style={{ flex: 1, borderRight: '0.5px solid var(--gpt-border)', background: 'transparent' }} />
+          )}
           <StatCell label="Steel lbs total" value={steelLbsSubTotal} borderRight={false} />
         </div>
         <div style={cellRowStyle(false)}>

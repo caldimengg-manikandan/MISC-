@@ -6,6 +6,13 @@ const db = require('../../config/mssql');
 const { calculateStairGeometry, parseToFeet } = require('./stairGeometry.service');
 
 // 📊 MASTER BENCHMARK TABLE (Excel Truth Source)
+// Connection hardware for all stair types (end plates, fasteners)
+const CONNECTION_WEIGHT_LBS = 6;
+// Pan plate density (lbs per square foot)
+const PAN_PLATE_PSF = 5;
+// Grating tread density (for 1 1/2 x 3/16 profile)
+const GRATING_TREAD_PSF = 11;
+
 // 📊 GALVANIZED LABOR BENCHMARKS (Additional MH/LF)
 const GALVANIZED_LABOR_MASTER = {
   // Standard Handrails & Pipe Guardrails
@@ -829,6 +836,9 @@ class StairCalculationService {
             baseRiserFieldHrs = 0.850;
             shopHrs = 0.150;
             fieldHrs = 0.100;
+          } else {
+            // FALLBACK: User has not selected a type, so we set weight to 0
+            panLbs = 0;
           }
 
           const src = st.stringerSize || '';
@@ -905,40 +915,112 @@ class StairCalculationService {
           let shopHoursInternal = 0;
           let fieldHoursInternal = 0;
 
+          const effectiveStringerLF = (st.totalLFBothStringers > 0) ? st.totalLFBothStringers : (risers * 2); // Fallback to 1ft per riser per stringer if length missing
+          
+          stringerBaseWeight = effectiveStringerLF * strLbs;
+          shopHoursInternal = effectiveStringerLF * shopHrs;
+          fieldHoursInternal = effectiveStringerLF * fieldHrs;
+          
+          // Add extra labor for risers in recipe mode if needed
           if (isRecipeMode) {
-            stringerBaseWeight = risers * strLbs;
-            shopHoursInternal = risers * shopHrs;
-            fieldHoursInternal = risers * fieldHrs;
-          } else {
-            stringerBaseWeight = st.totalLFBothStringers * strLbs;
-            shopHoursInternal = (st.totalLFBothStringers * shopHrs) + (risers * baseRiserShopHrs);
-            fieldHoursInternal = (st.totalLFBothStringers * fieldHrs) + (risers * baseRiserFieldHrs);
+             // In recipe mode, shopHrs might already be per riser or per LF. 
+             // To match Excel, we'll keep it per LF (effective length).
           }
 
-          const panTotalWeight = risers * panLbs;
-          let panPriceTotal = (stairTypeLabel.includes('PAN') || isRecipeMode) ? (panTotalWeight * panRate) : (panTotalWeight * steelPrice);
+          const isGratingStair = stairTypeLabel.includes('GRATING') || (st.config && st.config.stairGrating === true);
+          const isPanPlateStair = stairTypeLabel === 'PAN_PLATE_CONC_FILLED' || 
+                                  stairTypeLabel === 'PAN PLATE CONC. FILLED' || 
+                                  stairTypeLabel === 'PAN-CONCRETE' || 
+                                  stairTypeLabel === 'PAN_CONCRETE';
+          
+          let panTotalWeight = 0;
+          let panPlateArea = 0;
+          
+          if (isPanPlateStair) {
+            const numberOfTreads = Math.max(0, risers - 1);
+            panPlateArea = resolvedWidth * 1.0 * numberOfTreads;
+            panTotalWeight = panPlateArea * PAN_PLATE_PSF;
+          } else if (!isGratingStair) {
+            panTotalWeight = Math.max(0, risers - 1) * panLbs; // legacy fallback
+          }
+          
+          let panPriceTotal = 0; // Legacy split-cost removed; pans now priced within unified totalSteelWeight
 
           const totalUnitWeight = stringerBaseWeight + panTotalWeight;
           let gratingTotalCost = 0;
+          let gratingTotalWeight = 0;
           if (stairTypeLabel.includes('GRATING') || (st.config && st.config.stairGrating === true)) {
-            const w = st.widthFt || 5;
-            let gratingTreadRate = 80.15;
-            if (w <= 3.5) gratingTreadRate = 56.10;
-            else if (w <= 4.0) gratingTreadRate = 64.12;
-            else if (w <= 4.5) gratingTreadRate = 72.15;
+            const w = parseFloat(st.widthFt || 5);
+            const gratingKeyLookup = (st.gratingTreadType || st.gratingType || '').trim();
+            const isValidGrating = gratingKeyLookup !== '' && !gratingKeyLookup.toLowerCase().includes('select');
+
+            if (!isValidGrating) {
+              console.log(`[ENGINE] ⚠️ No grating type selected. Skipping grating calculation.`);
+              gratingTotalCost = 0;
+              gratingTotalWeight = 0;
+            } else {
+              // Start with width-based defaults
+              let gratingTreadRate = 95.30;
+              if (w <= 3.51) gratingTreadRate = 71.10;
+              else if (w <= 4.01) gratingTreadRate = 78.60;
+              else if (w <= 4.51) gratingTreadRate = 87.80;
+              
+              // 🔍 Robust Dictionary Lookup: Trim and case-insensitive
+              const [gratingDict] = await db.query(
+                `SELECT price FROM dictionary 
+                 WHERE (TRIM(label) = ? OR TRIM(value) = ? OR label = ? OR value = ?) 
+                 AND category = 'grating_type'`,
+                [gratingKeyLookup, gratingKeyLookup, gratingKeyLookup, gratingKeyLookup]
+              );
+              
+              if (gratingDict.length > 0 && gratingDict[0].price !== null && gratingDict[0].price > 0) {
+                gratingTreadRate = parseFloat(gratingDict[0].price);
+                console.log(`[ENGINE] 💰 Using dictionary fixed price for grating "${gratingKeyLookup}": ${gratingTreadRate}`);
+              } else {
+                console.log(`[ENGINE] ℹ️ Using width-based fallback for grating: ${gratingTreadRate} (Width: ${w}ft)`);
+              }
+
+              // 🔍 Hybrid Factor Lookup: Priority to legacy keys, fallback to dynamic slugs
+              const getBaseSpec = (label) => {
+                if (!label) return '';
+                return label.replace(/\s+x?\s*\d+'-\d+"?.*$/, '').trim();
+              };
+              const baseLabel = getBaseSpec(gratingKeyLookup);
+
+              const legacyFactors = {
+                '1 1/4" Bar / Welded': 'grating_factor_bar_125_welded',
+                '1-1/4" Bar / Welded': 'grating_factor_bar_125_welded',
+                '1 1/4" Bar / Bolted': 'grating_factor_bar_125_bolted',
+                '1-1/4" Bar / Bolted': 'grating_factor_bar_125_bolted',
+                '1" Bar / Welded': 'grating_factor_bar_100_welded',
+                '1" Bar / Bolted': 'grating_factor_bar_100_bolted',
+                'McNichols': 'grating_factor_mcnichols',
+                'Prefab': 'grating_factor_prefab',
+              };
+              
+              let gratingFactorKey = null;
+              for (const [k, v] of Object.entries(legacyFactors)) {
+                if (baseLabel.toLowerCase().includes(k.toLowerCase())) {
+                  gratingFactorKey = v;
+                  break;
+                }
+              }
+
+              if (!gratingFactorKey) {
+                const slug = baseLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                gratingFactorKey = `grating_factor_${slug}`;
+              }
+              
+              console.log(`[ENGINE] 🔍 Grating Factor Match: "${gratingFactorKey}" for "${baseLabel}"`);
+              
+              const treadFactor = configManager.get(gratingFactorKey, 1.00);
+              const gratingNumberOfTreads = risers > 0 ? risers - 1 : 0;
+              gratingTotalCost = gratingTreadRate * treadFactor * gratingNumberOfTreads;
+              
+              // 🔄 EXCEL PARITY: Add grating weight to total steel calculation
+              gratingTotalWeight = w * 1.0 * gratingNumberOfTreads * GRATING_TREAD_PSF;
+            }
             
-            const gratingKeyLookup = st.gratingTreadType || st.gratingType || '';
-            const gratingFactorKey = {
-              '1 1/4" Bar grating/Welded': 'grating_factor_bar_125_welded',
-              '1 1/4" Bar grating/Bolted': 'grating_factor_bar_125_bolted',
-              '1" Bar grating/Welded': 'grating_factor_bar_100_welded',
-              '1" Bar grating/Bolted': 'grating_factor_bar_100_bolted',
-              'McNichols treads': 'grating_factor_mcnichols',
-              'Other Pre-fabricated Treads': 'grating_factor_prefab',
-            }[gratingKeyLookup] ?? 'grating_factor_bar_125_welded';
-            
-            const treadFactor = configManager.get(gratingFactorKey, 1.00);
-            gratingTotalCost = gratingTreadRate * treadFactor * risers;
             panPriceTotal = 0;
           }
 
@@ -986,8 +1068,12 @@ class StairCalculationService {
           shopHoursInternal += extraShopHours;
           fieldHoursInternal += extraFieldHours;
 
-          const steelPriceBase = stringerBaseWeight * steelPrice;
-          const scrapLbs = stringerBaseWeight * scrapPortion;
+          // 🔄 EXCEL PARITY: Total steel weight MUST include stringers, pans/grating, and connections
+          const connectionWeight = CONNECTION_WEIGHT_LBS;
+          const totalSteelWeight = stringerBaseWeight + panTotalWeight + gratingTotalWeight + connectionWeight;
+
+          const steelPriceBase = totalSteelWeight * steelPrice; // Unified steel cost
+          const scrapLbs = totalSteelWeight * scrapPortion;
           const scrapPriceOnly = scrapLbs * steelPrice;
 
           const anchorBoltRate = configManager.get('anchor_bolt_rate', 0.025);
@@ -1006,16 +1092,44 @@ class StairCalculationService {
             else if (mType.includes('anchored')) porRokCost = stairConnCount * anchoredRate;
           }
 
-          const subTotalMaterial = steelPriceBase + panPriceTotal + gratingTotalCost + finishTotalCost + porRokCost + anchorBoltsCost;
+          const subTotalMaterial = steelPriceBase + gratingTotalCost + scrapPriceOnly + anchorBoltsCost + finishTotalCost + porRokCost;
           const shopLaborCost = (shopHoursInternal + galvShopHrs) * shopRate;
           const fieldLaborCost = (fieldHoursInternal + galvFieldHrs) * fieldRate;
-          const subTotalWithoutTax = subTotalMaterial + shopLaborCost + fieldLaborCost + scrapPriceOnly;
+          const subTotalWithoutTax = subTotalMaterial + shopLaborCost + fieldLaborCost;
           const taxRate_ = configManager.get('tax_rate', 0.06);
           const taxTotal = subTotalMaterial * taxRate_;
           const totalCostPerStair = subTotalWithoutTax + taxTotal;
 
+          const separatedCosts = {
+            stringer: {
+              type: st.stringerSize || stairTypeLabel,
+              steelLbsLf: strLbs,
+              weight: stringerBaseWeight,
+              cost: steelPriceBase
+            },
+            grating: (stairTypeLabel.includes('GRATING') || (st.config && st.config.stairGrating === true)) ? {
+              type: st.gratingTreadType || st.gratingType || '',
+              quantity: risers > 0 ? risers - 1 : 0,
+              weight: gratingTotalWeight,
+              cost: gratingTotalCost
+            } : null,
+            panPlate: isPanPlateStair ? {
+              quantity: risers > 0 ? risers - 1 : 0,
+              area: panPlateArea,
+              weight: panTotalWeight,
+              cost: panPriceTotal
+            } : null,
+            total: {
+              weight: totalSteelWeight,
+              scrapWeight: scrapLbs,
+              materialCost: subTotalMaterial,
+              totalCost: totalCostPerStair
+            }
+          };
+
           return {
             ...st,
+            separatedCosts,
             totalWeight: this.roundExcel(totalUnitWeight + scrapLbs, 3),
             shopHours: this.roundExcel(shopHoursInternal + galvShopHrs, 3),
             fieldHours: this.roundExcel(fieldHoursInternal + galvFieldHrs, 3),
@@ -1025,7 +1139,7 @@ class StairCalculationService {
               steelLbsPerLF: this.roundExcel(strLbs, 3),
               shopMH: this.roundExcel(shopHrs, 3),
               fieldMH: this.roundExcel(fieldHrs, 3),
-              totalSteel: this.roundExcel(stringerBaseWeight, 3),
+              totalSteel: this.roundExcel(totalSteelWeight, 3),
               scrapLbs: this.roundExcel(scrapLbs, 3),
               scrapFactorPct: scrapFactorPct,
               steelPriceBase: this.roundExcel(steelPriceBase, 2),
@@ -1046,6 +1160,11 @@ class StairCalculationService {
               taxRatePct: taxRate_ * 100,
               pricePerRiser: this.roundExcel(totalCostPerStair / (risers || 1), 2),
               stairPansTotalWeight: this.roundExcel(panTotalWeight, 3),
+              panPlateArea: this.roundExcel(panPlateArea, 3),
+              panPlateWeight: this.roundExcel(panTotalWeight, 3),
+              gratingWeight: this.roundExcel(gratingTotalWeight, 3),
+              panPlatePsf: PAN_PLATE_PSF,
+              connectionWeight: this.roundExcel(connectionWeight, 3),
               galvShopTotalHrs: this.roundExcel(galvShopHrs, 3),
               galvFieldTotalHrs: this.roundExcel(galvFieldHrs, 3),
               angleHeight: st.heightFt,

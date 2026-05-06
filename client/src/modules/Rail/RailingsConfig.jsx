@@ -354,9 +354,6 @@ export default function RailingsConfig() {
         const s = (t || '').toLowerCase();
         if (s.includes('kick')) return 'KICK_PLATE';
         if (s.includes('cane')) return 'CANE_RAIL';
-        if (s.includes('grab')) return 'GRAB_RAIL';
-        if (s.includes('handrail') || s.includes('hand railing')) return 'GRAB_RAIL';
-        if (s.includes('wall')) return 'WALL_RAIL';
         const m = s.match(/(\d+)-line/);
         if (m) {
           const n = parseInt(m[1]);
@@ -365,6 +362,10 @@ export default function RailingsConfig() {
           if (n === 2) return 'GUARD_2_LINE';
           if (n === 1) return 'GUARD_1_LINE';
         }
+
+        if (s.includes('grab')) return 'GRAB_RAIL';
+        if (s.includes('handrail') || s.includes('hand railing')) return 'GRAB_RAIL';
+        if (s.includes('wall')) return 'WALL_RAIL';
         return 'GUARD_2_LINE';
       };
 
@@ -384,6 +385,7 @@ export default function RailingsConfig() {
           mountingType:      r.mountingType || '',
           finish:            r.finish || 'Primer',
           intermediateRails: parseInt(r.intermediateRails) || 0,
+          postQty:           r.postQtySource === 'manual' ? (parseInt(r.postQty) || 0) : undefined,
           toeplateRequired:  r.toeplateRequired || 'No',
           toeWidth:          toFeetFull(r.toeWidth),
           widthIn:           r.type === 'kickPlate' ? (r.width || r.widthIn || 4) : undefined,
@@ -452,9 +454,6 @@ export default function RailingsConfig() {
         const s = (t || '').toLowerCase();
         if (s.includes('kick')) return 'KICK_PLATE';
         if (s.includes('cane')) return 'CANE_RAIL';
-        if (s.includes('grab')) return 'GRAB_RAIL';
-        if (s.includes('handrail') || s.includes('hand railing')) return 'GRAB_RAIL';
-        if (s.includes('wall')) return 'WALL_RAIL';
         const m = s.match(/(\d+)-line/);
         if (m) {
           const n = parseInt(m[1]);
@@ -463,6 +462,10 @@ export default function RailingsConfig() {
           if (n === 2) return 'GUARD_2_LINE';
           if (n === 1) return 'GUARD_1_LINE';
         }
+
+        if (s.includes('grab')) return 'GRAB_RAIL';
+        if (s.includes('handrail') || s.includes('hand railing')) return 'GRAB_RAIL';
+        if (s.includes('wall')) return 'WALL_RAIL';
         return 'GUARD_2_LINE';
       };
 
@@ -480,6 +483,7 @@ export default function RailingsConfig() {
             mountingType:      r.mountingType || '',
             finish:            r.finish || 'Primer',
             intermediateRails: parseInt(r.intermediateRails) || 0,
+            postQty:           r.postQtySource === 'manual' ? (parseInt(r.postQty) || 0) : undefined,
             toeplateRequired:  r.toeplateRequired || 'No',
             toeWidth:          toFeet(r.toeWidth),
             widthIn:           r.type === 'kickPlate' ? (r.width || r.widthIn || 4) : undefined,
@@ -504,7 +508,16 @@ export default function RailingsConfig() {
         const rType = r.railType || r.rail_type_id || (r.type === 'kickPlate' ? 'Kick Plate' : '');
         if (rLen && rType) {
           const rCalcRaw = result.breakdown?.rails?.[railIdx++] || {};
-          const { length: _l, maxSpacing: _ms, ...rCalc } = rCalcRaw;
+          // Destructure to avoid overwriting manual inputs with (potentially empty) backend values
+          const { 
+            length: _l, 
+            maxSpacing: _ms, 
+            postQty: _pq, 
+            postQtySource: _pqs, 
+            intermediateRails: _ir, 
+            intRailSource: _irs, 
+            ...rCalc 
+          } = rCalcRaw;
           return { ...r, ...rCalc, systemCalc: rCalc.systemCalc || {} };
         }
         return { ...r, totalCost: 0, systemCalc: null };
