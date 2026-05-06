@@ -34,7 +34,25 @@ async function migrate() {
       ELSE PRINT 'ℹ️ additionalCosts column already exists.';
     `);
 
-    // 3. Create Attachments Table
+    // 3. Add calculation columns to Dictionary
+    console.log('--- Checking Dictionary columns ---');
+    await db.query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dictionary') AND name = 'price')
+      BEGIN
+          ALTER TABLE dictionary ADD 
+              steelLbsLf FLOAT NULL,
+              shopLaborMhLf FLOAT NULL,
+              fieldLaborMhLf FLOAT NULL,
+              widthMax FLOAT NULL,
+              spanMin FLOAT NULL,
+              spanMax FLOAT NULL,
+              price FLOAT NULL;
+          PRINT '✅ Added calculation columns to dictionary table.';
+      END
+      ELSE PRINT 'ℹ️ Dictionary calculation columns already exist.';
+    `);
+
+    // 4. Create Attachments Table
     console.log('--- Checking Attachments table ---');
     await db.query(`
       IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID('project_attachments') AND type = 'U')
