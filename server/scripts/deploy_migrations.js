@@ -81,6 +81,23 @@ async function migrate() {
       ELSE PRINT 'ℹ️ project_attachments table already exists.';
     `);
 
+    // 5. Add tenant columns to Attachments
+    console.log('--- Checking Attachment tenant columns ---');
+    const attColumns = [
+        { name: 'company_id', type: 'INT NULL' },
+        { name: 'owner_admin_id', type: 'INT NULL' }
+    ];
+
+    for (const col of attColumns) {
+        await db.query(`
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('project_attachments') AND name = '${col.name}')
+            BEGIN
+                ALTER TABLE project_attachments ADD ${col.name} ${col.type};
+                PRINT '✅ Added ${col.name} column to project_attachments table.';
+            END
+        `);
+    }
+
     console.log('\n✨ All migrations applied successfully!');
   } catch (err) {
     console.error('\n❌ Migration failed:', err.message);

@@ -70,12 +70,16 @@ function validateMagicBytes(filePath) {
     const signatures = {
         'ffd8ff':   ['.jpg', '.jpeg'],
         '89504e47': ['.png'],
+        '47494638': ['.gif'],
         '25504446': ['.pdf'],
-        '504b0304': ['.xlsx'],
-        'd0cf11e0': ['.xls'],
+        '504b0304': ['.xlsx', '.docx', '.pptx', '.zip'], // Common PKZIP-based formats
+        '504b0506': ['.xlsx', '.docx', '.pptx', '.zip'], // Empty zip
+        '504b0708': ['.xlsx', '.docx', '.pptx', '.zip'], // Spanned zip
+        'd0cf11e0': ['.xls', '.doc', '.ppt'],           // Legacy OLE formats
     };
     const matched = signatures[hex] || signatures[hex.slice(0, 6)];
     if (matched && !matched.includes(ext)) {
+        logger.warn(`Validation mismatch: File ${ext} has magic bytes ${hex}`);
         throw new Error(`Magic bytes (${hex}) do not match declared extension (${ext})`);
     }
 }
