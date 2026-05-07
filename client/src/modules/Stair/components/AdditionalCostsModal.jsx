@@ -96,7 +96,8 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
       material: 0,
       shopHrs: 0,
       fieldHrs: 0,
-      included: false
+      included: false,
+      isEngineItem: false
     }))
   );
 
@@ -141,7 +142,8 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
           material: 0,
           shopHrs: 0,
           fieldHrs: 0,
-          included: false
+          included: false,
+          isEngineItem: false
         });
       }
       return newItems;
@@ -182,7 +184,8 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
         material: Math.round(getMat(s) * 100) / 100,
         shopHrs: s.shopHours || 0,
         fieldHrs: s.fieldHours || 0,
-        included: true
+        included: true,
+        isEngineItem: true
       });
       (s.flights || []).forEach(f => {
         newItems.push({
@@ -193,7 +196,8 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
           material: Math.round(getMat(f) * 100) / 100,
           shopHrs: f.shopHours || 0,
           fieldHrs: f.fieldHours || 0,
-          included: true
+          included: true,
+          isEngineItem: true
         });
       });
     });
@@ -208,7 +212,8 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
         material: Math.round(getMat(p) * 100) / 100,
         shopHrs: p.shopHours || 0,
         fieldHrs: p.fieldHours || 0,
-        included: true
+        included: true,
+        isEngineItem: true
       });
     });
 
@@ -222,22 +227,28 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
         material: Math.round(getMat(r) * 100) / 100,
         shopHrs: r.shopHours || 0,
         fieldHrs: r.fieldHours || 0,
-        included: true
+        included: true,
+        isEngineItem: true
       });
     });
 
     // Add 5 empty rows for extras
     for(let i=0; i<5; i++) {
-      newItems.push({ id: `ci-extra-${i}-${Date.now()}`, name: '', finish: '', drawing: '', material: 0, shopHrs: 0, fieldHrs: 0, included: false });
+      newItems.push({ id: `ci-extra-${i}-${Date.now()}`, name: '', finish: '', drawing: '', material: 0, shopHrs: 0, fieldHrs: 0, included: false, isEngineItem: false });
     }
 
     setCustomItems(newItems);
-    setUsedBaseTotal(0); // If we import everything, the base total is now in the table
+    // 🔄 USER REQUEST: Keep the base total as the starting point. 
+    // Imported engine items are for reference only and won't be re-added to the total.
+    // setUsedBaseTotal(0); 
   };
 
 
   /* ── Derived Engine Calculations ── */
-  const ciIncluded = customItems.filter((i) => i.included);
+  const isEngine = (item) => item.isEngineItem || (item.id && String(item.id).startsWith('eng-'));
+
+  // 🔄 USER REQUEST: "Engine Items" (imported items) show values but do NOT contribute to calculation.
+  const ciIncluded = customItems.filter((i) => i.included && !isEngine(i));
   const totalMaterial = ciIncluded.reduce((s, i) => s + i.material, 0);
   const totalShopHrs = ciIncluded.reduce((s, i) => s + i.shopHrs, 0);
   const totalFieldHrs = ciIncluded.reduce((s, i) => s + i.fieldHrs, 0);
@@ -395,7 +406,13 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
                       <NumCell value={item.fieldHrs} step="0.5" onChange={(v) => updateCI(item.id, { fieldHrs: v })} className="acm-price-input" />
                     </div>
                     <div className="acm-tc-hrs acm-muted">{fmt(item.fieldHrs / 8)}</div>
-                    <div className="acm-tc-total acm-money">${fmt(calcCI(item))}</div>
+                    <div className="acm-tc-total acm-money">
+                      {isEngine(item) ? (
+                        <span style={{ opacity: 0.6, fontSize: '11px', fontStyle: 'italic' }}>Informative</span>
+                      ) : (
+                        `$${fmt(calcCI(item))}`
+                      )}
+                    </div>
                     <div className="acm-tc-del">
                       <button className="acm-del-btn" onClick={() => deleteCI(item.id)} title="Remove"><Trash2 size={13} /></button>
                     </div>
@@ -420,12 +437,12 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
               <button className="acm-add-line-btn" onClick={() => {
                 setCustomItems(prev => [
                   ...prev,
-                  { id: `ci-${prev.length}-${Date.now()}`, name: '', finish: '', drawing: '', material: 0, shopHrs: 0, fieldHrs: 0, included: false }
+                  { id: `ci-${prev.length}-${Date.now()}`, name: '', finish: '', drawing: '', material: 0, shopHrs: 0, fieldHrs: 0, included: false, isEngineItem: false }
                 ]);
               }}>
                 <Plus size={14} /> Add Row
               </button>
-              <span className="acm-muted" style={{ fontSize: '11px' }}>Rows automatically added as you type. Max 29 items.</span>
+              <span className="acm-muted" style={{ fontSize: '11px' }}>Rows automatically added as you type. "Engine" items show breakdown but don't add to cost.</span>
             </div>
           </div>
 

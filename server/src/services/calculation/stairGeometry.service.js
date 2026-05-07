@@ -131,6 +131,8 @@ const calculateStairGeometry = (input) => {
     actualRise: roundTo(actualRise, 3),
     totalRun: roundTo(totalRun, 3),
     stringerLength: roundTo(stringerLength, 3),
+    stringerLengthFt: roundTo(stringerLength, 3), // Alias for UI compatibility
+    stringerLengthCalculated: true,              // Flag for UI "AUTO" label
     angle: roundTo(angle, 2)
   };
 };

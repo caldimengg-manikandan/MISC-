@@ -135,6 +135,7 @@ export default function ToolsDock() {
       
       const response = await fetch(targetUrl, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`
         },
