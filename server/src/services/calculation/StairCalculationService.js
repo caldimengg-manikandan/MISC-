@@ -169,6 +169,33 @@ class StairCalculationService {
     this.debug = false;
   }
 
+  /**
+   * 🔄 AUTO-CALC: Compute stringer length directly from rise/run/risers
+   * using the Pythagorean theorem. Used as a guaranteed fallback when
+   * the geometry engine cannot produce a result (e.g. totalHeight missing).
+   *
+   * Formula: √( (rise_in × risers / 12)² + (run_in × risers / 12)² )
+   *
+   * @param {number} riseInches - Rise per step in inches
+   * @param {number} runInches  - Run (tread) per step in inches
+   * @param {number} risers     - Number of risers
+   * @returns {number} Stringer length in feet (2 dp), or 0 if inputs invalid
+   */
+  calculateStringerLengthDirect(riseInches, runInches, risers) {
+    if (!riseInches || !runInches || !risers || risers < 1) {
+      console.warn('[STRINGER ENGINE] calculateStringerLengthDirect: invalid inputs', { riseInches, runInches, risers });
+      return 0;
+    }
+    const totalRiseFt = (riseInches * risers) / 12;
+    const totalRunFt  = (runInches  * risers) / 12;
+    const lengthFt    = Math.sqrt(Math.pow(totalRiseFt, 2) + Math.pow(totalRunFt, 2));
+    if (!isFinite(lengthFt) || lengthFt <= 0) {
+      console.error('[STRINGER ENGINE] calculateStringerLengthDirect: non-finite result');
+      return 0;
+    }
+    return parseFloat(lengthFt.toFixed(2));
+  }
+
   resetTrace() {
     this.formulaTrace = [];
   }
@@ -331,13 +358,47 @@ class StairCalculationService {
             manualStringerLength = parseToFeet(st.stringerLength) || 0;
           }
 
+          // 🔄 3-PRIORITY STRINGER LENGTH RESOLUTION:
+          //   1. Manual entry (user typed a value)
+          //   2. Geometry engine result (diagonalFt from calculateStairGeometry)
+          //   3. Direct Pythagorean fallback (always works if rise/run/risers present)
+          let resolvedDiagonalFt = 0;
+          let stringerLengthCalculated = false;
+          let stringerCalculationMethod = 'none';
+
+          // Parse rise/run for Pythagorean fallback
+          const riseIn = parseToFeet(st.rise, 'IN') * 12;   // back to inches
+          const runIn  = parseToFeet(st.run || st.tread, 'IN') * 12;
+          const numRisers = risers || parseInt(st.numRisers) || 0;
+
+          if (manualStringerLength > 0) {
+            resolvedDiagonalFt = manualStringerLength;
+            stringerCalculationMethod = 'manual';
+            stringerLengthCalculated = false;
+            console.log(`[STRINGER ENGINE] Using manual entry: ${resolvedDiagonalFt} ft`);
+          } else if (diagonalFt > 0) {
+            resolvedDiagonalFt = diagonalFt;
+            stringerCalculationMethod = 'geometry-engine';
+            stringerLengthCalculated = true;
+            console.log(`[STRINGER ENGINE] Using geometry engine: ${resolvedDiagonalFt} ft`);
+          } else if (riseIn > 0 && runIn > 0 && numRisers > 0) {
+            resolvedDiagonalFt = this.calculateStringerLengthDirect(riseIn, runIn, numRisers);
+            stringerCalculationMethod = 'pythagorean-fallback';
+            stringerLengthCalculated = true;
+            console.log(`[STRINGER ENGINE] Using Pythagorean fallback: ${resolvedDiagonalFt} ft (${riseIn}" rise × ${runIn}" run × ${numRisers} risers)`);
+          } else {
+            resolvedDiagonalFt = 0;
+            stringerCalculationMethod = 'none';
+            console.warn('[STRINGER ENGINE] ⚠️ Could not resolve stringer length — insufficient data');
+          }
+
           const nsBot = parseToFeet(st.nsStringerBot);
           const fsBot = parseToFeet(st.fsStringerBot);
           const nsTop = parseToFeet(st.nsStringerTop);
           const fsTop = parseToFeet(st.fsStringerTop);
 
-          const nsTrueLength = manualStringerLength > 0 ? manualStringerLength : (diagonalFt + nsBot + nsTop);
-          const fsTrueLength = manualStringerLength > 0 ? manualStringerLength : (diagonalFt + fsBot + fsTop);
+          const nsTrueLength = resolvedDiagonalFt > 0 ? resolvedDiagonalFt + nsBot + nsTop : 0;
+          const fsTrueLength = resolvedDiagonalFt > 0 ? resolvedDiagonalFt + fsBot + fsTop : 0;
           const totalLFBothStringers = nsTrueLength + fsTrueLength;
 
           return {
@@ -353,7 +414,10 @@ class StairCalculationService {
             fsTrueLength: this.roundExcel(fsTrueLength, 2),
             totalLFBothStringers: this.roundExcel(totalLFBothStringers, 2),
             panArea: this.roundExcel(panArea, 2),
-            isCompliant: slopeDeg >= 30 && slopeDeg <= 38
+            isCompliant: slopeDeg >= 30 && slopeDeg <= 38,
+            stringerLengthCalculated,
+            stringerCalculationMethod,
+            resolvedDiagonalFt: this.roundExcel(resolvedDiagonalFt, 2)
           };
         };
 
@@ -915,7 +979,10 @@ class StairCalculationService {
           let shopHoursInternal = 0;
           let fieldHoursInternal = 0;
 
-          const effectiveStringerLF = (st.totalLFBothStringers > 0) ? st.totalLFBothStringers : (risers * 2); // Fallback to 1ft per riser per stringer if length missing
+          // 🔄 SAFE FALLBACK: Use 0 when stringer LF is missing — never use risers*2 (causes $19k+ overestimation)
+          // If totalLFBothStringers is 0, the upstream calcTakeoff couldn't resolve the geometry,
+          // meaning there is genuinely insufficient data to price the stringer.
+          const effectiveStringerLF = (st.totalLFBothStringers > 0) ? st.totalLFBothStringers : 0;
           
           stringerBaseWeight = effectiveStringerLF * strLbs;
           shopHoursInternal = effectiveStringerLF * shopHrs;
@@ -1172,6 +1239,10 @@ class StairCalculationService {
               angle: geometry ? this.roundExcel(geometry.angle, 2) : (st.angle || 0),
               isCompliant: st.isCompliant,
               riserHeightIn: geometry ? this.roundExcel(geometry.actualRise * 12, 3) : 0,
+              // 🔄 AUTO-CALC flags — surfaced to frontend for UI display
+              stringerLengthFt: this.roundExcel(st.resolvedDiagonalFt || 0, 2),
+              stringerLengthCalculated: st.stringerLengthCalculated || false,
+              stringerCalculationMethod: st.stringerCalculationMethod || 'none',
               geometry: geometry ? {
                 risers: geometry.risers,
                 actualRise: geometry.actualRise,

@@ -60,13 +60,17 @@ const calculateStairGeometry = (input) => {
   const targetRiseFt = parseToFeet(rise, 'IN');
   let risers = parseInt(input.risers);
 
+  // 🔄 AUTO-CALC: Synthesize totalHeight from rise × risers if not provided
+  // This allows the engine to function with only Rise + Run + Risers inputs
+  // (the most common case where user doesn't supply total building height)
   if (!totalHeightFt && risers > 0 && targetRiseFt > 0) {
     totalHeightFt = risers * targetRiseFt;
+    console.log(`[GEOMETRY ENGINE] Auto-computed totalHeight: ${(totalHeightFt * 12).toFixed(2)}″ (${totalHeightFt.toFixed(3)} ft) from ${risers} risers × ${(targetRiseFt * 12).toFixed(2)}″ rise`);
   }
 
   // RULE 7: VALIDATION RULES
   if (!totalHeightFt || !runFt) {
-    throw new Error("Invalid stair geometry inputs. Total Height and Run must be greater than 0.");
+    throw new Error("Invalid stair geometry inputs. Total Height (or Rise+Risers) and Run must be greater than 0.");
   }
 
   // RULE 2: RISER CALCULATION 

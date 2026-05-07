@@ -646,7 +646,139 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             <input className="form-input" type="number" value={form.numRisers || ''} onChange={e => set('numRisers', e.target.value)} placeholder="0" />
           </div>
 
-          <UnitInput id="total-stringer-length" label="Total Stringer length" value={form.stringerLength} onChange={v => set('stringerLength', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
+          {/* ── Total Stringer Length: Auto-Calc Display ───────── */}
+          {(() => {
+            const autoLengthFt = form.systemCalc?.stringerLengthFt;
+            const isAutoCalc = form.systemCalc?.stringerLengthCalculated;
+            const calcMethod = form.systemCalc?.stringerCalculationMethod;
+            const manualVal = form.stringerLength?.value;
+            const hasManual = manualVal && parseFloat(manualVal) > 0;
+
+            if (isAutoCalc && !hasManual) {
+              // ── AUTO MODE ──
+              return (
+                <div className="form-field">
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Total Stringer Length</span>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center',
+                      background: 'var(--accent-blue, #3B82F6)', color: '#fff',
+                      fontSize: '9px', fontWeight: 800, padding: '2px 6px',
+                      borderRadius: '4px', letterSpacing: '0.05em'
+                    }}>AUTO</span>
+                    <button
+                      type="button"
+                      onClick={() => set('stringerLength', { value: autoLengthFt ? autoLengthFt.toFixed(2) : '', unit: 'FT' })}
+                      title="Switch to manual entry"
+                      style={{
+                        marginLeft: 'auto', 
+                        background: '#F1F5F9', 
+                        border: '1.5px solid #CBD5E1', 
+                        color: '#64748B', 
+                        fontSize: '10px', 
+                        fontWeight: 700,
+                        cursor: 'pointer', 
+                        padding: '2px 8px', 
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.02em',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.color = '#1E293B'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#64748B'; }}
+                    >
+                      Override
+                    </button>
+                  </label>
+                  <div className="form-input-with-unit field-auto" style={{
+                    borderColor: 'var(--accent-blue, #3B82F6)',
+                    background: 'var(--color-secondary-50, #EFF6FF)'
+                  }}>
+                    <input
+                      id="total-stringer-length"
+                      className="auto-calculation field-auto"
+                      type="text"
+                      value={autoLengthFt ? autoLengthFt.toFixed(2) : ''}
+                      readOnly
+                      placeholder="Auto"
+                      style={{ color: 'var(--color-secondary-800, #1E40AF)' }}
+                      title={calcMethod === 'pythagorean-fallback'
+                        ? 'Auto-calculated via Pythagorean theorem from Rise / Run / Risers'
+                        : 'Auto-calculated from stair geometry'}
+                    />
+                    <span className="form-input-unit" style={{ color: 'var(--accent-blue, #3B82F6)', fontWeight: 700 }}>ST</span>
+                  </div>
+                </div>
+              );
+            } else {
+              // ── MANUAL MODE ──
+              return (
+                <div className="form-field">
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Total Stringer Length</span>
+                    {hasManual && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        background: '#F59E0B', color: '#fff',
+                        fontSize: '9px', fontWeight: 800, padding: '2px 6px',
+                        borderRadius: '4px', letterSpacing: '0.05em'
+                      }}>MANUAL</span>
+                    )}
+                    {isAutoCalc && (
+                      <button
+                        type="button"
+                        onClick={() => set('stringerLength', { value: '', unit: 'FT' })}
+                        title="Revert to auto-calculated value"
+                        style={{
+                          marginLeft: 'auto', 
+                          background: 'var(--accent-blue, #3B82F6)', 
+                          border: 'none',
+                          color: '#fff', 
+                          fontSize: '10px', 
+                          fontWeight: 700,
+                          cursor: 'pointer', 
+                          padding: '2px 8px', 
+                          borderRadius: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.02em',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#2563EB'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-blue, #3B82F6)'}
+                      >
+                        Use Auto
+                      </button>
+                    )}
+                  </label>
+                  <div className="form-input-with-unit">
+                    <input
+                      id="total-stringer-length"
+                      type="text"
+                      className="arch-input"
+                      value={form.stringerLength?.value ?? ''}
+                      onChange={e => set('stringerLength', { value: e.target.value, unit: form.stringerLength?.unit || 'FT' })}
+                      onFocus={e => e.target.select()}
+                      placeholder={autoLengthFt ? `Auto: ${autoLengthFt.toFixed(2)}` : '0'}
+                    />
+                    <button
+                      type="button"
+                      className="form-input-unit unit-active"
+                      style={{ cursor: 'pointer', border: 'none' }}
+                      onClick={() => set('stringerLength', { value: form.stringerLength?.value ?? '', unit: (form.stringerLength?.unit || 'FT') === 'FT' ? 'IN' : 'FT' })}
+                    >
+                      {form.stringerLength?.unit || 'FT'}
+                    </button>
+                  </div>
+                  {autoLengthFt && (
+                    <span className="form-hint" style={{ marginTop: '4px', display: 'block', fontSize: '10px' }}>
+                      Auto-calc: {autoLengthFt.toFixed(2)} ft — clear to restore
+                    </span>
+                  )}
+                </div>
+              );
+            }
+          })()}
+
 
           <div className="form-field">
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
