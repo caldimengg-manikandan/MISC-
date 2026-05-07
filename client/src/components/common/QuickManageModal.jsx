@@ -36,10 +36,8 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
   };
   const gridColumns = getGridColumns();
 
-  const [dragPos, setDragPos] = useState(() => {
-    const saved = localStorage.getItem('quickModalPos');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [dragPos, setDragPos] = useState(null);
+
   const [isDragging, setIsDragging] = useState(false);
   const dragStartOffset = useRef({ x: 0, y: 0 });
 
@@ -54,25 +52,19 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
         position: 'fixed', 
         top: `${dragPos.y}px`, 
         left: `${dragPos.x}px`, 
-        margin: 0 
+        margin: 0,
+        transform: 'none'
       };
     }
 
-    // 2. Default positioning relative to triggerRect
-    if (!triggerRect) return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-    
-    const margin = 10;
-    let left = triggerRect.left;
-    let top = triggerRect.bottom + margin;
-
-    // Boundary checks for initial placement
-    if (left + modalWidth > window.innerWidth) left = window.innerWidth - modalWidth - 20;
-    if (top + modalHeight > window.innerHeight) top = triggerRect.top - modalHeight - margin;
-    
-    left = Math.max(20, left);
-    top = Math.max(20, top);
-
-    return { position: 'fixed', top: `${top}px`, left: `${left}px`, margin: 0 };
+    // 2. Default: Center of screen
+    return { 
+      position: 'fixed', 
+      top: '50%', 
+      left: '50%', 
+      transform: 'translate(-50%, -50%)',
+      margin: 0 
+    };
   };
 
   const onMouseDown = (e) => {
@@ -101,7 +93,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
       newPos.y = Math.max(0, Math.min(newPos.y, window.innerHeight - 100));
       
       setDragPos(newPos);
-      localStorage.setItem('quickModalPos', JSON.stringify(newPos));
+
     };
 
     const handleMouseUp = () => setIsDragging(false);
@@ -586,8 +578,7 @@ export default function QuickManageModal({ isOpen, onClose, category, categoryLa
       <style jsx>{`
         .quick-modal-overlay {
           position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.2); z-index: 2100;
-          backdrop-filter: blur(2px);
+          background: rgba(0,0,0,0.3); z-index: 2100;
         }
         .quick-modal {
           background: white; width: 900px; border-radius: 12px;

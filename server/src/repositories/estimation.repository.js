@@ -10,8 +10,8 @@ class EstimationRepository {
             query += ' WHERE (company_id = ? OR owner_admin_id = ?';
             params.push(companyId, companyId);
             if (userId) {
-                query += ' OR assigned_engineer_id = ? OR reviewer_id = ?';
-                params.push(userId, userId);
+                query += ' OR userId = ? OR createdBy = ? OR assigned_engineer_id = ? OR reviewer_id = ?';
+                params.push(userId, userId, userId, userId);
             }
             query += ')';
         }
@@ -34,8 +34,8 @@ class EstimationRepository {
             query += ' AND (p.company_id = ? OR p.owner_admin_id = ?';
             params.push(companyId, companyId);
             if (userId) {
-                query += ' OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
-                params.push(userId, userId);
+                query += ' OR p.userId = ? OR p.createdBy = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
+                params.push(userId, userId, userId, userId);
             }
             query += ')';
         }
@@ -68,8 +68,8 @@ class EstimationRepository {
             query += ' AND (p.company_id = ? OR p.owner_admin_id = ?';
             params.push(companyId, companyId);
             if (userId) {
-                query += ' OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
-                params.push(userId, userId);
+                query += ' OR p.userId = ? OR p.createdBy = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
+                params.push(userId, userId, userId, userId);
             }
             query += ')';
         }

@@ -3982,11 +3982,18 @@ textarea.form-input {
 .acm-rate-input-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
   background: var(--gpt-surface, #fff);
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: 1px solid var(--gpt-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.acm-rate-input-wrap:hover {
+  border-color: var(--gpt-accent, #10a37f);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .acm-rate-label {
@@ -4058,13 +4065,29 @@ textarea.form-input {
 }
 
 .acm-override-input {
-  width: 70px;
+  width: 95px;
   text-align: right;
   border-radius: 4px;
   border: 1px solid #d1d5db;
   background: white;
   padding: 4px 8px;
+  padding-left: 26px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
 }
+
+.acm-pct-input {
+  width: 65px;
+  text-align: center;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Geist Mono', monospace;
+}
+
+
 .acm-cond-badge {
   display: inline-flex;
   align-items: center;
@@ -4115,6 +4138,80 @@ textarea.form-input {
   box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
   background: #fff;
 }
+
+/* Header Total Pill */
+.acm-header-total-pill {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 48px; /* Room for close button */
+}
+
+.acm-tp-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.acm-tp-val {
+  font-family: 'Geist Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Sync Button */
+.acm-sync-btn {
+  background: #10a37f;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(16, 163, 127, 0.2);
+}
+
+.acm-sync-btn:hover {
+  background: #0d8a6a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 163, 127, 0.3);
+}
+
+.acm-sync-btn.acm-btn-ghost {
+  background: transparent;
+  color: #64748b;
+  box-shadow: none;
+  border: 1px solid #e2e8f0;
+}
+
+.acm-sync-btn.acm-btn-ghost:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.acm-count-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 8px;
+}
+
 
 .acm-cell-input::placeholder {
   color: #9ca3af;
@@ -4405,15 +4502,16 @@ textarea.form-input {
 
 .acm-dollar-prefix {
   position: absolute;
-  left: 10px;
+  left: 8px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--gpt-text-muted, #9ca3af);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   pointer-events: none;
-  z-index: 1;
+  z-index: 5;
 }
+
 
 .acm-amt-input { padding-left: 24px !important; }
 
@@ -4568,8 +4666,10 @@ textarea.form-input {
 }
 
 .acm-markup-input {
-  width: 52px;
+  width: 65px;
 }
+
+
 
 .acm-markup-amt {
   font-family: 'Geist Mono', 'SF Mono', monospace;

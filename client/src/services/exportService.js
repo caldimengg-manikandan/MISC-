@@ -20,7 +20,7 @@ const calculateSurfaceArea = (stair) => {
 /**
  * Professional PDF Proposal Generator
  */
-export const generateProposalPDF = (projectData, stairs, returnBlob = false) => {
+export const generateProposalPDF = (projectData, stairs, estimationResult = null, returnBlob = false) => {
   const doc = new jsPDF();
   const timestamp = new Date().toLocaleDateString();
 
@@ -83,14 +83,33 @@ export const generateProposalPDF = (projectData, stairs, returnBlob = false) => 
   doc.text('ESTIMATION SUMMARY', 15, currentY + 10);
   const finishArea = stairsArr.reduce((sum, s) => sum + calculateSurfaceArea(s), 0);
   
+  const additionalCosts = typeof projectData?.additionalCosts === 'string' ? JSON.parse(projectData.additionalCosts) : (projectData?.additionalCosts || null);
+  const parsedEst = estimationResult || (typeof projectData?.estimationResult === 'string' ? JSON.parse(projectData.estimationResult) : (projectData?.estimationResult || null));
+
+  const summaryBody = [
+    ['TOTAL STEEL WEIGHT (w/ 11% Scrap)', `${totalWeight.toFixed(2)} lbs`],
+    ['FINISHING SURFACE AREA (for Galv)', `${finishArea.toFixed(2)} SQFT`],
+    ['TOTAL FABRICATION HOURS', '— Hrs'],
+    ['TOTAL ESTIMATED COST', '— USD']
+  ];
+
+  if (parsedEst) {
+    const res = parsedEst?.sfeSummary || parsedEst?.summary || {};
+    if (res.totalShopHours !== undefined && res.totalFieldHours !== undefined) {
+      summaryBody[2] = ['TOTAL FABRICATION HOURS', `${(parseFloat(res.totalShopHours) + parseFloat(res.totalFieldHours)).toFixed(2)} Hrs`];
+    }
+    if (res.grandTotal !== undefined) {
+      summaryBody[3] = ['TOTAL ESTIMATED COST', `$${parseFloat(res.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}`];
+    }
+  }
+
+  if (additionalCosts && additionalCosts.total) {
+    summaryBody.push(['TOTAL W/ ADJUSTMENTS (ADDITIONAL COSTS)', `$${parseFloat(additionalCosts.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
+  }
+
   autoTable(doc, {
     startY: currentY + 15,
-    body: [
-      ['TOTAL STEEL WEIGHT (w/ 11% Scrap)', `${totalWeight.toFixed(2)} lbs`],
-      ['FINISHING SURFACE AREA (for Galv)', `${finishArea.toFixed(2)} SQFT`],
-      ['TOTAL FABRICATION HOURS', '— Hrs'],
-      ['TOTAL ESTIMATED COST', '— USD']
-    ],
+    body: summaryBody,
     theme: 'striped',
     styles: { fontSize: 10, cellPadding: 5 }
   });
@@ -308,19 +327,30 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   worksheet.getRow(finalStart+2).getCell(6).value = 'TOTAL ESTIMATE';
   worksheet.getRow(finalStart+2).getCell(7).value = totalEstimate;
 
-  for (let r = finalStart; r <= finalStart+2; r++) {
+  const additionalCosts = typeof projectData?.additionalCosts === 'string' ? JSON.parse(projectData.additionalCosts) : (projectData?.additionalCosts || null);
+  const hasAdditionalCosts = additionalCosts && additionalCosts.total;
+  let currentFinalRow = finalStart + 2;
+
+  if (hasAdditionalCosts) {
+    currentFinalRow++;
+    worksheet.getRow(currentFinalRow).getCell(6).value = 'TOTAL W/ ADJUSTMENTS';
+    worksheet.getRow(currentFinalRow).getCell(7).value = additionalCosts.total;
+  }
+
+  for (let r = finalStart; r <= currentFinalRow; r++) {
     worksheet.getRow(r).getCell(7).numFmt = '"$" #,##0.00';
-    worksheet.getRow(r).getCell(7).font = { bold: true, color: { argb: 'FFF59E0B' }, size: r === finalStart+2 ? 14 : 11 };
-    worksheet.getRow(r).getCell(6).font = { bold: true, size: r === finalStart+2 ? 14 : 11 };
+    const isFinalTotal = r === currentFinalRow;
+    worksheet.getRow(r).getCell(7).font = { bold: true, color: { argb: 'FFF59E0B' }, size: isFinalTotal ? 14 : 11 };
+    worksheet.getRow(r).getCell(6).font = { bold: true, size: isFinalTotal ? 14 : 11 };
     worksheet.getRow(r).getCell(6).alignment = { horizontal: 'right' };
     worksheet.getRow(r).getCell(6).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
     worksheet.getRow(r).getCell(7).border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
   }
-  worksheet.getRow(finalStart+2).getCell(6).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
-  worksheet.getRow(finalStart+2).getCell(7).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
+  worksheet.getRow(currentFinalRow).getCell(6).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
+  worksheet.getRow(currentFinalRow).getCell(7).border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
 
   // Detailed Line Items Section
-  let currentRow = finalStart + 6;
+  let currentRow = currentFinalRow + 4;
   const detailHeaderRow = worksheet.getRow(currentRow);
   detailHeaderRow.getCell(2).value = 'ITEMIZED ENTRIES (Stringers and Rails)';
   detailHeaderRow.getCell(2).font = { size: 14, bold: true };

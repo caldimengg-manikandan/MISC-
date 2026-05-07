@@ -16,6 +16,10 @@ const fmt = (v) =>
     maximumFractionDigits: 2,
   });
 
+const fmtNoComma = (v) =>
+  Number(v || 0).toFixed(2);
+
+
 const DELIVERY_OPTIONS = [
   { key: 'none', label: 'No Delivery',              cost: 0 },
   { key: 'galv', label: 'To Galv / Powder Coater',  cost: 350 },
@@ -58,18 +62,21 @@ function OverrideInput({ value, placeholderVal, onChange }) {
       <span className="acm-dollar-prefix">$</span>
       <input
         type="number"
-        className="acm-pct-input acm-override-input"
-        placeholder={fmt(placeholderVal)}
+        className="acm-override-input"
+        placeholder={fmtNoComma(placeholderVal)}
         value={value}
         step="0.01"
         onChange={(e) => onChange(e.target.value)}
       />
+
     </div>
   );
 }
 
 /* ─── Main Modal ─────────────────────────────────────────────────────── */
-export default function AdditionalCostsModal({ baseTotal, initialData, onApply, onClose }) {
+export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, initialData, onApply, onClose }) {
+  const [usedBaseTotal, setUsedBaseTotal] = useState(initialData?.usedBaseTotal ?? baseTotal);
+
   const [globalVars, setGlobalVars] = useState(initialData?.globalVars || {
     shopRate: 75,
     fieldRate: 75,
@@ -94,7 +101,12 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
   );
 
   /* 3. Delivery */
-  const [delivery, setDelivery] = useState(initialData?.delivery || 'none');
+  const [delivery, setDelivery] = useState(() => {
+    if (Array.isArray(initialData?.delivery)) return initialData.delivery;
+    if (initialData?.delivery && initialData.delivery !== 'none') return [initialData.delivery];
+    return [];
+  });
+
 
   /* 4. Labor Adjustments (Overrides) */
   const [manualOvernights, setManualOvernights] = useState(initialData?.manualOvernights || '');
@@ -144,7 +156,85 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
   };
 
   const calcCIMounting = (item) => item.fieldHrs * porRokRate;
-  const calcCI = (item) => item.material + (item.shopHrs * shopRate) + (item.fieldHrs * fieldRate) + calcCIMounting(item);
+  const calcCI = (item) => (Number(item.material) || 0) + (Number(item.shopHrs) * shopRate) + (Number(item.fieldHrs) * fieldRate) + calcCIMounting(item);
+
+  const importFromEstimation = () => {
+    if (!estimationBreakdown) return;
+    
+    const newItems = [];
+    
+    // Helper to extract material components
+    const getMat = (s) => (
+      (s.systemCalc?.steelPriceBase || 0) + 
+      (s.systemCalc?.pansMaterialPrice || 0) + 
+      (s.systemCalc?.gratingTotalCost || 0) + 
+      (s.systemCalc?.galvanizeCost || 0) + 
+      (s.systemCalc?.anchorBoltsCost || 0)
+    );
+
+    // Stairs
+    (estimationBreakdown.stairs || []).forEach(s => {
+      newItems.push({
+        id: `eng-s-${s.id}-${Date.now()}`,
+        name: s.label || 'Stair',
+        finish: s.finish || '',
+        drawing: '',
+        material: Math.round(getMat(s) * 100) / 100,
+        shopHrs: s.shopHours || 0,
+        fieldHrs: s.fieldHours || 0,
+        included: true
+      });
+      (s.flights || []).forEach(f => {
+        newItems.push({
+          id: `eng-f-${f.id}-${Date.now()}`,
+          name: f.label || 'Flight',
+          finish: f.finish || s.finish || '',
+          drawing: '',
+          material: Math.round(getMat(f) * 100) / 100,
+          shopHrs: f.shopHours || 0,
+          fieldHrs: f.fieldHours || 0,
+          included: true
+        });
+      });
+    });
+
+    // Platforms
+    (estimationBreakdown.platforms || []).forEach(p => {
+      newItems.push({
+        id: `eng-p-${p.id}-${Date.now()}`,
+        name: p.label || p.platformType || 'Platform',
+        finish: p.finish || '',
+        drawing: '',
+        material: Math.round(getMat(p) * 100) / 100,
+        shopHrs: p.shopHours || 0,
+        fieldHrs: p.fieldHours || 0,
+        included: true
+      });
+    });
+
+    // Rails
+    (estimationBreakdown.rails || []).forEach(r => {
+      newItems.push({
+        id: `eng-r-${r.id}-${Date.now()}`,
+        name: r.label || r.railType || 'Rail',
+        finish: r.finish || '',
+        drawing: '',
+        material: Math.round(getMat(r) * 100) / 100,
+        shopHrs: r.shopHours || 0,
+        fieldHrs: r.fieldHours || 0,
+        included: true
+      });
+    });
+
+    // Add 5 empty rows for extras
+    for(let i=0; i<5; i++) {
+      newItems.push({ id: `ci-extra-${i}-${Date.now()}`, name: '', finish: '', drawing: '', material: 0, shopHrs: 0, fieldHrs: 0, included: false });
+    }
+
+    setCustomItems(newItems);
+    setUsedBaseTotal(0); // If we import everything, the base total is now in the table
+  };
+
 
   /* ── Derived Engine Calculations ── */
   const ciIncluded = customItems.filter((i) => i.included);
@@ -156,7 +246,11 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
   const totalPW = totalFieldHrs / 8;
 
   // Delivery
-  const deliveryCost = DELIVERY_OPTIONS.find((o) => o.key === delivery)?.cost || 0;
+  const deliveryCost = delivery.reduce((sum, key) => {
+    const opt = DELIVERY_OPTIONS.find(o => o.key === key);
+    return sum + (opt?.cost || 0);
+  }, 0);
+
 
   // Conditional Labor
   const totalDays = totalFieldHrs / 8;
@@ -180,7 +274,8 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
   const calcTax = totalMaterial * (taxPct / 100);
 
   // Totals
-  const subTotal = baseTotal + totalLineItemsCost + deliveryCost + finalOvernights + finalTravel + finalDailyTravel + calcSafety + calcDetailing + calcTax;
+  const subTotal = usedBaseTotal + totalLineItemsCost + deliveryCost + finalOvernights + finalTravel + finalDailyTravel + calcSafety + calcDetailing + calcTax;
+
   const overheadAmt = subTotal * (overheadPct / 100);
   const profitAmt = (subTotal + overheadAmt) * (profitPct / 100);
   const jobTotal = subTotal + overheadAmt + profitAmt;
@@ -194,9 +289,15 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
 
         {/* ══ Header ══════════════════════════════════════════════════════ */}
         <div className="acm-header">
-          <div>
-            <h2 className="acm-title">Additional Costs (Engine)</h2>
-            <p className="acm-subtitle">Strict calculations based on extracted spreadsheet formulas</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <div>
+              <h2 className="acm-title">Additional Costs (Engine)</h2>
+              <p className="acm-subtitle">Strict calculations based on extracted spreadsheet formulas</p>
+            </div>
+            <div className="acm-header-total-pill">
+              <span className="acm-tp-label">Total Estimation Cost</span>
+              <span className="acm-tp-val">${fmt(baseTotal)}</span>
+            </div>
           </div>
           <button className="acm-close-btn" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </div>
@@ -207,7 +308,7 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
           {/* ── 1. Global Variables ── */}
           <div className="acm-section-block acm-rates-block">
             <span className="acm-section-label">Global Job Variables</span>
-            <div className="acm-vars-grid">
+            <div className="acm-rates-grid">
               <div className="acm-rate-input-wrap">
                 <span className="acm-rate-label">Shop Rate</span>
                 <div className="acm-pct-wrap"><span className="acm-pct-sign">$</span>
@@ -237,10 +338,21 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
 
           {/* ── 2. Line Items Table ── */}
           <div className="acm-section-block">
-            <span className="acm-section-label">
-              Custom Fabrications
-              {customItems.length > 0 && <span className="acm-count-badge">{customItems.length}</span>}
-            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span className="acm-section-label">Custom Fabrications <span className="acm-count-badge">{ciIncluded.length}</span></span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {estimationBreakdown && (
+                  <button className="acm-sync-btn" onClick={importFromEstimation} title="Import materials, shop and field hours from the engine result">
+                    ⚡ Import from Estimation
+                  </button>
+                )}
+                {usedBaseTotal === 0 && (
+                  <button className="acm-sync-btn acm-btn-ghost" onClick={() => setUsedBaseTotal(baseTotal)}>
+                    Reset Base Total
+                  </button>
+                )}
+              </div>
+            </div>
 
             {customItems.length > 0 && (
               <div className="acm-items-table acm-ci-table">
@@ -394,15 +506,33 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
             <div className="acm-section-block">
               <span className="acm-section-label">Delivery Options</span>
               <div className="acm-radio-list">
-                {DELIVERY_OPTIONS.map((opt) => (
-                  <label key={opt.key} className={`acm-radio-row ${delivery === opt.key ? 'selected' : ''}`}>
-                    <input type="radio" name="acm-delivery" value={opt.key} checked={delivery === opt.key} onChange={() => setDelivery(opt.key)} />
+                {DELIVERY_OPTIONS.filter(o => o.key !== 'none').map((opt) => (
+                  <label key={opt.key} className={`acm-radio-row ${delivery.includes(opt.key) ? 'selected' : ''}`}>
+                    <input 
+                      type="checkbox" 
+                      name="acm-delivery" 
+                      value={opt.key} 
+                      checked={delivery.includes(opt.key)} 
+                      onChange={() => {
+                        setDelivery(prev => 
+                          prev.includes(opt.key) 
+                            ? prev.filter(k => k !== opt.key) 
+                            : [...prev, opt.key]
+                        );
+                      }} 
+                    />
                     <span className="acm-radio-label">{opt.label}</span>
                     {opt.cost > 0 && <span className="acm-radio-cost">+${fmt(opt.cost)}</span>}
                   </label>
                 ))}
+                {delivery.length === 0 && (
+                  <div className="acm-muted" style={{ fontSize: '11px', marginTop: '8px', fontStyle: 'italic' }}>
+                    No delivery options selected.
+                  </div>
+                )}
               </div>
             </div>
+
           </div>
 
           {/* ── 4. Scope Adjustments ── */}
@@ -513,6 +643,7 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
             <button className="acm-btn-outline" onClick={onClose}>Cancel</button>
             <button className="acm-btn-primary" onClick={() => onApply({
               total: jobTotal,
+              usedBaseTotal,
               globalVars,
               customItems,
               delivery,
@@ -525,6 +656,7 @@ export default function AdditionalCostsModal({ baseTotal, initialData, onApply, 
               overheadPct,
               profitPct
             })}>
+
               Apply Changes
             </button>
           </div>

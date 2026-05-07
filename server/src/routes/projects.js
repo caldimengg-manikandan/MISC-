@@ -427,6 +427,7 @@ router.get('/:projectId', auth, async (req, res) => {
     project.guardRails = tryParseJson(project.guardRails);
     project.customRailValues = tryParseJson(project.customRailValues);
     project.localConfig = tryParseJson(project.localConfig);
+    project.additionalCosts = tryParseJson(project.additionalCosts);
 
     res.json({ success: true, project });
   } catch (error) {
@@ -466,7 +467,7 @@ router.put('/:projectId', auth, async (req, res) => {
       'aiscCertified', 'units', 'notes', 'stairs', 'guardRails', 
       'customRailValues', 'status', 'totalWeight', 'totalCost',
       'assignedEngineer', 'enquiryDate', 'submissionDeadline', 'estimationResult',
-      'isPinned', 'isArchived'
+      'isPinned', 'isArchived', 'additionalCosts', 'localConfig'
     ];
     
     let setClause = [];
@@ -475,7 +476,7 @@ router.put('/:projectId', auth, async (req, res) => {
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key)) {
         setClause.push(`${key} = ?`);
-        if (['stairs', 'guardRails', 'customRailValues', 'estimationResult'].includes(key)) {
+        if (['stairs', 'guardRails', 'customRailValues', 'estimationResult', 'additionalCosts', 'localConfig'].includes(key)) {
            // 🛡️ Prevent double-stringification if client already sent a string
            queryParams.push(typeof updates[key] === 'string' ? updates[key] : JSON.stringify(updates[key]));
         } else if (key === 'customerId') {

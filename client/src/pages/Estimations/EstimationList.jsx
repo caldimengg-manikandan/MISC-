@@ -186,8 +186,9 @@ export default function EstimationList() {
   const [selectedIds, setSelectedIds] = useState([]);
 
 
-  // Removed redundant fetchEstimations here as it is handled globally in MainLayout
-  // useEffect(() => { fetchEstimations(); }, []);
+  useEffect(() => { 
+    fetchEstimations(); 
+  }, []);
 
   const filtered = estimations.filter(p =>
     p.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||

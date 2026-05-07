@@ -90,7 +90,7 @@ export default function EstimationDetail() {
       setForm({
         ...initialData,
         assigned_engineer_name: user?.full_name || user?.email || '',
-        assigned_engineer_id: user?.id || null,
+        assignedEngineerId: user?.id || null,
         engineerId: user?.id || null
       });
     }

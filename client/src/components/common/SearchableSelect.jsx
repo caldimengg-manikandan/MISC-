@@ -46,13 +46,27 @@ const SearchableSelect = ({
   }, []);
 
   const filteredOptions = useMemo(() => {
-    if (!searchTerm) return options;
-    const term = searchTerm.toLowerCase();
-    return options.filter(opt => 
-      String(opt[displayKey]).toLowerCase().includes(term) ||
-      (opt.contactPerson && String(opt.contactPerson).toLowerCase().includes(term))
-    );
-  }, [options, searchTerm, displayKey]);
+    let result = options;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = options.filter(opt => 
+        String(opt[displayKey]).toLowerCase().includes(term) ||
+        (opt.contactPerson && String(opt.contactPerson).toLowerCase().includes(term))
+      );
+    }
+
+    // Always move the selected item to the top of the list if it exists in the result
+    if (value) {
+      const selectedIdx = result.findIndex(opt => String(opt[valueKey]) === String(value));
+      if (selectedIdx > 0) {
+        const selected = result[selectedIdx];
+        const others = result.filter((_, i) => i !== selectedIdx);
+        return [selected, ...others];
+      }
+    }
+
+    return result;
+  }, [options, searchTerm, displayKey, value, valueKey]);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);

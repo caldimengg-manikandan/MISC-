@@ -56,7 +56,7 @@ export default function EstimateReport({ data, onBack }) {
     );
   }
 
-  const { projectData = {}, summary = {}, stairs = [], rails = [], platforms = [], rawStairs = [] } = data;
+  const { projectData = {}, summary = {}, stairs = [], rails = [], platforms = [], rawStairs = [], additionalCosts = null } = data;
   const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
   const todayLong = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -434,6 +434,14 @@ export default function EstimateReport({ data, onBack }) {
                   <CurrencyCell value={grandTotalValue} color="#f59e0b" />
                 </div>
               </div>
+              {additionalCosts && additionalCosts.total !== undefined && (
+                <div className="flex border-t-2 border-slate-900 bg-amber-50 italic">
+                  <div className="flex-grow text-right pr-6 py-3 uppercase font-black tracking-tighter text-[18px] whitespace-nowrap border-r-2 border-slate-900 text-amber-900">Total W/ Adjustments</div>
+                  <div className="w-[180px] p-0 bg-white">
+                    <CurrencyCell value={additionalCosts.total} color="#d97706" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

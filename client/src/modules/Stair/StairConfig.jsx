@@ -900,6 +900,18 @@ export default function StairEstimation() {
   const [isDirty, setIsDirty] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', resolve: null });
 
+  // Prevent accidental navigation/refresh if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = ''; // Standard way to trigger browser's "Leave site?" prompt
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
   const requestConfirmation = (title, message) => {
     return new Promise((resolve) => {
       setConfirmModal({ isOpen: true, title, message, resolve });
@@ -1120,7 +1132,8 @@ export default function StairEstimation() {
           stairs: stairsToSave,
           customerName: projectData.customerName,
           customerId: projectData.customerId,
-          localConfig
+          localConfig,
+          additionalCosts
         })
       });
 
@@ -1139,7 +1152,7 @@ export default function StairEstimation() {
     } finally {
       setSaving(false);
     }
-  }, [projectData.projectId, projectData.customerName, projectData.customerId, localConfig]);
+  }, [projectData.projectId, projectData.customerName, projectData.customerId, localConfig, additionalCosts]);
 
   const handleAllocated = useCallback((data) => {
     setProjectData(prev => ({
@@ -1386,7 +1399,7 @@ export default function StairEstimation() {
       setCalculating(false);
     }
     // 🔄 FIX: Include isDirty, localConfig, and saveChanges to prevent stale closure bugs
-  }, [projectData.projectId, isDirty, localConfig, saveChanges]);
+  }, [projectData.projectId, isDirty, localConfig, saveChanges, additionalCosts]);
 
   // ── Live per-change calculation (debounced 400ms) ─────────────────────────
   // Fires whenever stair data changes; embeds calc results back into each rail + landing.
@@ -2073,7 +2086,8 @@ export default function StairEstimation() {
         data={{
           ...reportData,
           projectData,
-          rawStairs: stairs
+          rawStairs: stairs,
+          additionalCosts
         }}
         onBack={() => setShowReport(false)}
       />
@@ -2826,7 +2840,7 @@ export default function StairEstimation() {
                 onClick={() => navigate('/project-info?id=' + (projectData.projectId || ''))}
                 title="View and edit project details (Customer, Location, GC, etc.)"
               >
-                <FolderOpen size={14} /> Project Info
+                <FolderOpen size={14} /> Edit Project Info
               </button>
               <span className="info-chip chip-blue">📐 {totalStairs} Stair{totalStairs !== 1 ? 's' : ''}</span>
               <button
@@ -2999,6 +3013,7 @@ export default function StairEstimation() {
           {showAdditionalCosts && summaryData && (
             <AdditionalCostsModal
               baseTotal={summaryData.grandTotal || 0}
+              estimationBreakdown={estimationResult?.breakdown}
               initialData={additionalCosts}
               onApply={(data) => {
                 setAdditionalCosts(data);

@@ -136,7 +136,7 @@ export default function WorkflowActionBar({ project, onStatusChange, onEngineerC
       const parsedEst = typeof project.estimationResult === 'string' ? JSON.parse(project.estimationResult) : project.estimationResult || {};
 
       if (payload.attachmentType === 'PDF' || payload.attachmentType === 'Both') {
-         const pdfBlob = generateProposalPDF(project, parsedStairs, true);
+         const pdfBlob = generateProposalPDF(project, parsedStairs, parsedEst, true);
          formData.append('attachments', pdfBlob, 'Estimation_Proposal.pdf');
       }
       if (payload.attachmentType === 'BOM' || payload.attachmentType === 'Both') {

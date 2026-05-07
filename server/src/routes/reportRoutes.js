@@ -418,9 +418,16 @@ router.get('/:projectId/bom-excel', async (req, res) => {
       ['Sub-total w/o tax',      '—', '—', '—',          summary.subtotalWithoutTax],
       ['Tax',                    '—', '—', '—',          summary.taxAmount],
       ['GRAND TOTAL',            '—', '—', '—',          summary.grandTotal],
-      ['Total Risers',           summary.totalRisers, '—', '—', summary.totalRisers],
-      ['Price / Riser',          '—', '—', '—',          summary.pricePerRiser],
     ];
+
+    if (project.additionalCosts && project.additionalCosts.total !== undefined) {
+      sumData.push(['TOTAL W/ ADJUSTMENTS', '—', '—', '—', project.additionalCosts.total]);
+    }
+
+    sumData.push(
+      ['Total Risers',           summary.totalRisers, '—', '—', summary.totalRisers],
+      ['Price / Riser',          '—', '—', '—',          summary.pricePerRiser]
+    );
 
     sumData.forEach((row, i) => {
       const r = s1.addRow(row);
@@ -432,8 +439,10 @@ router.get('/:projectId/bom-excel', async (req, res) => {
         const val = r.getCell(ci).value;
         if (typeof val === 'number') r.getCell(ci).numFmt = ['Steel lbs','Scrap lbs','Total Risers'].some(l => row[0].includes(l)) ? numFmt : dolFmt;
       });
-      // Bold Grand Total
-      if (row[0] === 'GRAND TOTAL') r.eachCell(c => { c.font = { ...boldFont(), color: { argb: `FF${ACCENT}` } }; });
+      // Bold Grand Total and Adjustments
+      if (row[0] === 'GRAND TOTAL' || row[0] === 'TOTAL W/ ADJUSTMENTS') {
+        r.eachCell(c => { c.font = { ...boldFont(), color: { argb: `FF${ACCENT}` } }; });
+      }
     });
 
     s1.columns = [
@@ -800,6 +809,7 @@ async function fetchLiveData(projectId, userId) {
         aiscCertified: project.aisc_certified || 'Yes',
         units: project.units || 'Imperial',
         notes: project.notes || '',
+        additionalCosts: tryParse(project.additionalCosts) || null,
       },
       rates, summary, stairs: allStairs, rails: allRails, platforms: allPlatforms,
     };

@@ -76,6 +76,7 @@ export const EstimationProvider = ({ children }) => {
             const res = await estimationApi.create(data);
             if (res.data.success) {
                 await fetchDashboardStats();
+                await fetchEstimations(); // Refresh global list
                 return res.data.id;
             }
         } catch (err) {
