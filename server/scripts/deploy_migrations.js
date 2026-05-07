@@ -81,9 +81,10 @@ async function migrate() {
       ELSE PRINT 'ℹ️ project_attachments table already exists.';
     `);
 
-    // 5. Add tenant columns to Attachments
-    console.log('--- Checking Attachment tenant columns ---');
+    // 5. Add tenant and storage columns to Attachments
+    console.log('--- Checking Attachment columns ---');
     const attColumns = [
+        { name: 'storage_key', type: 'NVARCHAR(MAX) NULL' },
         { name: 'company_id', type: 'INT NULL' },
         { name: 'owner_admin_id', type: 'INT NULL' }
     ];
