@@ -347,6 +347,7 @@ export default function EstimationList() {
                       }
                     </button>
                   </th>
+                  <th>Created By</th>
                   <th style={{ width: 90 }}>ID</th>
                   <th>Project Name</th>
                   <th>Customer</th>
@@ -374,6 +375,7 @@ export default function EstimationList() {
                           {selectedIds.includes(p.id) ? <CheckSquare size={16} color="var(--gpt-accent)" /> : <Square size={16} />}
                         </button>
                       </td>
+                      <td className="el-td-muted">{p.CreatorName || p.CreatorFullName || '—'}</td>
                       <td><span className="el-id-chip">#{p.id.toString().slice(-6).toUpperCase()}</span></td>
                       <td className="el-td-name">{p.projectName}</td>
                       <td className="el-td-muted">{p.LinkedCustomerName || p.customer_name || '—'}</td>
@@ -386,7 +388,7 @@ export default function EstimationList() {
                           </span>
                         )}
                       </td>
-                      <td className="el-td-muted">{p.engineerId || '—'}</td>
+                      <td className="el-td-muted">{p.EngineerName || p.EngineerFullName || p.engineerId || '—'}</td>
                       <td className="el-td-date">{p.dueDate ? format(new Date(p.dueDate), 'dd MMM yyyy') : '—'}</td>
                       <td><DaysLeftBadge dueDate={p.dueDate} /></td>
                       <td>
@@ -447,8 +449,11 @@ export default function EstimationList() {
                   </div>
                   <div className="el-grid-name">{p.projectName}</div>
                   <div className="el-grid-customer">{p.customer_name || 'No customer assigned'}</div>
+                  <div className="el-grid-creator" style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                    Created by: <span style={{ color: '#64748b', fontWeight: 600 }}>{p.CreatorName || p.CreatorFullName || 'Unknown'}</span>
+                  </div>
                   <div className="el-grid-footer">
-                    <span className="el-grid-eng">{p.engineerId || 'Unassigned'}</span>
+                    <span className="el-grid-eng">{p.EngineerName || p.EngineerFullName || p.engineerId || 'Unassigned'}</span>
                     {daysLeft !== null && <DaysLeftBadge dueDate={p.dueDate} />}
                   </div>
                   <button className="el-grid-open" id={`btn-grid-open-${p.id}`}><ArrowUpRight size={14} /></button>

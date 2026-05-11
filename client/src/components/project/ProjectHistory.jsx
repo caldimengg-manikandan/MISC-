@@ -116,6 +116,7 @@ export default function ProjectHistory() {
                 <thead>
                   <tr>
                     <th>Project Details</th>
+                    <th>Created By</th>
                     <th>Status</th>
                     <th>Last Updated</th>
                     <th>Stairs</th>
@@ -131,7 +132,12 @@ export default function ProjectHistory() {
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
                           <span className="data-badge dt-string" style={{ padding: '0 4px' }}>{project.projectNumber || 'N/A'}</span>
                           <span>•</span>
-                          <span>{project.customerName || 'No Customer'}</span>
+                          <span>{project.customerName || project.customer_name || 'No Customer'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                          {project.CreatorName || project.CreatorFullName || '—'}
                         </div>
                       </td>
                       <td>

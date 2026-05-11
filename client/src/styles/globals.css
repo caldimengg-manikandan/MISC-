@@ -3640,7 +3640,7 @@ textarea.form-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: 9000;
   padding: 16px;
   animation: acm-fade-in 0.18s ease;
 }

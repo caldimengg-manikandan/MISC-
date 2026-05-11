@@ -6,8 +6,9 @@
 // ─ Conditional Labor Adjustments (Overnights vs Travel) with manual overrides
 // ─ Scope Adjustments (Safety, Detailing, Tax) using precise formulas
 // ─ Markups (Overhead & Profit) applied to Subtotal
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
+import { motion, useDragControls } from 'framer-motion';
 
 /* ─── Helpers ─────────────────────────────────────────────────────────── */
 const fmt = (v) =>
@@ -75,6 +76,7 @@ function OverrideInput({ value, placeholderVal, onChange }) {
 
 /* ─── Main Modal ─────────────────────────────────────────────────────── */
 export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, initialData, onApply, onClose }) {
+  const dragControls = useDragControls();
   const [usedBaseTotal, setUsedBaseTotal] = useState(initialData?.usedBaseTotal ?? baseTotal);
 
   const [globalVars, setGlobalVars] = useState(initialData?.globalVars || {
@@ -296,10 +298,22 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
 
   return (
     <div className="acm-overlay" onClick={handleOverlayClick}>
-      <div className="acm-modal acm-modal-xl" role="dialog" aria-modal="true">
+      <motion.div 
+        className="acm-modal acm-modal-xl" 
+        role="dialog" 
+        aria-modal="true"
+        drag
+        dragControls={dragControls}
+        dragListener={false}
+        dragMomentum={false}
+      >
 
         {/* ══ Header ══════════════════════════════════════════════════════ */}
-        <div className="acm-header">
+        <div 
+          className="acm-header" 
+          onPointerDown={(e) => dragControls.start(e)}
+          style={{ cursor: 'grab', userSelect: 'none' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <div>
               <h2 className="acm-title">Additional Costs (Engine)</h2>
@@ -679,7 +693,7 @@ export default function AdditionalCostsModal({ baseTotal, estimationBreakdown, i
           </div>
         </div>
 
-      </div>
+      </motion.div>
     </div>
   );
 }

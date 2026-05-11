@@ -56,18 +56,33 @@ router.get('/', auth, async (req, res) => {
     let query, params;
     if (ownerAdminId === null) {
       // superadmin — sees everything
-      query = 'SELECT * FROM projects ORDER BY updatedAt DESC';
+      query = `SELECT p.*, u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
+                      u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
+               FROM projects p
+               LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+               LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
+               ORDER BY p.updatedAt DESC`;
       params = [];
     } else if (req.userRole === 'admin') {
       // Admin sees all projects they own OR created directly (legacy projects have NULL owner_admin_id)
-      query = 'SELECT * FROM projects WHERE (owner_admin_id = ? OR company_id = ? OR userId = ? OR createdBy = ?) ORDER BY updatedAt DESC';
+      query = `SELECT p.*, u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
+                      u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
+               FROM projects p
+               LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+               LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
+               WHERE (p.owner_admin_id = ? OR p.company_id = ? OR p.userId = ? OR p.createdBy = ?)
+               ORDER BY p.updatedAt DESC`;
       params = [ownerAdminId, ownerAdminId, req.userId, req.userId];
     } else {
       // Estimator/Engineer: must be creator, assigned engineer, or assigned reviewer
-      query = `SELECT * FROM projects
-               WHERE (owner_admin_id = ? OR company_id = ?)
-               AND (userId = ? OR createdBy = ? OR engineerId = ? OR assigned_engineer_id = ? OR reviewer_id = ?)
-               ORDER BY updatedAt DESC`;
+      query = `SELECT p.*, u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
+                      u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
+               FROM projects p
+               LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+               LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
+               WHERE (p.owner_admin_id = ? OR p.company_id = ?)
+               AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?)
+               ORDER BY p.updatedAt DESC`;
       params = [ownerAdminId, ownerAdminId, req.userId, req.userId, req.userId, req.userId, req.userId];
     }
 
@@ -110,16 +125,26 @@ router.get('/lookup/name', auth, async (req, res) => {
                FROM projects
                WHERE owner_admin_id = ? AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
                ORDER BY createdAt DESC`;
+      query = `SELECT p.id, p.projectNumber, p.projectName, p.customer_name, p.customer_id,
+                      p.project_location, p.architect, p.eor, p.gc_name, p.detailer, p.vendor_name,
+                      p.aisc_certified as aiscCertified, p.units, p.status, p.createdAt,
+                      u_creator.full_name as CreatorFullName
+               FROM projects p
+               LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+               WHERE p.owner_admin_id = ? AND (p.projectName = ? OR p.projectName LIKE ? OR p.projectNumber = ?)
+               ORDER BY p.createdAt DESC`;
       params = [ownerAdminId, q, `%${q}%`, q];
     } else {
-      query = `SELECT id, projectNumber, projectName, customer_name, customer_id,
-                      project_location, architect, eor, gc_name, detailer, vendor_name,
-                      aisc_certified as aiscCertified, units, status, createdAt
-               FROM projects
-               WHERE owner_admin_id = ?
-               AND (userId = ? OR createdBy = ? OR engineerId = ?)
-               AND (projectName = ? OR projectName LIKE ? OR projectNumber = ?)
-               ORDER BY createdAt DESC`;
+      query = `SELECT p.id, p.projectNumber, p.projectName, p.customer_name, p.customer_id,
+                      p.project_location, p.architect, p.eor, p.gc_name, p.detailer, p.vendor_name,
+                      p.aisc_certified as aiscCertified, p.units, p.status, p.createdAt,
+                      u_creator.full_name as CreatorFullName
+               FROM projects p
+               LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+               WHERE p.owner_admin_id = ?
+               AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ?)
+               AND (p.projectName = ? OR p.projectName LIKE ? OR p.projectNumber = ?)
+               ORDER BY p.createdAt DESC`;
       params = [ownerAdminId, req.userId, req.userId, req.userId, q, `%${q}%`, q];
     }
 
@@ -319,9 +344,11 @@ router.post('/upsert', auth, async (req, res) => {
       
       const newId = rows[0].id;
       const [inserted] = await db.query(`
-        SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email 
+        SELECT p.*, u.full_name as assigned_engineer_name, u.email as assigned_engineer_email,
+               u_creator.name as CreatorName, u_creator.full_name as CreatorFullName 
         FROM projects p 
         LEFT JOIN users u ON p.engineerId = u.id 
+        LEFT JOIN users u_creator ON p.createdBy = u_creator.id
         WHERE p.id = ?`, [newId]);
       
       try { await notif.onProjectCreated(newId, req.user || { email: req.userId }); } catch (e) {}
@@ -408,12 +435,14 @@ router.get('/:projectId', auth, async (req, res) => {
     const [rows] = await db.query(`
       SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
              c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip,
-             COALESCE(u.full_name, creator.full_name) as assigned_engineer_name,
-             COALESCE(u.email, creator.email) as assigned_engineer_email
+             u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
+             u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName,
+             COALESCE(u_engineer.full_name, u_creator.full_name) as assigned_engineer_name,
+             COALESCE(u_engineer.email, u_creator.email) as assigned_engineer_email
       FROM projects p
       LEFT JOIN customers c ON p.customer_id = c.id
-      LEFT JOIN users u ON p.engineerId = u.id
-      LEFT JOIN users creator ON p.userId = creator.id
+      LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+      LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
       WHERE ${whereClause}
     `, params);
 

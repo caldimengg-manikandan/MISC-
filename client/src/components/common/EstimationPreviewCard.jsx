@@ -7,7 +7,7 @@ const formatMoney = (val) => Number(val || 0).toLocaleString(undefined, { minimu
 const StatCell = ({ label, value, color, valueStyle = {}, bgStyle = {}, borderRight = true }) => {
   return (
     <div style={{
-      padding: '9px 12px',
+      padding: '10px 14px',
       flex: 1,
       minWidth: 0,
       display: 'flex',
@@ -18,22 +18,25 @@ const StatCell = ({ label, value, color, valueStyle = {}, bgStyle = {}, borderRi
       ...bgStyle
     }}>
       <div style={{
-        fontSize: '10px',
+        fontSize: '10.5px',
         color: 'var(--gpt-text-muted)',
         lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: '0.02em',
         transition: 'color 0.35s ease'
       }}>
         {label}
       </div>
       <div style={{
-        fontFamily: "'Geist Mono', 'SF Mono', 'Fira Code', monospace",  /* ← Mono font for all numbers */
-        fontSize: '12px',
-        fontWeight: 500,
+        fontFamily: "'Geist Mono', 'SF Mono', 'Fira Code', monospace",
+        fontSize: '14px',
+        fontWeight: 700,
         lineHeight: 1,
-        marginTop: '4px',
+        marginTop: '6px',
         color: color || 'var(--gpt-text-primary)',
         transition: 'color 0.35s ease',
         ...valueStyle
@@ -227,13 +230,13 @@ export default function EstimationPreviewCard({
             borderRight: '0.5px solid var(--gpt-border)',
             transition: 'border-color 0.35s ease',
           }}>
-            <div style={{ fontSize: '10px', color: 'var(--gpt-text-muted)', lineHeight: 1, transition: 'color 0.35s ease' }}>Sub total w/o tax</div>
+            <div style={{ fontSize: '11px', color: 'var(--gpt-text-muted)', lineHeight: 1, fontWeight: 700, textTransform: 'uppercase', transition: 'color 0.35s ease' }}>Sub total w/o tax</div>
             <div style={{
               fontFamily: "'Geist Mono', 'SF Mono', monospace",
-              fontSize: '14px',
-              fontWeight: 500,
+              fontSize: '16px',
+              fontWeight: 700,
               color: 'var(--gpt-text-primary)',
-              marginTop: '4px',
+              marginTop: '6px',
               transition: 'color 0.35s ease',
             }}>
               {subTotalWithoutTax}
@@ -245,7 +248,7 @@ export default function EstimationPreviewCard({
             label="Total estimate"
             value={totalEstimate}
             color={moneyColor}
-            valueStyle={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.3px' }}
+            valueStyle={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.5px' }}
             bgStyle={totalEstimateBgStyle}
             borderRight={false}
           />

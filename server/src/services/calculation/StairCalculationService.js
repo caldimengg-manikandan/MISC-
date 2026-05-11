@@ -1258,31 +1258,25 @@ class StairCalculationService {
         const mainResult = await estimateStair(s);
         const flightResults = await Promise.all((s.flights || []).map(fl => estimateStair(fl)));
 
-        let totalWeight = mainResult.totalWeight || 0;
-        let shopHours = mainResult.shopHours || 0;
-        let fieldHours = mainResult.fieldHours || 0;
-        let totalCost = mainResult.totalCost || 0;
-
-        flightResults.forEach(fr => {
-          totalWeight += fr.totalWeight || 0;
-          shopHours += fr.shopHours || 0;
-          fieldHours += fr.fieldHours || 0;
-          totalCost += fr.totalCost || 0;
-        });
+        // 🔄 ISOLATION FIX: Do NOT aggregate flight results back into the parent stair's top-level fields.
+        // This ensures that "Flight 1" (the main stair) displays only its own cost/weight,
+        // while the Calculation Summary correctly sums all independent components.
+        // The frontend mapping in triggerLiveCalc expects stairCalc.totalCost to reflect the item itself.
 
         return {
           ...mainResult,
-          totalWeight: this.roundExcel(totalWeight, 3),
-          shopHours: this.roundExcel(shopHours, 3),
-          fieldHours: this.roundExcel(fieldHours, 3),
-          totalCost: this.roundExcel(totalCost, 2),
+          // totalWeight/Cost/Hours removed from aggregation loop — parent now stands alone
           flights: flightResults
         };
       }))
     };
 
     // 🔄 Final aggregated project-level parity recalculation
-    estimate.totalEstimatedCost = estimate.stairs.reduce((sum, s) => sum + s.totalCost, 0) +
+    // Must explicitly sum stairs AND their nested flights now that they are decoupled.
+    estimate.totalEstimatedCost = estimate.stairs.reduce((sum, s) => {
+      const flightSum = (s.flights || []).reduce((fSum, f) => fSum + (f.totalCost || 0), 0);
+      return sum + (s.totalCost || 0) + flightSum;
+    }, 0) +
       estimate.platforms.reduce((sum, p) => sum + p.totalCost, 0) +
       estimate.rails.reduce((sum, r) => sum + r.totalCost, 0);
 

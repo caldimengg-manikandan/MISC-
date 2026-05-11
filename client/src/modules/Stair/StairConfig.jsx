@@ -5,7 +5,7 @@ import LandingConfig from '../Landing/LandingConfig';
 import RailConfig from '../Rail/RailConfig';
 import KickPlateConfig from '../KickPlate/KickPlateConfig';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
-import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin, Zap, X, ArrowUp, ArrowDown, Plus, GripVertical, FolderOpen } from 'lucide-react';
+import { FileText, Table, Scale, DollarSign, Copy, Settings, Building2, User, Mail, Phone, MapPin, Zap, X, ArrowUp, ArrowDown, ArrowRight, CornerDownRight, Plus, GripVertical, FolderOpen } from 'lucide-react';
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils.js';
 import { generateProposalPDF, generateFabricationExcel } from '../../services/exportService';
 import PricingOverridesModal from './PricingOverridesModal';
@@ -856,6 +856,28 @@ export default function StairEstimation() {
   const navigate = useNavigate();
   const initialId = makeId();
   const [activeId, setActiveId] = useState(initialId);
+  const stairTabRefs = useRef({});
+  const [arrowOffset, setArrowOffset] = useState(0);
+  
+  const updateArrowPosition = useCallback(() => {
+    const activeTab = stairTabRefs.current[activeId];
+    if (activeTab) {
+      // Calculate center of tab relative to container
+      const offset = activeTab.offsetLeft + (activeTab.offsetWidth / 2) - 30; // -30 to account for arrow width/start
+      setArrowOffset(Math.max(10, offset));
+      
+      // Auto-scroll the tab into view if it's overflowing
+      activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeId]);
+
+  useEffect(() => {
+    updateArrowPosition();
+    // Also update on window resize
+    window.addEventListener('resize', updateArrowPosition);
+    return () => window.removeEventListener('resize', updateArrowPosition);
+  }, [updateArrowPosition]);
+
   const [stairs, setStairs] = useState([
     {
       id: initialId,
@@ -898,6 +920,7 @@ export default function StairEstimation() {
   const [reportData, setReportData] = useState(null);   // New state for report data
   const [overallHistory, setOverallHistory] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [isEditingRates, setIsEditingRates] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', resolve: null });
 
   // Prevent accidental navigation/refresh if there are unsaved changes
@@ -2024,6 +2047,22 @@ export default function StairEstimation() {
     }));
   };
 
+  const updateLocalRate = (key, value) => {
+    let finalVal = parseFloat(value);
+    if (isNaN(finalVal)) return;
+
+    // Special handling for tax_rate to keep it as decimal in state but percentage in UI
+    if (key === 'tax_rate') {
+      finalVal = finalVal / 100;
+    }
+
+    setLocalConfig(prev => ({
+      ...prev,
+      [key]: finalVal
+    }));
+    setIsDirty(true);
+  };
+
   const undoLastOverallAction = () => {
     if (!overallHistory) return;
     const { type, stairId, data } = overallHistory;
@@ -2300,41 +2339,67 @@ export default function StairEstimation() {
     
     /* Cost Breakdown Styles */
     .sc-cost-breakdown {
-      margin: 2px 0 8px 32px;
-      padding: 6px 12px;
-      border-left: 1.5px solid var(--sf-border);
-      font-family: 'DM Sans', sans-serif;
+      margin: 4px 0 10px 24px;
+      padding: 8px 12px;
+      border-left: 2px solid var(--sf-accent-dim);
+      background: rgba(0,0,0,0.01);
+      border-radius: 0 0 8px 8px;
     }
     .sc-breakdown-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 9.5px;
-      color: var(--sf-muted);
-      margin-bottom: 4px;
-      font-weight: 500;
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 6px;
+      font-weight: 600;
       background: transparent;
       border: none;
       width: 100%;
-      padding: 2px 4px;
+      padding: 4px 6px;
       cursor: pointer;
       text-align: left;
-      border-radius: 4px;
+      border-radius: 6px;
       transition: all 0.2s;
     }
+    .sc-breakdown-item:last-child { margin-bottom: 0; }
     .sc-breakdown-item:hover {
-      background: rgba(16, 163, 127, 0.05);
-      color: #10a37f;
+      background: var(--sf-accent-dim);
+      color: var(--sf-accent);
     }
     .bc-branch {
-      color: var(--sf-border);
-      margin-right: 6px;
-      font-family: monospace;
+      color: var(--sf-accent);
+      margin-right: 8px;
+      opacity: 0.5;
     }
     .bc-val {
-      color: var(--sf-text);
-      font-weight: 700;
+      color: #0f172a;
+      font-weight: 800;
       font-family: 'Geist Mono', monospace;
+      font-size: 11.5px;
+    }
+    .sc-nav-tag {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: 'Geist Mono', monospace;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .active .sc-nav-tag {
+      background: #10a37f;
+      color: white;
+    }
+    .sc-nav-weight {
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .active .sc-nav-weight {
+      color: rgba(255,255,255,0.7);
     }
     
     /* KPI and Sidebar Rates */
@@ -2365,55 +2430,195 @@ export default function StairEstimation() {
       border-color: var(--sf-accent);
       background: white;
     }
-    .sc-rates-content {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 9.5px;
-    }
-    .sc-dot-sep {
-      opacity: 0.3;
-      font-weight: 900;
-    }
-    .sc-sidebar-rates-pill b {
-      color: var(--sf-text);
-    }
-    
     .sc-header-meta {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 12px;
-      margin-top: 8px;
-    }
-    .sc-meta-dot {
-      color: #CBD5E1;
-      font-weight: 900;
+      gap: 10px;
+      margin-bottom: 2px;
     }
     .sc-header-rates {
       display: flex;
       align-items: center;
       gap: 16px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(0,0,0,0.05);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 11px;
-      color: #64748B;
+      margin-top: 8px;
+      padding: 6px 14px;
+      background: #f8fafc;
+      border-radius: 100px;
+      border: 1px solid #e2e8f0;
+      width: fit-content;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
     .sc-rate-item {
       display: flex;
       align-items: center;
       gap: 6px;
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
     }
     .sc-rate-item b {
-      color: #0F172A;
-      font-weight: 700;
       font-family: 'Geist Mono', monospace;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
     }
-    .sc-rate-dot {
-      color: #CBD5E1;
+    /* Color-coding for rates */
+    .rate-steel b { color: #2563eb; background: rgba(37, 99, 235, 0.05); }
+    .rate-shop b  { color: #059669; background: rgba(5, 150, 105, 0.05); }
+    .rate-field b { color: #0d9488; background: rgba(13, 148, 136, 0.05); }
+    .rate-scrap b { color: #d97706; background: rgba(217, 119, 6, 0.05); }
+    .rate-tax b   { color: #7c3aed; background: rgba(124, 58, 237, 0.05); }
+
+    .sc-rate-input {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      font-weight: 800;
+      font-family: 'Geist Mono', monospace;
+      width: 58px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      text-align: center;
+      font-size: 11px;
+    }
+    .sc-rate-input:focus {
+      border-color: #10a37f;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1);
+    }
+    .sc-rate-unit {
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: -2px;
+    }
+    .sc-rate-edit-btn {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 8px;
+      text-transform: uppercase;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .sc-rate-edit-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+    }
+    .sc-rate-edit-btn.active {
+      background: #10a37f;
+      color: white;
+      border-color: #10a37f;
+    }
+    .sc-dot-sep {
+      opacity: 0.3;
       font-weight: 900;
+      color: #cbd5e1;
+    }
+    .sc-est-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    .sc-est-table th {
+      padding: 12px 14px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #64748b;
+      border-bottom: 2px solid #f1f5f9;
+      background: #f8fafc;
+      white-space: nowrap;
+    }
+    .sc-est-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #475569;
+      vertical-align: middle;
+      font-weight: 500;
+    }
+    .sc-row-label {
+      text-align: right;
+      font-weight: 700 !important;
+      color: #1e293b !important;
+      font-size: 12.5px !important;
+      background: #fdfdfd;
+      width: 220px;
+    }
+    .sc-num-cell {
+      text-align: center;
+      font-family: 'Geist Mono', monospace;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .sc-money {
+      color: #10a37f !important;
+      font-weight: 800 !important;
+    }
+    .sc-total-num {
+      font-size: 16px !important;
+      color: #10a37f !important;
+      font-weight: 900 !important;
+    }
+    .sc-col-shaded {
+      background: #fcfcfc !important;
+    }
+    .sc-yes-badge {
+      background: #10a37f !important;
+      color: white !important;
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+      font-size: 9px !important;
+      font-weight: 900 !important;
+    }
+    .sc-totals-box {
+      margin: 24px 24px 24px auto;
+      background: #ffffff;
+      border: 2px solid #0f172a;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      width: 420px;
+    }
+    .sc-total-row {
+      padding: 14px 20px;
+      font-size: 14px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .sc-grand-total {
+      background: #0f172a !important;
+      padding: 18px 20px !important;
+    }
+    .sc-grand-total span:first-child {
+      color: rgba(255,255,255,0.7);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 11px;
+    }
+    .sc-grand-total .pulsing-total {
+      font-size: 28px !important;
+      font-weight: 900 !important;
+      background: linear-gradient(135deg, #10a37f 0%, #34d399 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+    .sc-adj-total-row {
+      background: #f0fdfa;
+      border-top: 1px solid #10a37f;
+    }
+    .sc-adj-total-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: #10a37f;
     }
 
     /* Classic Confirm Modal Styling */
@@ -2647,6 +2852,10 @@ export default function StairEstimation() {
                 (stair.rails || []).reduce((sum, r) => sum + (r.totalCost || 0), 0) +
                 (stair.landings || []).reduce((sum, l) => sum + (l.totalCost || 0), 0);
 
+              const assemblyWeight = (stair.totalWeight || 0) +
+                (stair.rails || []).reduce((sum, r) => sum + (r.totalWeight || 0), 0) +
+                (stair.landings || []).reduce((sum, l) => sum + (l.totalWeight || 0), 0);
+
               return (
                 <div key={stair.id} className="sc-stair-nav-wrapper">
                   <div className={`sc-stair-nav-group ${activeId === stair.id ? 'active' : ''}`}>
@@ -2659,7 +2868,10 @@ export default function StairEstimation() {
                     >
                       <span className="sc-nav-bullet" />
                       <span className="sc-nav-name">{stair.label}</span>
-                      {assemblyTotal > 0 && <span className="sc-nav-tag">${Math.round(assemblyTotal).toLocaleString()}</span>}
+                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                        {assemblyWeight > 0 && <span className="sc-nav-weight">{Math.round(assemblyWeight)} lb</span>}
+                        {assemblyTotal > 0 && <span className="sc-nav-tag">${Math.round(assemblyTotal).toLocaleString()}</span>}
+                      </div>
                     </button>
                     <button className="sc-stair-copy-btn" onClick={() => duplicateStair(stair.id)} title="Duplicate Stair">
                       <Copy size={12} />
@@ -2667,21 +2879,28 @@ export default function StairEstimation() {
                   </div>
 
                   {/* Micro Cost Breakdown */}
-                  {activeId === stair.id && assemblyTotal > 0 && (
+                  {activeId === stair.id && (
                     <div className="sc-cost-breakdown">
-                      {stair.totalCost > 0 && (
+                      {stair.totalCost > 0 ? (
                         <button className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `stair-${stair.id}`)}>
-                          Stringers & pans <span className="bc-val">${Math.round(stair.totalCost).toLocaleString()}</span>
+                          <span><span className="bc-branch">↳</span>Stringers & Pans</span>
+                          <span className="bc-val">${Math.round(stair.totalCost).toLocaleString()}</span>
                         </button>
+                      ) : (
+                        <div style={{ padding: '4px 6px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>
+                          No flight geometry defined
+                        </div>
                       )}
                       {(stair.landings || []).map((l, i) => (
                         <button key={l.id} className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `landing-${l.id}`)}>
-                          {l.label} <span className="bc-val">${Math.round(l.totalCost || 0).toLocaleString()}</span>
+                          <span><span className="bc-branch">↳</span>{l.label}</span>
+                          <span className="bc-val">${Math.round(l.totalCost || 0).toLocaleString()}</span>
                         </button>
                       ))}
                       {(stair.rails || []).map((r, i) => (
                         <button key={r.id} className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `rail-${r.id}`)}>
-                          {r.label} <span className="bc-val">${Math.round(r.totalCost || 0).toLocaleString()}</span>
+                          <span><span className="bc-branch">↳</span>{r.label}</span>
+                          <span className="bc-val">${Math.round(r.totalCost || 0).toLocaleString()}</span>
                         </button>
                       ))}
                     </div>
@@ -2758,6 +2977,7 @@ export default function StairEstimation() {
             {stairs.map(s => (
               <div 
                 key={s.id} 
+                ref={el => stairTabRefs.current[s.id] = el}
                 className={`stair-tab ${activeId === s.id ? 'active' : ''}`}
                 onClick={() => setActiveId(s.id)}
               >
@@ -2774,22 +2994,42 @@ export default function StairEstimation() {
 
           {/* Sub-navigation: Flights for Active Stair (Only if multiple flights exist) */}
           {stairs.find(s => s.id === activeId)?.flights?.length > 0 && (
-            <div className="flight-tabs fade-in">
-              <span className="flight-tabs-label">Quick Jump:</span>
+            <div className="flight-tabs fade-in" style={{ position: 'relative', paddingLeft: arrowOffset + 30 }}>
+              <motion.div 
+                animate={{ x: arrowOffset }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{ 
+                  position: 'absolute', 
+                  left: 0, 
+                  color: '#10a37f', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  opacity: 0.8,
+                  height: '100%' 
+                }}
+              >
+                <CornerDownRight size={14} strokeWidth={3} />
+              </motion.div>
+              
               <div 
                 className="flight-tab"
                 onClick={() => jumpTo(activeId, `stair-${activeId}`)}
               >
                 Flight 1
               </div>
+              
               {stairs.find(s => s.id === activeId).flights.map((f, i) => (
-                <div 
-                  key={f.id} 
-                  className="flight-tab"
-                  onClick={() => jumpTo(activeId, `flight-${f.id}`)}
-                >
-                  {f.label}
-                </div>
+                <React.Fragment key={f.id}>
+                  <div className="flight-tab-sep">
+                    <ArrowRight size={12} strokeWidth={3} />
+                  </div>
+                  <div 
+                    className="flight-tab"
+                    onClick={() => jumpTo(activeId, `flight-${f.id}`)}
+                  >
+                    {f.label}
+                  </div>
+                </React.Fragment>
               ))}
             </div>
           )}
@@ -2813,25 +3053,80 @@ export default function StairEstimation() {
               </div>
 
               <div className="sc-header-rates">
-                <div className={`sc-rate-item ${localConfig.steel_price_per_lb ? 'text-blue-600 font-bold' : ''}`}>
-                  Steel <b>${localConfig.steel_price_per_lb ?? configManager.get('steel_price_per_lb')}/lb</b>
+                <div className="sc-rate-item rate-steel">
+                  Steel 
+                  {isEditingRates ? (
+                    <input 
+                      type="number" step="0.01" className="sc-rate-input"
+                      value={localConfig.steel_price_per_lb ?? configManager.get('steel_price_per_lb')}
+                      onChange={(e) => updateLocalRate('steel_price_per_lb', e.target.value)}
+                    />
+                  ) : (
+                    <b>${localConfig.steel_price_per_lb ?? configManager.get('steel_price_per_lb')}</b>
+                  )}
+                  <span className="sc-rate-unit">/lb</span>
                 </div>
-                <div className="sc-rate-dot">·</div>
-                <div className={`sc-rate-item ${localConfig.shop_hourly_rate ? 'text-blue-600 font-bold' : ''}`}>
-                  Shop <b>${localConfig.shop_hourly_rate ?? configManager.get('shop_hourly_rate')}/hr</b>
+                <div className="sc-dot-sep">·</div>
+                <div className="sc-rate-item rate-shop">
+                  Shop 
+                  {isEditingRates ? (
+                    <input 
+                      type="number" className="sc-rate-input"
+                      value={localConfig.shop_hourly_rate ?? configManager.get('shop_hourly_rate')}
+                      onChange={(e) => updateLocalRate('shop_hourly_rate', e.target.value)}
+                    />
+                  ) : (
+                    <b>${localConfig.shop_hourly_rate ?? configManager.get('shop_hourly_rate')}</b>
+                  )}
+                  <span className="sc-rate-unit">/hr</span>
                 </div>
-                <div className="sc-rate-dot">·</div>
-                <div className={`sc-rate-item ${localConfig.field_hourly_rate ? 'text-blue-600 font-bold' : ''}`}>
-                  Field <b>${localConfig.field_hourly_rate ?? configManager.get('field_hourly_rate')}/hr</b>
+                <div className="sc-dot-sep">·</div>
+                <div className="sc-rate-item rate-field">
+                  Field 
+                  {isEditingRates ? (
+                    <input 
+                      type="number" className="sc-rate-input"
+                      value={localConfig.field_hourly_rate ?? configManager.get('field_hourly_rate')}
+                      onChange={(e) => updateLocalRate('field_hourly_rate', e.target.value)}
+                    />
+                  ) : (
+                    <b>${localConfig.field_hourly_rate ?? configManager.get('field_hourly_rate')}</b>
+                  )}
+                  <span className="sc-rate-unit">/hr</span>
                 </div>
-                <div className="sc-rate-dot">·</div>
-                <div className={`sc-rate-item ${localConfig.scrap_factor_pct ? 'text-blue-600 font-bold' : ''}`}>
-                  Scrap <b>{localConfig.scrap_factor_pct ?? configManager.get('scrap_factor_pct')}%</b>
+                <div className="sc-dot-sep">·</div>
+                <div className="sc-rate-item rate-scrap">
+                  Scrap 
+                  {isEditingRates ? (
+                    <input 
+                      type="number" className="sc-rate-input"
+                      value={localConfig.scrap_factor_pct ?? configManager.get('scrap_factor_pct')}
+                      onChange={(e) => updateLocalRate('scrap_factor_pct', e.target.value)}
+                    />
+                  ) : (
+                    <b>{localConfig.scrap_factor_pct ?? configManager.get('scrap_factor_pct')}%</b>
+                  )}
                 </div>
-                <div className="sc-rate-dot">·</div>
-                <div className={`sc-rate-item ${localConfig.tax_rate ? 'text-blue-600 font-bold' : ''}`}>
-                  Tax <b>{((localConfig.tax_rate ?? configManager.get('tax_rate')) * 100).toFixed(1)}%</b>
+                <div className="sc-dot-sep">·</div>
+                <div className="sc-rate-item rate-tax">
+                  Tax 
+                  {isEditingRates ? (
+                    <input 
+                      type="number" step="0.1" className="sc-rate-input"
+                      value={((localConfig.tax_rate ?? configManager.get('tax_rate')) * 100).toFixed(1)}
+                      onChange={(e) => updateLocalRate('tax_rate', e.target.value)}
+                    />
+                  ) : (
+                    <b>{((localConfig.tax_rate ?? configManager.get('tax_rate')) * 100).toFixed(1)}%</b>
+                  )}
                 </div>
+                
+                <button 
+                  className={`sc-rate-edit-btn ${isEditingRates ? 'active' : ''}`}
+                  onClick={() => setIsEditingRates(!isEditingRates)}
+                >
+                  {isEditingRates ? 'Done' : 'Edit Rates'}
+                </button>
               </div>
             </div>
             <div className="sc-header-actions">

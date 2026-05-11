@@ -23,9 +23,13 @@ class EstimationRepository {
 
     async findAll(filters = {}, companyId = null, userId = null) {
         let query = `
-            SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email, c.phone
+            SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email, c.phone,
+                   u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
+                   u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
+            LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+            LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
             WHERE 1=1
         `;
         let params = [];
@@ -57,9 +61,13 @@ class EstimationRepository {
     async findById(id, companyId = null, userId = null) {
         let query = `
             SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
-                   c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip
+                   c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip,
+                   u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
+                   u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
             FROM projects p
             LEFT JOIN customers c ON p.customer_id = c.id
+            LEFT JOIN users u_creator ON p.createdBy = u_creator.id
+            LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
             WHERE p.id = ?
         `;
         let params = [id];
