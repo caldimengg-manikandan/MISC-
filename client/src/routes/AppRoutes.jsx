@@ -36,7 +36,8 @@ import LicenseManagement from '../pages/SuperAdmin/LicenseManagement';
 import UserManagement from '../pages/SuperAdmin/UserManagement';
 import ActivityLogs from '../pages/SuperAdmin/ActivityLogs';
 
-
+// Library Hub
+import LibraryHub from '../pages/Library/LibraryHub';
 
 const EngRoute = ({ element }) => (
   <PrivateRoute>
@@ -89,6 +90,10 @@ const AppRoutes = () => {
       <Route path="/superadmin/config" element={<SaEngRoute element={<Placeholder type="SuperAdmin System Config" />} />} />
       <Route path="/superadmin" element={<Navigate to="/superadmin/dashboard" replace />} />
 
+
+      {/* Library Hub — admin/owner/superadmin only (enforced at API level) */}
+      <Route path="/library" element={<EngRoute element={<LibraryHub />} />} />
+      <Route path="/library/:category" element={<EngRoute element={<LibraryHub />} />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

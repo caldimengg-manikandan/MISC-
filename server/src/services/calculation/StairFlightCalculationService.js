@@ -27,6 +27,10 @@ class StairFlightCalculationService {
       connectionTypeTop = 'WELDED',
       finish = 'PRIMER',
       galvRatePerLb = 0.50, // Standard specified rate
+      panPlateConfigId = null,
+      panPlateTypeId = null,
+      panSupportTypeId = null,
+      gaugeId = null,
       estimateId = null,
     } = payload;
 
@@ -100,11 +104,36 @@ class StairFlightCalculationService {
     if (stairType === 'pan-concrete' || stairType === '76') {
       // ID 76 (PAN PLATE): Area = Width * (Run / 12) * Risers
       componentArea = stairWidthFt * (runIn / 12) * numRisers;
-      // Pan Burdened Weight = Area * 12.5 lbs/sqft * 1.11 markup
-      panWeight = this.roundExcel(componentArea * 12.5 * (1 + markup), 2);
-      // Labor from platform_types or standard rates (using standard 0.05 hr/sqft if not specified)
-      shopLaborHrs += componentArea * 0.05;
-      fieldLaborHrs += componentArea * 0.02;
+      
+      // Get Pan Plate Config with fallback logic
+      let panConfig = {
+        steelLbsLf: 5.0,   // Default 5 lbs/SF
+        shopLaborMhLf: 1.2, // Default 1.2 hrs/SF
+        fieldLaborMhLf: 0
+      };
+
+      if (panPlateConfigId) {
+        const [configRows] = await db.query(
+          "SELECT * FROM dictionary WHERE id = ? AND category = 'pan_plate_config'",
+          [panPlateConfigId]
+        );
+        if (configRows && configRows.length > 0) {
+          panConfig.steelLbsLf = parseFloat(configRows[0].steelLbsLf) || panConfig.steelLbsLf;
+          panConfig.shopLaborMhLf = parseFloat(configRows[0].shopLaborMhLf) || panConfig.shopLaborMhLf;
+          panConfig.fieldLaborMhLf = parseFloat(configRows[0].fieldLaborMhLf) || panConfig.fieldLaborMhLf;
+        }
+      } else if (gaugeId) {
+        // Fallback for legacy estimates
+        const [gaugeRows] = await db.query("SELECT steelLbsLf FROM dictionary WHERE id = ?", [gaugeId]);
+        if (gaugeRows && gaugeRows.length > 0) panConfig.steelLbsLf = parseFloat(gaugeRows[0].steelLbsLf) || panConfig.steelLbsLf;
+        // Optionally fetch panPlateTypeId if it contains shop_hours, but let's stick to defaults for safety
+      }
+
+      // Pan Burdened Weight = Area * Config Weight * (1 + markup)
+      panWeight = this.roundExcel(componentArea * panConfig.steelLbsLf * (1 + markup), 2);
+      // Labor from config
+      shopLaborHrs += componentArea * panConfig.shopLaborMhLf;
+      fieldLaborHrs += componentArea * panConfig.fieldLaborMhLf;
     } else if (stairType === 'grating-tread' || stairType === '77') {
       // ID 77 (GRATING TREAD): Tiered pricing based on Width (Standard matrix)
       // 🔄 EXCEL PARITY: Updated base rates per user request ($71.10, $78.60, $87.80, $95.30)

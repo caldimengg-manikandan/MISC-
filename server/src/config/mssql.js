@@ -49,7 +49,11 @@ module.exports = {
       params.forEach((val, i) => {
         const paramName = `p${i}`;
         request.input(paramName, val);
-        sqlText = sqlText.replace('?', `@${paramName}`);
+        // Replace '?' one by one to avoid global replace issues
+        const index = sqlText.indexOf('?');
+        if (index !== -1) {
+          sqlText = sqlText.substring(0, index) + `@${paramName}` + sqlText.substring(index + 1);
+        }
       });
     }
     

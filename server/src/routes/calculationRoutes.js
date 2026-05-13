@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/mssql');
+const auth = require('../middleware/auth');
 const calcService = require('../services/calculation/StairCalculationService');
 const flightCalcService = require('../services/calculation/StairFlightCalculationService');
+const panPlateService = require('../services/estimation/PanPlateRecommendationService');
 
 /**
  * POST /api/calculate/stair-flight
@@ -79,6 +81,35 @@ router.post('/calculate', async (req, res) => {
     res.json({ success: true, ...result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * GET /api/calculate/pan-plate-recommendation
+ */
+router.get('/pan-plate-recommendation', auth, async (req, res) => {
+  try {
+    const { width, length, stairType, applicationType, gauge } = req.query;
+    const adminOwnerId = req.userRole === 'admin' || req.userRole === 'superadmin' ? req.userId : req.user.admin_owner_id;
+    const recommendation = await panPlateService.getRecommendedPanPlate(
+      width, length, stairType, applicationType, adminOwnerId, gauge
+    );
+    return res.json({ success: true, recommendation });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/calculate/validate-pan-plate-dimensions
+ */
+router.post('/validate-pan-plate-dimensions', auth, async (req, res) => {
+  try {
+    const { configId, width, length, applicationType } = req.body;
+    const validation = await panPlateService.validatePanPlateForDimensions(configId, width, length, applicationType);
+    return res.json(validation);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 });
 

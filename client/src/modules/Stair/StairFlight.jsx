@@ -9,6 +9,10 @@ import { calculateStairGeometry, debounce } from '../../services/estimationServi
 import { normalizeToInches, normalizeToFeet, parseArchitecturalInput, parseToFeet } from '../../utils/mathUtils';
 import toast from 'react-hot-toast';
 
+import PanPlateWeightCalculationService from '../../services/PanPlateWeightCalculationService';
+import StringerWeightCalculationService from '../../services/StringerWeightCalculationService';
+import PanPlateLaborCalculationService from '../../services/PanPlateLaborCalculationService';
+
 // Fallback hardcoded lists (used while loading or if API fails)
 const DEFAULT_STAIR_TYPES = [
   { value: 'pan-concrete', label: 'PAN PLATE CONC. FILLED' },
@@ -32,7 +36,14 @@ const DEFAULT_STRINGER_SIZES = [
   'HSS12x2x3/16',
   'HSS12x2x1/4'
 ];
-const DEFAULT_CONNECTION_TYPES = ['Welded', 'Bolted'];
+const DEFAULT_CONNECTION_TYPES = [
+  'Type-1(Single support)', 
+  'Type-2(Dual support)', 
+  'Type-3(bent plate)', 
+  'Type-(Welded)', 
+  'Welded', 
+  'Bolted'
+];
 const DEFAULT_FINISH_OPTIONS = ['Primer', 'Painted', 'Galvanized', 'Galv+Painted', 'Powder Coated'];
 
 const DEFAULT_GRATING_TYPES = [
@@ -149,10 +160,35 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
       { value: 'anchored', label: 'Anchored' },
       { value: 'embedded', label: 'Embedded' }
     ],
-    steelGrades: ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
+    steelGrades: ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'],
+    panPlateConfigs: []
   });
 
   const [quickModal, setQuickModal] = useState({ isOpen: false, category: '', label: '', rect: null });
+
+  // Thickness handling (GAUGE OR MANUAL)
+  const [thicknessSource, setThicknessSource] = useState('gauge');  // 'gauge' or 'manual'
+  const [selectedGauge, setSelectedGauge] = useState('12ga');
+  const [manualThicknessInches, setManualThicknessInches] = useState('0.1046');
+
+  // Calculation results
+  const [panPlateWeightResult, setPanPlateWeightResult] = useState(null);
+  const [panPlateLaborResult, setPanPlateLaborResult] = useState(null);
+  const [stringerWeightResult, setStringerWeightResult] = useState(null);
+
+  // Gauge thickness lookup table
+  const GAUGE_THICKNESS = {
+    '7ga': 0.1793,
+    '10ga': 0.1345,
+    '11ga': 0.1196,
+    '12ga': 0.1046,
+    '14ga': 0.0747,
+    '16ga': 0.0598,
+    '18ga': 0.0478,
+    '20ga': 0.0359,
+    '22ga': 0.0299,
+    '24ga': 0.0239
+  };
 
   // Fetch dynamic lists from Admin Dictionary
   const loadAll = useCallback(async () => {
@@ -168,28 +204,30 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
       } catch (e) { return []; }
     };
 
-    const [st, gt, ss, fo, ct, sg, mt] = await Promise.all([
+    const [st, gt, ss, fo, ct, sg, mt, ppc] = await Promise.all([
       fetchList('stair_type'),
       fetchList('grating_type'),
       fetchList('stringer_size'),
       fetchList('finish_option'),
       fetchList('connection_type'),
-      fetchList('steel_grade_stair'),
-      fetchList('mounting_type')
+      fetchList('material_type'),
+      fetchList('mounting_type'),
+      fetchList('pan_plate_config')
     ]);
 
     setDropdowns({
       stairTypes: st.length > 0 ? st : DEFAULT_STAIR_TYPES,
       gratingTypes: gt.length > 0 ? gt.map(i => i.label || i.value) : DEFAULT_GRATING_TYPES,
-      stringerSizes: ss.length > 0 ? ss.map(i => i.label || i.value) : DEFAULT_STRINGER_SIZES,
+      stringerSizes: ss.length > 0 ? ss.map(i => i.description || (i.label && i.label.length > 5 ? i.label : (i.value || i.label))) : DEFAULT_STRINGER_SIZES,
       stringerSizesData: ss,
-      finishes: fo.length > 0 ? fo.map(i => i.label || i.value) : DEFAULT_FINISH_OPTIONS,
+      finishes: fo.length > 0 ? [...new Set(fo.map(i => i.label || i.value))] : DEFAULT_FINISH_OPTIONS,
       connections: ct.length > 0 ? ct.map(i => i.label || i.value) : DEFAULT_CONNECTION_TYPES,
       mountingTypes: mt.length > 0 ? mt : [
         { value: 'anchored', label: 'Anchored' },
         { value: 'embedded', label: 'Embedded' }
       ],
-      steelGrades: sg.length > 0 ? sg.map(i => i.label || i.value) : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304']
+      steelGrades: sg.length > 0 ? sg : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'],
+      panPlateConfigs: ppc || []
     });
   }, []);
 
@@ -208,7 +246,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
     stairNumber: stair.stairNumber || '',
     stairCategory: stair.stairCategory || 'Commercial',
     stairType: (stair.stairType && stair.stairType !== '') ? stair.stairType : 'pan-concrete',
-    panPlThk: (stair.panPlThk && stair.panPlThk.value) ? stair.panPlThk : { value: '12ga', unit: 'IN' },
+    panPlThk: (stair.panPlThk && stair.panPlThk.value) ? stair.panPlThk : { value: '0.1046', unit: 'IN' },
     gratingType: stair.gratingType || '',
     stairWidth: (stair.stairWidth && typeof stair.stairWidth === 'object') ? stair.stairWidth : { value: stair.stairWidth || '', unit: 'FT' },
     run: stair.run || { value: '', unit: 'IN' },
@@ -220,6 +258,8 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
     stringerType: stair.stringerType || 'Rolled',
     stringerSize: stair.stringerSize || '',
     steelGrade: stair.steelGrade || 'A36',
+    materialGradeId: stair.materialGradeId || '',
+    gaugeId: stair.gaugeId || '',
     plateThk: stair.plateThk || '',
     plateWidth: stair.plateWidth || '',
     nsStringerBot: (stair.nsStringerBot && typeof stair.nsStringerBot === 'object') ? stair.nsStringerBot : { value: stair.nsStringerBot || '', unit: 'FT' },
@@ -233,8 +273,14 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
     stringerLength: (stair.stringerLength && typeof stair.stringerLength === 'object') ? stair.stringerLength : { value: stair.stringerLength || '', unit: 'FT' },
     finish: stair.finish || 'Primer',
     mountingType: stair.mountingType || '',
-    selectionSource: (stair.selectionSource) || (stair.stringerSize && stair.stringerSize !== '' ? 'manual' : 'auto')
+    panPlateConfigId: stair.panPlateConfigId || '',
+    selectionSource: (stair.selectionSource) || (stair.stringerSize && stair.stringerSize !== '' ? 'manual' : 'auto'),
+    panPlateSelectionSource: (stair.panPlateSelectionSource) || (stair.panPlateConfigId && stair.panPlateConfigId !== '' ? 'manual' : 'auto'),
+    applicationType: stair.applicationType || 'Commercial / Standard Duty'
   });
+
+  const [recommendedPanPlateConfig, setRecommendedPanPlateConfig] = useState(null);
+  const [panPlateValidationMessage, setPanPlateValidationMessage] = useState('');
 
   // Sync state if stair data changes from outside (duplication/undo)
   useEffect(() => {
@@ -272,6 +318,10 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
           stairType: (stair.stairType && stair.stairType !== '') ? stair.stairType : (f.stairType || 'pan-concrete'),
           stringerType: withDefault('stringerType', 'Rolled'),
           steelGrade: withDefault('steelGrade', 'A36'),
+          materialGradeId: withDefault('materialGradeId', ''),
+          panPlateConfigId: withDefault('panPlateConfigId', ''),
+          panPlateSelectionSource: withDefault('panPlateSelectionSource', 'auto'),
+          applicationType: withDefault('applicationType', 'Commercial / Standard Duty'),
           finish: withDefault('finish', 'Primer')
         };
       });
@@ -415,9 +465,94 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
     }
   }, [recommendedStringerStr, form.selectionSource, form.gratingType]); // Added form.gratingType to trigger on grating changes
 
+  // --- Smart Auto-Suggest for Pan Plate Configuration ---
+  useEffect(() => {
+    const fetchPanPlateRecommendation = async () => {
+      if (!isPanStair || stairWidthFt <= 0 || totalRunFt <= 0) return;
+      try {
+        const token = localStorage.getItem('steel_token');
+        const appType = encodeURIComponent(form.applicationType || 'Commercial / Standard Duty');
+        const gaugeToMatch = thicknessSource === 'gauge' ? selectedGauge : '';
+        const res = await fetch(
+          `${API_BASE_URL}/api/v1/calculate/pan-plate-recommendation?width=${stairWidthFt}&length=${totalRunFt}&stairType=${form.stairType}&applicationType=${appType}&gauge=${gaugeToMatch}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = await res.json();
+        if (data.success && data.recommendation) {
+          setRecommendedPanPlateConfig(data.recommendation);
+          const recId = data.recommendation.id || data.recommendation.value;
+          const recLabel = data.recommendation.label || '';
+
+          if (form.panPlateSelectionSource === 'auto' && form.panPlateConfigId !== recId) {
+            // Smart Suggest Pan Support Type based on Recommendation
+            let suggestedSupport = form.connectionType;
+            if (recLabel.includes('TYPE-1')) suggestedSupport = 'Type-1(Single support)';
+            if (recLabel.includes('TYPE-2')) suggestedSupport = 'Type-2(Dual support)';
+
+            setForm(f => ({ 
+              ...f, 
+              panPlateConfigId: recId,
+              connectionType: suggestedSupport
+            }));
+            onChange({ ...form, panPlateConfigId: recId, connectionType: suggestedSupport });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch pan plate recommendation:', e);
+      }
+    };
+    fetchPanPlateRecommendation();
+  }, [stairWidthFt, totalRunFt, form.stairType, form.applicationType, form.panPlateSelectionSource, isPanStair, selectedGauge, thicknessSource]);
+
+  // Support Type Options Mapping
+  const supportTypeOptions = isPanStair 
+    ? [
+        { value: 'Type-1(Single support)', label: 'Type-1(Single support)' },
+        { value: 'Type-2(Dual support)', label: 'Type-2(Dual support)' },
+        { value: 'Type-3(bent plate)', label: 'Type-3(bent plate)' },
+        { value: 'Type-4(Welded)', label: 'Type-4(Welded)' }
+      ]
+    : dropdowns.connections.map(c => ({ 
+        value: c.label || c.value || c, 
+        label: c.label || c.value || c 
+      }));
+
+  useEffect(() => {
+    const validatePanPlateSelection = async () => {
+      if (!isPanStair || !form.panPlateConfigId || stairWidthFt <= 0 || totalRunFt <= 0) {
+        setPanPlateValidationMessage('');
+        return;
+      }
+      try {
+        const token = localStorage.getItem('steel_token');
+        const res = await fetch(`${API_BASE_URL}/api/v1/calculate/validate-pan-plate-dimensions`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            configId: form.panPlateConfigId,
+            width: stairWidthFt,
+            length: totalRunFt,
+            applicationType: form.applicationType || 'Commercial / Standard Duty'
+          })
+        });
+        const data = await res.json();
+        if (!data.valid && data.issues && data.issues.length > 0) {
+          setPanPlateValidationMessage(data.issues.join(' • '));
+        } else {
+          setPanPlateValidationMessage('');
+        }
+      } catch (e) {
+        console.error('Failed to validate pan plate selection:', e);
+      }
+    };
+    validatePanPlateSelection();
+  }, [form.panPlateConfigId, form.applicationType, stairWidthFt, totalRunFt, isPanStair]);
+
   let stringerWarning = null;
   let stringerWarningType = 'info';
-  const selectedScore = form.stringerSize ? scoredStringers.find(s => (s.label || s.value) === form.stringerSize)?.score : null;
+  const selectedScore = form.stringerSize ? scoredStringers.find(s => 
+    (s.label === form.stringerSize || s.value === form.stringerSize || s.description === form.stringerSize)
+  )?.score : null;
 
   if (bestMatch) {
     if (!form.stringerSize || selectedScore === 0) {
@@ -455,6 +590,140 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
     }
   }
 
+  const getActiveThickness = useCallback(() => {
+    if (thicknessSource === 'manual') {
+      return parseFloat(manualThicknessInches) || 0;
+    } else {
+      return GAUGE_THICKNESS[selectedGauge] || 0.1046;
+    }
+  }, [thicknessSource, manualThicknessInches, selectedGauge]);
+
+  const getProfileWeightPerFoot = useCallback(() => {
+    if (form?.stringerSize && typeof form.stringerSize === 'object') {
+      if (form.stringerSize.lbsPerFoot) return parseFloat(form.stringerSize.lbsPerFoot);
+      if (form.stringerSize.weight) return parseFloat(form.stringerSize.weight);
+      if (form.stringerSize.weightPerFoot) return parseFloat(form.stringerSize.weightPerFoot);
+      if (form.stringerSize.lbPerFt) return parseFloat(form.stringerSize.lbPerFt);
+    }
+    
+    if (typeof form?.stringerSize === 'string') {
+      const match = form.stringerSize.match(/x\s*([\d.]+)/i);
+      if (match && match[1]) {
+        return parseFloat(match[1]);
+      }
+      console.warn(`stringerSize is string '${form.stringerSize}', using fallback weight of 10.6 lbs/ft`);
+      return 10.6;
+    }
+    
+    return 10.6; // MC 12 X 10.6 default
+  }, [form?.stringerSize]);
+
+  const calculateAllMetrics = useCallback(() => {
+    try {
+      const panPlateConfig = dropdowns.panPlateConfigs?.find(
+        config => (config.id || config.value) === form.panPlateConfigId
+      ) || null;
+      
+      if (!panPlateConfig) {
+        console.warn('Pan plate config not found for ID:', form.panPlateConfigId);
+        return;
+      }
+      
+      const activeThickness = getActiveThickness();
+      const profileWeight = getProfileWeightPerFoot();
+      
+      // Calculate inputs properly using form mappings
+      const riserHeightInches = parseFloat(form.rise?.value) || 0;
+      const treadWidthInches = parseFloat(form.run?.value) || 0;
+      const stairWidthFeet = parseToFeet(form.stairWidth) || 0;
+      const stairLengthFeet = parseToFeet(form.stringerLength) || form.systemCalc?.stringerLengthFt || 0;
+      const numberOfRisers = parseFloat(form.numRisers) || form.systemCalc?.risers || 0;
+      
+      const panWeightService = new PanPlateWeightCalculationService();
+      const numberOfTreads = Math.max(0, (parseFloat(numberOfRisers) || 0) - 1);
+      const panWeightResult = panWeightService.calculatePanPlateWeight(
+        panPlateConfig,
+        riserHeightInches,
+        treadWidthInches,
+        stairWidthFeet,
+        activeThickness,
+        thicknessSource,
+        0.75,
+        numberOfTreads   // ← Pass total tread count for full-stair weight
+      );
+      setPanPlateWeightResult(panWeightResult);
+      
+      const panLaborService = new PanPlateLaborCalculationService();
+      const panLaborResult = panLaborService.calculateLaborCost(
+        stairWidthFeet,
+        stairLengthFeet,
+        panPlateConfig,
+        90,
+        125
+      );
+      setPanPlateLaborResult(panLaborResult);
+      
+      const stringerService = new StringerWeightCalculationService();
+      const stringerResult = stringerService.calculateStringerWeight(
+        profileWeight,
+        stairLengthFeet,
+        numberOfRisers,
+        2,
+        0.75
+      );
+      setStringerWeightResult(stringerResult);
+      
+      if (panWeightResult.success && panLaborResult.success && stringerResult.success) {
+        onChange?.({
+          ...form,
+          panPlateThickness: activeThickness,
+          panPlateThicknessSource: thicknessSource,
+          // ✅ Write gauge label & thickness back to form so payload builder can use them
+          panPlateGauge: thicknessSource === 'gauge' ? selectedGauge : null,
+          panPlateWeight: panWeightResult.panPlateWeight,
+          panPlateWeightWithScrap: panWeightResult.panPlateWeightWithScrap,
+          panPlateMaterialCost: panWeightResult.materialCost,
+          panPlateScrapCost: panWeightResult.scrapCost,
+          panPlateShopHours: panLaborResult.shopHours,
+          panPlateShopCost: panLaborResult.shopCost,
+          panPlateFieldHours: panLaborResult.fieldHours,
+          panPlateFieldCost: panLaborResult.fieldCost,
+          stringerWeight: stringerResult.totalWeightAllStringers,
+          stringerWeightWithScrap: stringerResult.totalWeightWithScrap,
+          stringerMaterialCost: stringerResult.materialCost,
+          stringerScrapCost: stringerResult.scrapCost
+        });
+      }
+    } catch (error) {
+      console.error('Calculation error:', error);
+    }
+  }, [
+    dropdowns.panPlateConfigs, form, getActiveThickness, getProfileWeightPerFoot, thicknessSource, onChange
+  ]);
+
+  useEffect(() => {
+    // We check either direct input form strings or the parsed systemCalc variables to avoid missing data cases.
+    if (form?.stairType === 'PAN PLATE CONC. FILLED' &&
+        form?.panPlateConfigId &&
+        form?.stairWidth && 
+        form?.rise && 
+        form?.run && 
+        (form?.stringerLength || form?.systemCalc?.stringerLengthFt)) {
+      calculateAllMetrics();
+    }
+  }, [
+    form?.panPlateConfigId,
+    form?.stairWidth,
+    form?.rise,
+    form?.run,
+    form?.stringerLength,
+    form?.systemCalc?.stringerLengthFt,
+    form?.stringerSize,
+    thicknessSource,
+    selectedGauge,
+    manualThicknessInches
+  ]);
+
   return (
     <div onPointerDown={onFocus}>
       {/* ── Identification ─────────────────────────────────────────── */}
@@ -462,45 +731,8 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
         <div className="group-header">Identification</div>
         <div className="form-grid form-grid-4">
           <div className="form-field">
-            <label className="form-label">Stair Category</label>
-            <div className="radio-group" style={{ display: 'flex', gap: '12px' }}>
-              {['Commercial', 'Industrial'].map(cat => (
-                <label key={cat}
-                  className={`radio-option ${form.stairCategory === cat ? 'selected active-radio-highlight' : ''}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #E2E8F0',
-                    borderColor: form.stairCategory === cat ? '#3B82F6' : '#E2E8F0',
-                    background: form.stairCategory === cat ? '#EFF6FF' : '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    transition: 'all 0.2s',
-                    color: form.stairCategory === cat ? '#1D4ED8' : '#64748B'
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name={`stairCategory-${stair?.id || 'default'}`}
-                    value={cat}
-                    checked={form.stairCategory === cat}
-                    onChange={() => set('stairCategory', cat)}
-                    style={{ accentColor: '#2563EB' }}
-                  />
-                  {cat} Stair
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-field">
             <label className="form-label">
-              Stair Type <span className="data-badge dt-string"></span>
+              Stair Type
               {isAdmin && (
                 <button
                   onClick={(e) => openManage('stair_type', 'Stair Types', e)}
@@ -521,23 +753,205 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             />
           </div>
 
+          {isPanStair && (
+            <div className="form-field fade-in">
+              <label className="form-label">
+                Finish Specification
+                {isAdmin && (
+                  <button
+                    onClick={(e) => openManage('finish_option', 'Finish Options', e)}
+                    className="quick-edit-btn"
+                    title="Manage Options"
+                  >
+                    <Settings size={14} />
+                  </button>
+                )}
+              </label>
+              <SearchableSelect
+                options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+                valueKey="value"
+                displayKey="label"
+                value={form.finish}
+                onSelect={opt => set('finish', opt?.value || '')}
+                placeholder="— Select Finish —"
+              />
+            </div>
+          )}
+
+
+
+          <div className="form-field">
+            <label className="form-label">
+              {isPanStair ? 'Pan support type' : 'Connection Type'}
+              {isAdmin && (
+                <button
+                  onClick={(e) => openManage('connection_type', 'Connection Types', e)}
+                  className="quick-edit-btn"
+                  title="Manage Options"
+                >
+                  <Settings size={14} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              options={supportTypeOptions}
+              valueKey="value"
+              displayKey="label"
+              value={form.connectionType}
+              onSelect={opt => set('connectionType', opt?.value || '')}
+              placeholder="— Select Connection —"
+            />
+          </div>
+
+
 
           {/* ── Conditional Pan / Tread Inputs (Same Line) ─────────────────────────────────── */}
           {isPanStair && (
-            <UnitInput
-              id="pan-thk"
-              label="Pan Pl. Thk"
-              value={form.panPlThk}
-              onChange={v => set('panPlThk', v)}
-              dtTag="DIM"
-              dtClass="dt-float"
-            />
+            <>
+
+              {/* Pan Plate Config auto-selected field */}
+              <div className="form-field">
+                <label className="form-label">
+                  Pan Plate Configuration
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => openManage('pan_plate_config', 'Pan Plate Configs', e)}
+                      className="quick-edit-btn"
+                      title="Manage Options"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  )}
+                </label>
+
+                {recommendedPanPlateConfig && (
+                  <div className="recommendation-banner fade-in" style={{ 
+                    marginBottom: '8px', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    background: form.panPlateSelectionSource === 'manual' ? '#F1F5F9' : '#ECFDF5',
+                    borderColor: form.panPlateSelectionSource === 'manual' ? '#E2E8F0' : '#A7F3D0',
+                    color: form.panPlateSelectionSource === 'manual' ? '#64748B' : '#059669'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Check size={14} style={{ marginRight: '6px' }}/>
+                      <span style={{ fontSize: '11px', fontWeight: 600 }}>
+                        Recommended: {Number(stairWidthFt).toFixed(0)}'W × {Number(totalRunFt).toFixed(2)}'L 
+                        {recommendedPanPlateConfig.label?.includes('TYPE-1') && ' · Single Support'}
+                        {recommendedPanPlateConfig.label?.includes('TYPE-2') && ' · Dual Support'}
+                      </span>
+                    </div>
+                    {form.panPlateSelectionSource === 'manual' && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const recId = recommendedPanPlateConfig.id || recommendedPanPlateConfig.value;
+                          const updated = { ...form, panPlateConfigId: recId, panPlateSelectionSource: 'auto' };
+                          setForm(updated);
+                          onChange(updated);
+                          toast.success('Applied recommendation');
+                        }}
+                        style={{
+                          background: '#3B82F6', color: 'white', border: 'none',
+                          padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
+                          fontSize: '10px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
+                        }}
+                      >
+                        Use Recommended
+                      </button>
+                    )}
+                  </div>
+                )}
+                {form.panPlateSelectionSource === 'manual' && !panPlateValidationMessage && form.panPlateConfigId && (
+                  <div className="info-banner fade-in" style={{ marginBottom: '8px', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}>
+                    <Settings size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }}/>
+                    Manually overridden
+                  </div>
+                )}
+                {panPlateValidationMessage && (
+                  <div className="warning-banner fade-in" style={{ marginBottom: '8px' }}>
+                    <AlertTriangle size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }}/>
+                    {panPlateValidationMessage}
+                  </div>
+                )}
+
+                <SearchableSelect
+                  options={dropdowns.panPlateConfigs.map(c => {
+                    // Strip the [bracketed range] from the label if it exists
+                    const cleanLabel = (c.label || '').replace(/\s*\[.*\]\s*$/, '').trim();
+                    return { value: c.id || c.value, label: cleanLabel };
+                  })}
+                  valueKey="value"
+                  displayKey="label"
+                  value={form.panPlateConfigId}
+                  onSelect={opt => {
+                    const updated = { ...form, panPlateConfigId: opt?.value || '', panPlateSelectionSource: 'manual' };
+                    setForm(updated);
+                    onChange(updated);
+                  }}
+                  placeholder="— Select Pan Plate Config —"
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">
+                  Plate Thickness
+                  <span className="data-badge dt-string"></span>
+                </label>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="form-input-with-unit" style={{ border: '1.5px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
+                    <input 
+                      type="text"
+                      className="arch-input"
+                      style={{ 
+                        height: '42px', 
+                        border: 'none', 
+                        padding: '0 12px',
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        color: '#1E293B',
+                        width: '100%'
+                      }}
+                      value={thicknessSource === 'gauge' ? selectedGauge : manualThicknessInches}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const clean = val.toLowerCase().trim();
+                        
+                        const isExplicitGauge = clean.includes('ga') || clean.includes('gauge');
+                        const numVal = parseFloat(clean);
+                        const isLikelyGauge = !isNaN(numVal) && numVal >= 7 && !clean.includes('.');
+
+                        if (isExplicitGauge || isLikelyGauge) {
+                          setThicknessSource('gauge');
+                          const match = clean.match(/(\d+)/);
+                          if (match) {
+                            setSelectedGauge(`${match[1]}ga`);
+                          } else {
+                            setSelectedGauge(val);
+                          }
+                        } else {
+                          setThicknessSource('manual');
+                          setManualThicknessInches(val);
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="e.g. 12ga or 0.1046"
+                    />
+                    <span className="form-input-unit" style={{ background: '#F1F5F9', color: '#64748B', fontWeight: 700, padding: '0 12px', display: 'flex', alignItems: 'center' }}>
+                      {thicknessSource === 'gauge' ? 'GA' : 'IN'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           {isGratingStair && (
             <div className="form-field fade-in">
               <label className="form-label">
-                Grating Tread Type <span className="data-badge dt-string"></span>
+                Grating Tread Type
                 {isAdmin && (
                   <button
                     onClick={(e) => openManage('grating_type', 'Grating Types', e)}
@@ -608,28 +1022,10 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             </div>
           )}
 
-          <div className="form-field">
-            <label className="form-label">
-              Finish Specification
-              {isAdmin && (
-                <button
-                  onClick={(e) => openManage('finish_option', 'Finish Options', e)}
-                  className="quick-edit-btn"
-                  title="Manage Options"
-                >
-                  <Settings size={14} />
-                </button>
-              )}
-            </label>
-            <SearchableSelect
-              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.finish}
-              onSelect={opt => set('finish', opt?.value || '')}
-              placeholder="— Select Finish —"
-            />
-          </div>
+
+
+
+
         </div>
       </div>
 
@@ -878,11 +1274,18 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
               )}
             </label>
             <SearchableSelect
-              options={dropdowns.steelGrades.map(s => ({ value: s, label: s }))}
+              options={dropdowns.steelGrades.map(s => ({ value: s.id || s, label: s.label || s }))}
               valueKey="value"
               displayKey="label"
-              value={form.steelGrade}
-              onSelect={opt => set('steelGrade', opt?.value || '')}
+              value={form.materialGradeId || form.steelGrade}
+              onSelect={opt => {
+                setForm(prev => ({
+                  ...prev,
+                  materialGradeId: opt?.value || '',
+                  steelGrade: opt?.label || ''
+                }));
+                onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
+              }}
               placeholder="— Select Grade —"
             />
           </div>
@@ -1040,7 +1443,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
                 </>
               )}
 
-              <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '10px', marginBottom: '4px', letterSpacing: '0.05em' }}>HARDWARE & SCRAP</div>
+              <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '10px', marginBottom: '4px', letterSpacing: '0.05em' }}>HARDWARE</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                 <span>Connections / Hardware Weight:</span>
                 <span>{(form.systemCalc.separatedCosts.total.weight - form.systemCalc.separatedCosts.stringer.weight - (form.systemCalc.separatedCosts.grating?.weight || 0) - (form.systemCalc.separatedCosts.panPlate?.weight || 0)).toFixed(1)} lbs</span>
@@ -1048,10 +1451,6 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                 <span>Connections / Bolts Cost:</span>
                 <span>${(Number(form.systemCalc.anchorBoltsCost || 0) + Number(form.systemCalc.porRokCost || 0)).toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                <span>Scrap Allowance ({form.systemCalc.scrapFactorPct}%):</span>
-                <span>${Number(form.systemCalc.scrapPriceOnly).toFixed(2)}</span>
               </div>
 
               <div style={{ borderTop: '1px dashed #CBD5E1', margin: '8px 0' }}></div>
@@ -1071,12 +1470,28 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             </div>
           )}
 
+          {/* Minimal Estimation Results Indicator */}
+          <div className="fade-in" style={{ display: 'flex', gap: '16px', marginBottom: '16px', fontSize: '11px', color: '#64748B', justifyContent: 'flex-end', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+            {stringerWeightResult?.success && (
+              <span>Stringer: <strong>{stringerWeightResult.display.total}</strong></span>
+            )}
+            {(!panPlateWeightResult?.success && !stringerWeightResult?.success) && (
+              <span style={{ fontStyle: 'italic' }}>Awaiting configuration...</span>
+            )}
+          </div>
+
           <EstimationPreviewCard
-            systemCalc={form.systemCalc}
+            systemCalc={{
+              ...form.systemCalc,
+              shopTotalHrs: form.systemCalc.stringerShopHrs,
+              fieldTotalHrs: form.systemCalc.stringerFieldHrs
+            }}
             totalCost={form.totalCost}
             stairType={form.stairType}
             finishName={form.finish}
             hidePorRok={true}
+            hideAnchorBolts={true}
+            minimal={true}
           />
         </div>
       )}
@@ -1088,6 +1503,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
         categoryLabel={quickModal.label}
         onUpdate={loadAll}
         triggerRect={quickModal.rect}
+        userRole={user?.role}
       />
 
       <style>{`

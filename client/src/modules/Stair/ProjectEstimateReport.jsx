@@ -29,7 +29,7 @@ export default function EstimateReport({ data, onBack }) {
     async function fetchPricing() {
       try {
         const token = localStorage.getItem('steel_token');
-        const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, { credentials: 'include',
+        const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const d = await res.json();
@@ -463,7 +463,8 @@ export default function EstimateReport({ data, onBack }) {
                     <th className="p-2 text-left font-bold border border-slate-300">Ref</th>
                     <th className="p-2 text-center font-bold border border-slate-300">Category</th>
                     <th className="p-2 text-center font-bold border border-slate-300">Stair Type</th>
-                    <th className="p-2 text-center font-bold border border-slate-300">Tread Setup</th>
+                    <th className="p-2 text-center font-bold border border-slate-300">Tread Setup / Grating</th>
+                    <th className="p-2 text-center font-bold border border-slate-300">Pan Thick</th>
                     <th className="p-2 text-center font-bold border border-slate-300">Mounting</th>
                     <th className="p-2 text-center font-bold border border-slate-300">Finish</th>
                     <th className="p-2 text-right font-bold border border-slate-300" style={{minWidth: '70px'}}>Wt(lbs)</th>
@@ -475,7 +476,8 @@ export default function EstimateReport({ data, onBack }) {
                       <td className="p-2 border border-slate-300"><b>{s.id ? `Stair ${i + 1}` : 'Stair'}</b></td>
                       <td className="p-2 text-center border border-slate-300">{s.stairCategory || 'Commercial'}</td>
                       <td className="p-2 text-center border border-slate-300">{s.stairType || '-'}</td>
-                      <td className="p-2 text-center border border-slate-300">{s.gratingType || '-'}</td>
+                      <td className="p-2 text-center border border-slate-300">{s.gratingTreadType || s.gratingType || '-'}</td>
+                      <td className="p-2 text-center border border-slate-300">{s.panPlThk || s.gaugeId || '-'}</td>
                       <td className="p-2 text-center border border-slate-300">{s.mountingType || '-'}</td>
                       <td className="p-2 text-center border border-slate-300">{s.finish || '-'}</td>
                       <td className="p-2 text-right border border-slate-300 font-bold bg-slate-50">{(s.totalWeight || s.systemCalc?.totalWeight || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>

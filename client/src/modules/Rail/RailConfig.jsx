@@ -91,17 +91,17 @@ const RAIL_CONFIGS = {
 
 // ── Suggestion Engine Helpers ──────────────────────────────────────────
 const parseRailAttributes = (label) => {
-  if (!label || label.includes("Optional Kick Plate")) return null;
-  // Wall/Grab Rails check - removed to allow parsing line counts for auto-settings
-  // if (label.toLowerCase().includes('wall bolted') || label.toLowerCase().includes('on guardrail')) return null;
+  if (!label) return null;
+  const s = label.toLowerCase();
+  if (s.includes("optional kick plate")) return null;
 
   return {
-    lines: label.match(/^(\d+)-Line/)?.[1] ? parseInt(label.match(/^(\d+)-Line/)[1]) : null,
-    pipeSize: label.includes('1 1/4') ? '1.25' : (label.includes('1 1/2') ? '1.5' : null),
-    postType: (label.includes('SCH 80') || label.includes('SCH. 80')) ? 'SCH80' : 'SCH40',
-    infill: label.match(/1\/2" picket|w\/1\/2/i) ? 'picket_half'
-           : label.match(/3\/4" picket|w\/3\/4/i) ? 'picket_three_quarter'
-           : label.match(/MESH/i) ? 'mesh'
+    lines: s.match(/^(\d+)-line/)?.[1] ? parseInt(s.match(/^(\d+)-line/)[1]) : null,
+    pipeSize: s.includes('1 1/4') ? '1.25' : (s.includes('1 1/2') ? '1.5' : null),
+    postType: (s.includes('sch 80') || s.includes('sch. 80')) ? 'SCH80' : 'SCH40',
+    infill: s.match(/1\/2" picket|w\/1\/2/) ? 'picket_half'
+           : s.match(/3\/4" picket|w\/3\/4/) ? 'picket_three_quarter'
+           : s.match(/mesh/) ? 'mesh'
            : 'pipe'
   };
 };
@@ -191,7 +191,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       fetchList('wallRail_type'),
       fetchList('grabRail_type'),
       fetchList('caneRail_type'),
-      fetchList('steel_grade_stair')
+      fetchList('material_type')
     ]);
 
     setDropdowns({
@@ -201,7 +201,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
       wallRailTypes: wrt.length > 0 ? wrt.map(i => i.label) : RAIL_CONFIGS.wallRail.types,
       grabRailTypes: gbt.length > 0 ? gbt.map(i => i.label) : RAIL_CONFIGS.grabRail.types,
       caneRailTypes: crt.length > 0 ? crt.map(i => i.label) : RAIL_CONFIGS.caneRail.types,
-      steelGrades: sg.length > 0 ? sg.map(i => i.label) : DEFAULT_STEEL_GRADES
+      steelGrades: sg.length > 0 ? sg : DEFAULT_STEEL_GRADES
     });
   }, []);
 
@@ -220,6 +220,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
     railType: data?.railType || '',
     railLength: data?.railLength || { value: '', unit: 'FT' },
     steelGrade: data?.steelGrade || 'A36',
+    materialGradeId: data?.materialGradeId || '',
     mountingType: data?.mountingType || '',
     intermediateRails: (data?.intermediateRails !== undefined && data?.intermediateRails !== null) ? data.intermediateRails : (type === 'caneRail' ? '0' : ''),
     postSpacing: data?.postSpacing || { value: '4', unit: 'FT' },
@@ -381,6 +382,98 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
           {type === 'guardRail' ? 'Guard Rail Specifications' : 'Rail Specifications'}
         </div>
 
+        {/* ── Identification Group ─────────────────────────────────────────── */}
+        <div className="subtle-group" style={{ marginBottom: '20px' }}>
+          <div className="group-header">Identification & Global Context</div>
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+            <div className="form-field">
+              <label className="form-label">
+                Material Type
+                {isAdmin && (
+                  <button onClick={(e) => openManage('material_type', 'Material Types', e)} className="quick-edit-btn" title="Manage Options">
+                    <Settings size={12} />
+                  </button>
+                )}
+              </label>
+              <SearchableSelect
+                className="compact-select"
+                options={dropdowns.steelGrades.map(sg => ({ value: sg.id || sg, label: sg.label || sg }))}
+                valueKey="value"
+                displayKey="label"
+                value={form.materialGradeId || form.steelGrade}
+                onSelect={opt => {
+                  setForm(prev => ({
+                    ...prev,
+                    materialGradeId: opt?.value || '',
+                    steelGrade: opt?.label || ''
+                  }));
+                  if (onChange) onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
+                }}
+                placeholder="— Select Type —"
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label">
+                Mounting Type
+                {isAdmin && (
+                  <button
+                    onClick={(e) => openManage('mounting_type', 'Mounting Types', e)}
+                    className="quick-edit-btn"
+                    title="Manage Options"
+                  >
+                    <Settings size={12} />
+                  </button>
+                )}
+              </label>
+              <SearchableSelect
+                className={`compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
+                options={dropdowns.mountings.map(m => ({ value: m, label: m }))}
+                valueKey="value"
+                displayKey="label"
+                value={form.mountingType}
+                onSelect={opt => set('mountingType', opt?.value || '')}
+                placeholder="— Select —"
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label">
+                Finish Specification
+                {isAdmin && (
+                  <button
+                    onClick={(e) => openManage('finish_option', 'Finish Options', e)}
+                    className="quick-edit-btn"
+                    title="Manage Options"
+                  >
+                    <Settings size={12} />
+                  </button>
+                )}
+              </label>
+              <SearchableSelect
+                className="compact-select"
+                options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+                valueKey="value"
+                displayKey="label"
+                value={form.finish}
+                onSelect={opt => set('finish', opt?.value || '')}
+                placeholder="— Select Finish —"
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label">Rail Number / ID</label>
+              <input
+                className="form-input compact-input"
+                value={form.railNumber || ''}
+                onChange={e => set('railNumber', e.target.value)}
+                onFocus={e => e.target.select()}
+                placeholder="e.g. R-01"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Suggestion Filters - OPTION B */}
         {(type === 'guardRail' || type === 'caneRail') && (
           <div className="suggestion-filters-box">
@@ -390,7 +483,14 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             </div>
             <div className="filters-grid">
               <div className="filter-group">
-                <label>Lines</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  Lines
+                  {isAdmin && (
+                    <button onClick={(e) => openManage(`${type}_type`, `${type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} Types`, e)} className="quick-edit-btn" title="Manage Options">
+                      <Settings size={12} />
+                    </button>
+                  )}
+                </label>
                 <div className="segmented-control">
                   {[1, 2, 3, 8].map(v => (
                     <button
@@ -404,7 +504,14 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
                 </div>
               </div>
               <div className="filter-group">
-                <label>Pipe Size</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  Pipe Size
+                  {isAdmin && (
+                    <button onClick={(e) => openManage(`${type}_type`, `${type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} Types`, e)} className="quick-edit-btn" title="Manage Options">
+                      <Settings size={12} />
+                    </button>
+                  )}
+                </label>
                 <div className="segmented-control">
                   {['1.25', '1.5'].map(v => (
                     <button
@@ -418,7 +525,14 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
                 </div>
               </div>
               <div className="filter-group">
-                <label>Post Type</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  Post Type
+                  {isAdmin && (
+                    <button onClick={(e) => openManage(`${type}_type`, `${type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} Types`, e)} className="quick-edit-btn" title="Manage Options">
+                      <Settings size={12} />
+                    </button>
+                  )}
+                </label>
                 <div className="segmented-control">
                   {['SCH40', 'SCH80'].map(v => (
                     <button
@@ -432,7 +546,14 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
                 </div>
               </div>
               <div className="filter-group">
-                <label>Infill</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  Infill
+                  {isAdmin && (
+                    <button onClick={(e) => openManage(`${type}_type`, `${type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} Types`, e)} className="quick-edit-btn" title="Manage Options">
+                      <Settings size={12} />
+                    </button>
+                  )}
+                </label>
                 <div className="segmented-control wrapable" data-group="infill">
                   {['pipe', 'picket_half', 'picket_three_quarter', 'mesh'].map(v => (
                     <button
@@ -481,7 +602,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
         {/* Primary Inputs Grid */}
         <div className="rail-specs-grid">
-          <div className="form-field" style={{ gridColumn: 'span 2' }}>
+          <div className="form-field" style={{ gridColumn: 'span 3' }}>
             <label className="form-label">
               {type === 'guardRail' ? 'Guard Rail Type' : 'Rail Type'} <span className="required">*</span>
               {isAdmin && (
@@ -501,15 +622,15 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
                 const isRec = (type === 'guardRail' || type === 'caneRail') && score === 2;
                 return { 
                   value: t, 
-                  label: `${t} ${isRec ? ' ★ (REC)' : ''}`,
-                  opacity: score === 0 ? 0.4 : 1
+                  label: t,
+                  isRecommended: isRec
                 };
               })}
               valueKey="value"
               displayKey="label"
               value={form.railType}
               onSelect={opt => handleManualSelection(opt?.value || '')}
-              placeholder="— Select Type —"
+              placeholder={`— Select ${type === 'guardRail' ? 'Guard' : ''} Rail Type —`}
             />
           </div>
 
@@ -524,10 +645,10 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
 
           <div className="form-field">
             <label className="form-label">
-              Steel Grade
+              Material Type
               {isAdmin && (
                 <button
-                  onClick={(e) => openManage('steel_grade_stair', 'Steel Grades', e)}
+                  onClick={(e) => openManage('material_type', 'Material Types', e)}
                   className="quick-edit-btn"
                   title="Manage Options"
                 >
@@ -537,12 +658,19 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             </label>
             <SearchableSelect
               className="compact-select"
-              options={dropdowns.steelGrades.map(sg => ({ value: sg, label: sg }))}
+              options={dropdowns.steelGrades.map(sg => ({ value: sg.id || sg, label: sg.label || sg }))}
               valueKey="value"
               displayKey="label"
-              value={form.steelGrade}
-              onSelect={opt => set('steelGrade', opt?.value || '')}
-              placeholder="— Select Grade —"
+              value={form.materialGradeId || form.steelGrade}
+              onSelect={opt => {
+                setForm(prev => ({
+                  ...prev,
+                  materialGradeId: opt?.value || '',
+                  steelGrade: opt?.label || ''
+                }));
+                if (onChange) onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
+              }}
+              placeholder="— Select Type —"
             />
           </div>
 
@@ -607,41 +735,6 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               )}
             </div>
           )}
-
-          <div className="form-field" style={{ display: config.hasIntermediateRails ? 'block' : 'none' }}>
-            <label className="form-label">
-              Intermediate Rails
-            </label>
-            <input
-              className="form-input data-type-int"
-              type="number"
-              value={form.intermediateRails || ''}
-              onChange={(e) => {
-                const updated = { ...form, intermediateRails: e.target.value, intRailSource: 'manual' };
-                setForm(updated);
-                if (onChange) onChange(updated);
-              }}
-              onFocus={e => e.target.select()}
-              placeholder="0"
-            />
-            {/* Auto-set hint */}
-            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource !== 'manual' && form.railType && parsedTypes[form.railType]?.lines && (
-              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: 'var(--color-text-tertiary, #94a3b8)', fontStyle: 'italic' }}>
-                Auto: based on {parsedTypes[form.railType].lines}-Line type
-              </span>
-            )}
-            {/* Manual override amber note */}
-            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource === 'manual' && data?.systemCalc?.intRailDelta !== undefined && data.systemCalc.intRailDelta !== 0 && (
-              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic', background: '#fffbeb', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
-                Custom count — steel lbs/LF adjusted proportionally
-              </span>
-            )}
-            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource === 'manual' && (data?.systemCalc?.intRailDelta === 0 || data?.systemCalc?.intRailDelta === undefined) && form.railType && parsedTypes[form.railType]?.lines && (
-              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic' }}>
-                Custom count
-              </span>
-            )}
-          </div>
 
           <div className="form-field" style={{ display: config.hasPosts ? 'block' : 'none' }}>
             <label className="form-label">
@@ -743,29 +836,34 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             </>
           )}
 
-          <div className="form-field">
-            <label className={`form-label ${showMountingWarning ? 'text-amber-600 font-bold' : ''}`}>Mounting</label>
-            <SearchableSelect
-              className={`compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
-              options={dropdowns.mountings.map(m => ({ value: m, label: m }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.mountingType}
-              onSelect={opt => set('mountingType', opt?.value || '')}
-              placeholder="— Select —"
+          <div className="form-field" style={{ gridColumn: 'span 2', display: config.hasIntermediateRails ? 'block' : 'none' }}>
+            <label className="form-label">
+              Intermediate Rails
+            </label>
+            <input
+              className="form-input data-type-int"
+              type="number"
+              value={form.intermediateRails || ''}
+              onChange={(e) => {
+                const updated = { ...form, intermediateRails: e.target.value, intRailSource: 'manual' };
+                setForm(updated);
+                if (onChange) onChange(updated);
+              }}
+              onFocus={e => e.target.select()}
+              placeholder="0"
             />
-          </div>
-          <div className="form-field">
-            <label className="form-label">Finish Specification</label>
-            <SearchableSelect
-              className="compact-select"
-              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.finish}
-              onSelect={opt => set('finish', opt?.value || '')}
-              placeholder="— Select Finish —"
-            />
+            {/* Auto-set hint */}
+            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource !== 'manual' && form.railType && parsedTypes[form.railType]?.lines && (
+              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: 'var(--color-text-tertiary, #94a3b8)', fontStyle: 'italic' }}>
+                Auto: based on {parsedTypes[form.railType].lines}-Line type
+              </span>
+            )}
+            {/* Manual override amber note */}
+            {(type === 'guardRail' || type === 'caneRail') && form.intRailSource === 'manual' && data?.systemCalc?.intRailDelta !== undefined && data.systemCalc.intRailDelta !== 0 && (
+              <span style={{ display: 'block', marginTop: '3px', fontSize: '10px', color: '#92400e', fontStyle: 'italic', background: '#fffbeb', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
+                Custom count — steel lbs/LF adjusted proportionally
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -782,6 +880,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             hidePricePerRiser={true}
             title="Rail Configuration Preview"
             mountingType={form.mountingType}
+            minimal={true}
           />
         </div>
       )}
@@ -796,6 +895,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
         categoryLabel={quickModal.label}
         onUpdate={load}
         triggerRect={quickModal.rect}
+        userRole={user?.role}
         defaultOptions={
           quickModal.category === 'finish_option' ? DEFAULT_FINISH_OPTIONS :
             quickModal.category === 'mounting_type' ? DEFAULT_MOUNTING_OPTIONS :

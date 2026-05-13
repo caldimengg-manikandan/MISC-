@@ -687,6 +687,10 @@ button.form-input-unit:hover {
   border-bottom: 1px solid var(--sf-border);
   background: var(--sf-bg);
   text-align: left;
+  /* FREEZE */
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .eng-table td {
@@ -1058,15 +1062,29 @@ button.form-input-unit:hover {
 .subtle-group:nth-of-type(10) { z-index: 21; }
 
 .group-header {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: #94a3b8;
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.5px !important;
+  color: #10a37f !important;
+  margin-bottom: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  
+  /* FREEZE LOGIC */
+  position: sticky !important;
+  top: -1px !important;
+  background: white !important;
+  z-index: 45 !important;
+  padding: 12px 10px !important;
+  margin: -12px -10px 24px -10px !important;
+  
+  /* HIGHLIGHT LOGIC */
+  border-left: 4px solid #10a37f !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  border-radius: 0 4px 4px 0 !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
 }
 .group-header::after {
   content: '';

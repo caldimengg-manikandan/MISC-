@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StairFlight from './StairFlight';
 import LandingConfig from '../Landing/LandingConfig';
@@ -923,6 +923,34 @@ export default function StairEstimation() {
   const [isEditingRates, setIsEditingRates] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', resolve: null });
 
+  // --- Aggregations for Calculation Summary Dashboard ---
+  // NOTE: These read from estimationResult.breakdown (post-estimation backend results),
+  // NOT from the raw stairs[] state which only contains user-input form data.
+  const aggregatePanPlateWeight = useMemo(() => {
+    const breakdown = estimationResult?.breakdown?.stairs || [];
+    return breakdown.reduce((total, stair) => {
+      const stairPan = stair.systemCalc?.panPlateWeight || 0;
+      const flightsPan = (stair.flights || []).reduce(
+        (fs, flight) => fs + (flight.systemCalc?.panPlateWeight || 0), 0
+      );
+      return total + stairPan + flightsPan;
+    }, 0);
+  }, [estimationResult]);
+
+  const aggregateStringerWeight = useMemo(() => {
+    const breakdown = estimationResult?.breakdown?.stairs || [];
+    return breakdown.reduce((total, stair) => {
+      // systemCalc.totalSteel is total assembly weight; stringer only is separatedCosts.stringer.weight
+      const stairStringer = stair.separatedCosts?.stringer?.weight ||
+                            stair.systemCalc?.totalSteel || 0;
+      const flightsStringer = (stair.flights || []).reduce(
+        (fs, flight) => fs + (flight.separatedCosts?.stringer?.weight ||
+                               flight.systemCalc?.totalSteel || 0), 0
+      );
+      return total + stairStringer + flightsStringer;
+    }, 0);
+  }, [estimationResult]);
+
   // Prevent accidental navigation/refresh if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -1348,12 +1376,38 @@ export default function StairEstimation() {
             fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
             finish: stair.finish || 'Primer',
             mountingType: stair.mountingType || '',
+            // 🔬 PAN PLATE PRECISION FIELDS: Pass these so backend uses engineering formula, not PSF fallback
+            gaugeId: stair.gaugeId || '',
+            panPlateConfigId: stair.panPlateConfigId || '',
+            // Resolve thickness: prefer plain numeric value written by onChange; fallback to {value,unit} object
+            panPlateThickness: stair.panPlateThickness
+              ? parseFloat(stair.panPlateThickness)
+              : (stair.panPlThk?.value ? parseFloat(stair.panPlThk.value) : null),
+            panPlateGauge: stair.panPlateGauge || null,   // gauge label e.g. '7ga', '12ga'
+            panPlateThicknessSource: stair.panPlateThicknessSource || null,
+            panPlateTypeId: stair.panPlateTypeId || null,
+            panSupportTypeId: stair.panSupportTypeId || null,
+            riserHeightInches: rise,   // already in inches from toInchesFull
+            treadWidthInches: run,     // already in inches
+            stairWidthFeet: width,     // already in feet
             flights: (stair.flights || []).map(f => ({
               ...f,
               width: toFeetFull(f.stairWidth),
               rise: toInchesFull(f.rise),
               run: toInchesFull(f.run),
               totalHeight: toInchesFull(f.totalHeight),
+              // 🔬 PAN PLATE PRECISION FIELDS for flights
+              gaugeId: f.gaugeId || stair.gaugeId || '',
+              panPlateConfigId: f.panPlateConfigId || stair.panPlateConfigId || '',
+              panPlateThickness: f.panPlateThickness
+                ? parseFloat(f.panPlateThickness)
+                : (f.panPlThk?.value
+                    ? parseFloat(f.panPlThk.value)
+                    : (stair.panPlateThickness ? parseFloat(stair.panPlateThickness) : null)),
+              panPlateGauge: f.panPlateGauge || stair.panPlateGauge || null,
+              riserHeightInches: toInchesFull(f.rise),
+              treadWidthInches: toInchesFull(f.run),
+              stairWidthFeet: toFeetFull(f.stairWidth),
               // Ensure extents are handled consistently even for flights
               nsStringerBot: 0,
               fsStringerBot: 0,
@@ -1362,6 +1416,7 @@ export default function StairEstimation() {
             })),
           });
         }
+
       });
 
       const payload = {
@@ -2703,6 +2758,96 @@ export default function StairEstimation() {
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+
+    /* --- NEW CALCULATION SUMMARY GRID STYLES --- */
+    .sc-calc-grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 24px;
+      background: #F8FAFC;
+    }
+    .sc-calc-quadrant {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .sc-calc-quad-header {
+      background: #F1F5F9;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      border-bottom: 1px solid #E2E8F0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .sc-calc-quad-body {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .sc-calc-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sc-calc-item-label {
+      font-size: 10px;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    .sc-calc-item-value {
+      font-size: 14px;
+      color: #0F172A;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+    }
+    .sc-calc-item-value.sc-highlight-blue { color: #0284C7; }
+    .sc-calc-item-value.sc-highlight-green { color: #16A34A; }
+    .sc-calc-item-value.sc-highlight-amber { color: #D97706; }
+    .sc-calc-item.sc-full-width { grid-column: span 2; }
+    
+    .sc-calc-summary-section {
+      margin-top: 16px;
+      border-top: 1px dashed #CBD5E1;
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sc-calc-summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .sc-calc-summary-row-label {
+      color: #475569;
+      font-weight: 600;
+    }
+    .sc-calc-summary-row-val {
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      color: #0F172A;
+    }
+    .sc-calc-grand-total {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 12px 16px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .sc-calc-grand-total .sc-calc-summary-row-label { color: #94A3B8; font-size: 14px; }
+    .sc-calc-grand-total .sc-calc-summary-row-val { color: #38BDF8; font-size: 18px; }
   `;
 
   return (
@@ -3198,108 +3343,158 @@ export default function StairEstimation() {
                   </button>
                 </div>
               </div>
-              <div style={{ overflowX: 'auto', padding: '0 24px' }}>
-                <table className="sc-est-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 200, textAlign: 'right' }}></th>
-                      <th>Steel lbs</th>
-                      <th>Galv Shop Hrs/LF</th>
-                      <th>Galv Field Hrs/LF</th>
-                      <th className="sc-col-shaded">Steel (+10% Scrap)</th>
-                      <th className="sc-col-shaded">Shop Hours</th>
-                      <th className="sc-col-shaded">Field Hours</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="sc-row-label">Sub Total</td>
-                      <td className="sc-num-cell">{(summaryData.baseSteelWeight || 0).toFixed(3)}</td>
-                      <td className="sc-num-cell sc-amber">{(summaryData.totalGalvanizeShopHours || 0).toFixed(3)}</td>
-                      <td className="sc-num-cell sc-amber">{(summaryData.totalGalvanizeFieldHours || 0).toFixed(3)}</td>
-                      <td className="sc-num-cell sc-col-shaded">{(summaryData.scrapWeight || 0).toFixed(3)}</td>
-                      <td className="sc-num-cell sc-col-shaded">{(summaryData.totalShopHours || 0).toFixed(2)}</td>
-                      <td className="sc-num-cell sc-col-shaded">{(summaryData.totalFieldHours || 0).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label">Steel Price</td>
-                      <td className="sc-num-cell sc-money">${(summaryData.baseSteelCost || 0).toFixed(2)}</td>
-                      <td /><td />
-                      <td className="sc-num-cell sc-col-shaded sc-money">${(summaryData.scrapWeightCost || 0).toFixed(2)}</td>
-                      <td className="sc-num-cell sc-col-shaded sc-money">${(summaryData.shopLaborCost || 0).toFixed(2)}</td>
-                      <td className="sc-num-cell sc-col-shaded sc-money">${(summaryData.fieldLaborCost || 0).toFixed(2)}</td>
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label">Stair Pan Total Price</td>
-                      <td className="sc-num-cell sc-money">{(summaryData.pansMaterialPrice || 0).toFixed(2)}</td>
-                      <td colSpan={5} />
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label">
-                        {summaryData.gratingTotalCost > 0 && <span className="sc-yes-badge">YES</span>} Stair Grating
-                      </td>
-                      <td className="sc-num-cell sc-money">
-                        {summaryData.gratingTotalCost > 0 ? `$${(summaryData.gratingTotalCost || 0).toFixed(2)}` : '—'}
-                      </td>
-                      <td colSpan={5} />
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label"><span className="sc-yes-badge">YES</span> Galvanize</td>
-                      <td className="sc-num-cell sc-money">${(summaryData.galvanizeCost || 0).toFixed(2)}</td>
-                      <td colSpan={5} />
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label">Anchor Bolts</td>
-                      <td className="sc-num-cell sc-money">${(summaryData.anchorBoltsCost || 0).toFixed(2)}</td>
-                      <td colSpan={5} />
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label">POR ROK ANCHORS</td>
-                      <td className="sc-num-cell sc-money">${(summaryData.porRokAnchorsCost || 0).toFixed(2)}</td>
-                      <td colSpan={5} />
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label">
-                        {(summaryData.mountingCharges > 0) ? 'Mounting (Add-ons)' : 'Mounting Cost'}
-                      </td>
-                      <td className="sc-num-cell sc-money">${(summaryData.mountingCharges || 0).toFixed(2)}</td>
-                      <td colSpan={5} />
-                    </tr>
-                    <tr>
-                      <td className="sc-row-label" style={{ fontWeight: 700, color: 'var(--gpt-text-primary)' }}>Total Material Price</td>
-                      <td className="sc-num-cell sc-money sc-total-num">
+              <div className="sc-calc-grid-container">
+                {/* Quadrant 1: STEEL & STRUCTURE */}
+                <div className="sc-calc-quadrant">
+                  <div className="sc-calc-quad-header">Steel & Structure</div>
+                  <div className="sc-calc-quad-body">
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Stringer Weight</span>
+                      <span className="sc-calc-item-value">{(summaryData.totalStringerWeight || 0).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Pan Plate Weight</span>
+                      <span className="sc-calc-item-value">{(summaryData.totalPanPlateWeight || 0).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Hardware & Conn. Weight</span>
+                      <span className="sc-calc-item-value">{( (summaryData.totalHardwareWeight || 0) + (summaryData.connectionWeight || 0) ).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Steel Net Total</span>
+                      <span className="sc-calc-item-value">{(summaryData.baseSteelWeight || 0).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Scrap Lbs (+11%)</span>
+                      <span className="sc-calc-item-value">{(summaryData.scrapWeight || 0).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Total Weight (Gross)</span>
+                      <span className="sc-calc-item-value sc-highlight-blue">{((summaryData.baseSteelWeight || 0) + (summaryData.scrapWeight || 0)).toFixed(3)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quadrant 2: LABOR BREAKDOWN */}
+                <div className="sc-calc-quadrant">
+                  <div className="sc-calc-quad-header">Labor Breakdown</div>
+                  <div className="sc-calc-quad-body">
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Fab. Shop Hrs</span>
+                      <span className="sc-calc-item-value">{(summaryData.totalStringerShopHours || 0).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Shop Labor Cost</span>
+                      <span className="sc-calc-item-value">${(summaryData.shopLaborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Field Hrs Total</span>
+                      <span className="sc-calc-item-value">{(summaryData.totalFieldHours || 0).toFixed(3)}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Field Labor Cost</span>
+                      <span className="sc-calc-item-value">${(summaryData.fieldLaborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item sc-full-width" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '4px' }}>
+                      <span className="sc-calc-item-label">Labor Total</span>
+                      <span className="sc-calc-item-value sc-highlight-green">
+                        ${((summaryData.shopLaborCost || 0) + (summaryData.fieldLaborCost || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quadrant 3: MATERIAL COSTS (EXCL. SCRAP) */}
+                <div className="sc-calc-quadrant">
+                  <div className="sc-calc-quad-header">Material Costs (Excl. Scrap)</div>
+                  <div className="sc-calc-quad-body">
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Structural Steel Cost</span>
+                      <span className="sc-calc-item-value">${(summaryData.baseSteelCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Pan Plate Cost</span>
+                      <span className="sc-calc-item-value">${(summaryData.pansMaterialPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Finish / Galvanize</span>
+                      <span className="sc-calc-item-value">${(summaryData.galvanizeCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Stair Grating</span>
+                      <span className="sc-calc-item-value">${(summaryData.gratingTotalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Por-Rok Grout/Anchors</span>
+                      <span className="sc-calc-item-value">${(summaryData.porRokAnchorsCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item">
+                      <span className="sc-calc-item-label">Scrap cost (Isolated)</span>
+                      <span className="sc-calc-item-value">${(summaryData.scrapWeightCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-item sc-full-width" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+                      <span className="sc-calc-item-label">Material Sub-Total</span>
+                      <span className="sc-calc-item-value sc-highlight-green">
                         ${(
                           (summaryData.baseSteelCost || 0) +
                           (summaryData.pansMaterialPrice || 0) +
                           (summaryData.gratingTotalCost || 0) +
                           (summaryData.galvanizeCost || 0) +
-                          (summaryData.mountingCharges || 0)
-                        ).toFixed(2)}
-                      </td>
-                      <td colSpan={5} />
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="sc-totals-box">
-                <div className="sc-total-row">
-                  <span>Sub Total Without Tax</span>
-                  <span>${(summaryData.subtotalWithoutTax || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="sc-total-row">
-                  <span>Sales Tax (6%)</span>
-                  <span>${(summaryData.taxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="sc-total-row sc-grand-total">
-                  <span>Total Estimate</span>
-                  <span className="pulsing-total">${(summaryData.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                {additionalCosts?.total !== undefined && additionalCosts?.total !== null && (
-                  <div className="sc-total-row sc-adj-total-row">
-                    <span>With Adjustments</span>
-                    <span className="sc-adj-total-val">${additionalCosts.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          (summaryData.porRokAnchorsCost || 0)
+                        ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Quadrant 4: PROJECT TOTALS */}
+                <div className="sc-calc-quadrant">
+                  <div className="sc-calc-quad-header">Project Totals</div>
+                  <div className="sc-calc-quad-body" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="sc-calc-summary-row">
+                      <span className="sc-calc-summary-row-label">Material Sub-Total</span>
+                      <span className="sc-calc-summary-row-val">
+                        ${(
+                          (summaryData.baseSteelCost || 0) +
+                          (summaryData.pansMaterialPrice || 0) +
+                          (summaryData.gratingTotalCost || 0) +
+                          (summaryData.galvanizeCost || 0) +
+                          (summaryData.mountingCharges || 0) +
+                          (summaryData.anchorBoltsCost || 0) + 
+                          (summaryData.porRokAnchorsCost || 0)
+                        ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="sc-calc-summary-row">
+                      <span className="sc-calc-summary-row-label">Labor Sub-Total</span>
+                      <span className="sc-calc-summary-row-val">${((summaryData.shopLaborCost || 0) + (summaryData.fieldLaborCost || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-summary-row">
+                      <span className="sc-calc-summary-row-label">Scrap Cost (Isolated)</span>
+                      <span className="sc-calc-summary-row-val">${(summaryData.scrapWeightCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-summary-row" style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0' }}>
+                      <span className="sc-calc-summary-row-label">Project Sub-Total (W/O Tax)</span>
+                      <span className="sc-calc-summary-row-val">${(summaryData.subtotalWithoutTax || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sc-calc-summary-row">
+                      <span className="sc-calc-summary-row-label">Tax (6%)</span>
+                      <span className="sc-calc-summary-row-val">${(summaryData.taxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    
+                    <div className="sc-calc-grand-total">
+                      <span className="sc-calc-summary-row-label">TOTAL ESTIMATE</span>
+                      <span className="sc-calc-summary-row-val">${(summaryData.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    
+                    {additionalCosts?.total !== undefined && additionalCosts?.total !== null && (
+                      <div className="sc-calc-summary-row" style={{ marginTop: '4px', color: '#D97706' }}>
+                        <span className="sc-calc-summary-row-label" style={{ color: '#D97706' }}>With Adjustments</span>
+                        <span className="sc-calc-summary-row-val">${additionalCosts.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

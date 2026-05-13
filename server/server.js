@@ -51,6 +51,9 @@ const mfaRoutes        = require('./src/routes/mfaRoutes');
 const superadminRoutes = require('./src/routes/superadminRoutes');
 const adminUserRoutes  = require('./src/routes/adminUserRoutes');
 
+// Library Management Module (Phase Library-1+)
+const libraryRoutes    = require('./src/routes/libraryRoutes');
+
 
 console.log('🚀 SERVER READY - BULK DELETE RECONFIGURED');
 
@@ -363,6 +366,9 @@ app.use('/api/v1/admin',         authMiddleware, adminRoutes);
 
 // SuperAdmin routes (license check not applicable — superadmin has no license)
 app.use('/api/v1/superadmin',    authMiddleware, superadminRoutes);
+
+// Library Management Module — admin/owner/superadmin only (estimators blocked inside the route)
+app.use('/api/v1/library',       authMiddleware, licenseCheck, libraryRoutes);
 
 
 // ================ SERVE CLIENT (VPS READY) ================

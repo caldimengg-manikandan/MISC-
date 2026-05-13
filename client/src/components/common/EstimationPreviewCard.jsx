@@ -72,7 +72,9 @@ export default function EstimationPreviewCard({
   finishName = "",
   unitType = "LF",
   hidePricePerRiser = false,
-  hidePorRok = false
+  hidePorRok = false,
+  hideAnchorBolts = false,
+  minimal = false
 }) {
   const scrapFactorPct = systemCalc.scrapFactorPct || 11;
   const taxRatePct = systemCalc.taxRatePct || 6;
@@ -99,7 +101,7 @@ export default function EstimationPreviewCard({
   const totalEstimate = `$${formatMoney(totalCost || 0)}`;
 
   /* Premium color tokens */
-  const moneyColor = '#1D9E75';
+  const moneyColor = '#10a37f';
   const scrapColor = '#B97B15';
 
   const cardStyle = {
@@ -140,6 +142,46 @@ export default function EstimationPreviewCard({
     transition: 'background 0.35s ease',
   };
 
+  if (minimal) {
+    const hardwareCost = (Number(systemCalc.anchorBoltsCost || 0) + Number(systemCalc.porRokCost || 0));
+    const grossWeight = (Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0));
+
+    return (
+      <div className="estimation-preview-card minimal" style={{
+        background: 'var(--gpt-bg-primary)',
+        border: '1px solid var(--gpt-border)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+      }}>
+        {/* ROW 1: STRUCTURAL DATA */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--gpt-border)' }}>
+          <StatCell label="Steel Net" value={steelLbsSubTotal} />
+          <StatCell label="Gross Weight" value={formatNum(grossWeight, 3)} />
+          <StatCell label="Shop Hrs" value={formatNum(systemCalc.totalStringerShopHours || 0, 3)} />
+          <StatCell label="Field Hrs" value={formatNum(systemCalc.fieldTotalHrs || 0, 3)} borderRight={false} />
+        </div>
+
+        {/* ROW 2: FINANCIAL DATA */}
+        <div style={{ display: 'flex', background: 'rgba(16, 185, 129, 0.03)' }}>
+          <StatCell label="Steel Cost" value={steelDollars} />
+          <StatCell label="Finish Cost" value={finishDollars} />
+          <StatCell label="Grout/Mt" value={porRokDollars} />
+          <StatCell 
+            label="Total Estimate" 
+            value={totalEstimate} 
+            color="#10B981" 
+            valueStyle={{ fontWeight: 900, fontSize: '18px' }}
+            bgStyle={{ background: 'rgba(16, 185, 129, 0.08)' }}
+            borderRight={false} 
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={cardStyle}>
 
@@ -147,18 +189,21 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(true, true)}>
         <SectionHeader title="Steel & structure" />
         <div style={cellRowStyle(true)}>
-          {(systemCalc.panPlateWeight > 0 || systemCalc.gratingWeight > 0) ? (
-            <StatCell 
-              label={systemCalc.gratingWeight > 0 ? "Grating weight" : "Pan plate weight"} 
-              value={formatNum(systemCalc.gratingWeight > 0 ? systemCalc.gratingWeight : systemCalc.panPlateWeight, 3)} 
-            />
-          ) : (
-            <div style={{ flex: 1, borderRight: '0.5px solid var(--gpt-border)', background: 'transparent' }} />
+          {!minimal && (systemCalc.panPlateWeight > 0 || systemCalc.gratingWeight > 0) && (
+            <>
+              <StatCell 
+                label={systemCalc.gratingWeight > 0 ? "Grating weight" : "Pan plate weight"} 
+                value={formatNum(systemCalc.gratingWeight > 0 ? systemCalc.gratingWeight : systemCalc.panPlateWeight, 3)} 
+              />
+              {!systemCalc.gratingWeight && systemCalc.panSupportType && (
+                <StatCell label="Pan support type" value={systemCalc.panSupportType} />
+              )}
+            </>
           )}
           <StatCell label="Steel lbs total" value={steelLbsSubTotal} borderRight={false} />
         </div>
         <div style={cellRowStyle(false)}>
-          <StatCell label={`Scrap lbs (+${scrapFactorPct}%)`} value={steelScrapLbs} color={scrapColor} />
+          {!minimal && <StatCell label={`Scrap lbs (+${scrapFactorPct}%)`} value={steelScrapLbs} color={scrapColor} />}
           <StatCell label="Total weight (gross)" value={formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} borderRight={false} />
         </div>
       </div>
@@ -167,12 +212,12 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(false, true)}>
         <SectionHeader title="Labor" />
         <div style={cellRowStyle(true)}>
-          <StatCell label="Shop hrs total" value={formatNum(systemCalc.shopTotalHrs || 0, 3)} />
-          <StatCell label="Shop labor cost" value={shopLaborDollars} color={moneyColor} borderRight={false} />
+          <StatCell label="Shop hrs total" value={formatNum(systemCalc.shopTotalHrs || 0, 3)} borderRight={!minimal} />
+          {!minimal && <StatCell label="Shop labor cost" value={shopLaborDollars} color={moneyColor} borderRight={false} />}
         </div>
         <div style={cellRowStyle(false)}>
-          <StatCell label="Field hrs total" value={formatNum(systemCalc.fieldTotalHrs || 0, 3)} />
-          <StatCell label="Field labor cost" value={fieldLaborDollars} color={moneyColor} borderRight={false} />
+          <StatCell label="Field hrs total" value={formatNum(systemCalc.fieldTotalHrs || 0, 3)} borderRight={!minimal} />
+          {!minimal && <StatCell label="Field labor cost" value={fieldLaborDollars} color={moneyColor} borderRight={false} />}
         </div>
       </div>
 
@@ -180,75 +225,80 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(true, false)}>
         <SectionHeader title="Material costs (Excl. Scrap)" />
         <div style={cellRowStyle(true)}>
-          <StatCell label={`Steel weight cost ($${formatMoney(systemCalc.steelPricePerLb || 0.75)}/lb)`} value={steelDollars} />
+          <StatCell label={`Structural Steel ($${formatMoney(systemCalc.steelPricePerLb || 0.75)}/lb)`} value={`$${formatMoney(systemCalc.structuralSteelCost || systemCalc.steelPriceBase || 0)}`} />
           <StatCell label={`Finish (${finishName?.toLowerCase() || 'primer'})`} value={finishDollars} borderRight={false} />
         </div>
-        <div style={cellRowStyle(true)}>
-          {hidePorRok ? (
-            <StatCell label="Anchor bolts" value={anchorBoltsDollars} />
-          ) : (
-            <StatCell label="POR ROK / Post cost" value={porRokDollars} />
-          )}
-          {hidePorRok ? (
-            <div style={{ flex: 1 }} />
-          ) : (
-            <StatCell label="Anchor bolts" value={anchorBoltsDollars} borderRight={false} />
+        {(systemCalc.panPlateCost > 0 || systemCalc.gratingTotalCost > 0) && (
+          <div style={cellRowStyle(true)}>
+            <StatCell label="Pan / Grating Cost" value={`$${formatMoney((systemCalc.panPlateCost || 0) + (systemCalc.gratingTotalCost || 0))}`} color={moneyColor} borderRight={false} />
+          </div>
+        )}
+        <div style={cellRowStyle(!(systemCalc.panPlateCost > 0 || systemCalc.gratingTotalCost > 0))}>
+          {!hidePorRok && (
+            <StatCell label="POR ROK / Post cost" value={porRokDollars} borderRight={false} />
           )}
         </div>
-        <div style={{ display: 'flex', ...subBgStyle }}>
-          <StatCell label="Scrap cost (Isolated)" value={scrapDollars} color={scrapColor} />
-          <StatCell
-            label="Sub total material"
-            value={subTotalMaterial}
-            color={moneyColor}
-            valueStyle={{ fontSize: '14px', fontWeight: 700 }}
-            borderRight={false}
-          />
-        </div>
+        {!minimal && (
+          <div style={{ display: 'flex', ...subBgStyle }}>
+            <StatCell label="Scrap cost (Isolated)" value={scrapDollars} color={scrapColor} />
+            <StatCell
+              label="Sub total material"
+              value={subTotalMaterial}
+              color={moneyColor}
+              valueStyle={{ fontSize: '14px', fontWeight: 700 }}
+              borderRight={false}
+            />
+          </div>
+        )}
       </div>
 
       {/* ROW 2 RIGHT — Estimate Summary */}
       <div style={quadrantStyle(false, false)}>
         <SectionHeader title="Estimate summary" />
         <div style={cellRowStyle(true)}>
-          <StatCell label="Labor total" value={laborTotalDollars} />
-          <StatCell label={`Tax (${taxRatePct}%)`} value={taxDollars} borderRight={false} />
+          {!minimal && <StatCell label="Labor total" value={laborTotalDollars} />}
+          {!minimal && <StatCell label={`Tax (${taxRatePct}%)`} value={taxDollars} borderRight={false} />}
+          {minimal && <StatCell label="Total weight (gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} borderRight={false} />}
         </div>
-        <div style={cellRowStyle(false)}>
-          <StatCell label="Total Weight (Gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} />
-          <StatCell label="Material + Scrap" value={`$${formatMoney((systemCalc.subTotalMaterial || 0) + (systemCalc.scrapPriceOnly || 0))}`} color={moneyColor} borderRight={false} />
-        </div>
+        {!minimal && (
+          <div style={cellRowStyle(false)}>
+            <StatCell label="Total Weight (Gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} />
+            <StatCell label="Material + Scrap" value={`$${formatMoney((systemCalc.subTotalMaterial || 0) + (systemCalc.scrapPriceOnly || 0))}`} color={moneyColor} borderRight={false} />
+          </div>
+        )}
 
         {/* ── Bottom Bar with accent glow on Total Estimate ── */}
         <div style={{ display: 'flex', marginTop: 'auto', borderTop: '0.5px solid var(--gpt-border)', ...subBgStyle }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            padding: '9px 12px',
-            borderRight: '0.5px solid var(--gpt-border)',
-            transition: 'border-color 0.35s ease',
-          }}>
-            <div style={{ fontSize: '11px', color: 'var(--gpt-text-muted)', lineHeight: 1, fontWeight: 700, textTransform: 'uppercase', transition: 'color 0.35s ease' }}>Sub total w/o tax</div>
+          {!minimal && (
             <div style={{
-              fontFamily: "'Geist Mono', 'SF Mono', monospace",
-              fontSize: '16px',
-              fontWeight: 700,
-              color: 'var(--gpt-text-primary)',
-              marginTop: '6px',
-              transition: 'color 0.35s ease',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              padding: '9px 12px',
+              borderRight: '0.5px solid var(--gpt-border)',
+              transition: 'border-color 0.35s ease',
             }}>
-              {subTotalWithoutTax}
+              <div style={{ fontSize: '11px', color: 'var(--gpt-text-muted)', lineHeight: 1, fontWeight: 700, textTransform: 'uppercase', transition: 'color 0.35s ease' }}>Sub total w/o tax</div>
+              <div style={{
+                fontFamily: "'Geist Mono', 'SF Mono', monospace",
+                fontSize: '16px',
+                fontWeight: 700,
+                color: 'var(--gpt-text-primary)',
+                marginTop: '6px',
+                transition: 'color 0.35s ease',
+              }}>
+                {subTotalWithoutTax}
+              </div>
             </div>
-          </div>
-
+          )}
+          
           {/* ── Accent Glow Cell ── */}
           <StatCell
             label="Total estimate"
             value={totalEstimate}
             color={moneyColor}
-            valueStyle={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.5px' }}
+            valueStyle={{ fontSize: minimal ? '18px' : '22px', fontWeight: 900, letterSpacing: '-0.5px' }}
             bgStyle={totalEstimateBgStyle}
             borderRight={false}
           />

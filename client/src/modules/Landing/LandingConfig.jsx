@@ -54,7 +54,10 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
 
   const [dropdowns, setDropdowns] = useState({
     platformTypes: DEFAULT_PLATFORM_TYPES,
-    finishes: DEFAULT_FINISH_OPTIONS
+    finishes: DEFAULT_FINISH_OPTIONS,
+    steelGrades: ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'],
+    gauges: [],
+    mountingTypes: ['Anchored', 'Embedded']
   });
 
   const [quickModal, setQuickModal] = useState({ isOpen: false, category: '', label: '', rect: null });
@@ -70,13 +73,19 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
       } catch (e) { return []; }
     };
 
-    const [pt, fo] = await Promise.all([
+    const [pt, fo, sg, mt, gp] = await Promise.all([
       fetchList('platform_type'),
-      fetchList('finish_option')
+      fetchList('finish_option'),
+      fetchList('material_type'),
+      fetchList('mounting_type'),
+      fetchList('gauge_plate_spec')
     ]);
     setDropdowns({
       platformTypes: pt,
-      finishes: fo.map(i => i.label)
+      finishes: fo.map(i => i.label),
+      steelGrades: sg.length > 0 ? sg : ['A992', 'A572-50', 'A36', 'SS316', 'SS 304'],
+      gauges: gp || [],
+      mountingTypes: mt.length > 0 ? mt.map(i => i.label) : ['Anchored', 'Embedded']
     });
   }, []);
 
@@ -94,6 +103,10 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
     platformLength: data?.platformLength || { value: '', unit: 'FT' },
     platformWidth: data?.platformWidth || { value: '', unit: 'FT' },
     platformType: data?.platformType || '',
+    steelGrade: data?.steelGrade || 'A36',
+    materialGradeId: data?.materialGradeId || '',
+    gaugeId: data?.gaugeId || '',
+    mountingType: data?.mountingType || '',
     finish: data?.finish || 'Primer',
     selectionSource: data?.selectionSource || (data?.platformType ? 'manual' : 'auto'),
     ...data
@@ -182,18 +195,20 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
 
   return (
     <div onPointerDown={onFocus}>
-      {/* ── Compressed Configuration Header ────────────────────────── */}
-      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-        <div className="form-field">
-          <label className="form-label">Landing Number</label>
-          <input
-            className="form-input data-type-string compact-input"
-            value={form.landingNumber}
-            onChange={e => set('landingNumber', e.target.value)}
-            onFocus={e => e.target.select()}
-            placeholder="e.g. L-01"
-          />
-        </div>
+      {/* ── Geometry & Identification ────────────────────────────── */}
+      <div className="subtle-group">
+        <div className="group-header">Geometry & Identification</div>
+        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+          <div className="form-field">
+            <label className="form-label">Landing Number</label>
+            <input
+              className="form-input data-type-string compact-input"
+              value={form.landingNumber}
+              onChange={e => set('landingNumber', e.target.value)}
+              onFocus={e => e.target.select()}
+              placeholder="e.g. L-01"
+            />
+          </div>
         <UnitInput 
           id="landing-length"
           label="Length"
@@ -222,10 +237,12 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
             <span className="form-input-unit">FT²</span>
           </div>
         </div>
+        </div>
       </div>
 
-
-      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div className="subtle-group">
+        <div className="group-header">Platform Selection & Specs</div>
+        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
         <div className="form-field">
           <label className="form-label">
             Platform Type
@@ -294,22 +311,96 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
 
         <div className="form-field">
           <label className="form-label">
-            Finish Specification
+            Material Type
             {isAdmin && (
-              <button onClick={(e) => openManage('finish_option', 'Finish Options', e)} className="quick-edit-btn" title="Manage Options">
+              <button onClick={(e) => openManage('material_type', 'Material Types', e)} className="quick-edit-btn" title="Manage Options">
                 <Settings size={12} />
               </button>
             )}
           </label>
           <SearchableSelect
-            className="data-type-string compact-select"
-            options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+            className="compact-select"
+            options={dropdowns.steelGrades.map(sg => ({ value: sg.id || sg, label: sg.label || sg }))}
             valueKey="value"
             displayKey="label"
-            value={form.finish}
-            onSelect={opt => set('finish', opt?.value || '')}
-            placeholder="— Select Finish —"
+            value={form.materialGradeId || form.steelGrade}
+            onSelect={opt => {
+              setForm(prev => ({
+                ...prev,
+                materialGradeId: opt?.value || '',
+                steelGrade: opt?.label || ''
+              }));
+              if (onChange) onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
+            }}
+            placeholder="— Select Type —"
           />
+        </div>
+
+        <div className="form-field">
+          <label className="form-label">
+            Pan/Plate Gauge
+            {isAdmin && (
+              <button onClick={(e) => openManage('gauge_plate_spec', 'Gauge Specs', e)} className="quick-edit-btn" title="Manage Options">
+                <Settings size={12} />
+              </button>
+            )}
+          </label>
+          <SearchableSelect
+            className="compact-select"
+            options={dropdowns.gauges.map(g => ({ value: g.id || g, label: g.label || g }))}
+            valueKey="value"
+            displayKey="label"
+            value={form.gaugeId}
+            onSelect={opt => set('gaugeId', opt?.value || '')}
+            placeholder="— Select Gauge —"
+          />
+        </div>
+
+        <div className="form-field">
+          <label className="form-label">
+            Mounting Type
+            {isAdmin && (
+              <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
+                <Settings size={12} />
+              </button>
+            )}
+          </label>
+          <SearchableSelect
+            className="compact-select"
+            options={dropdowns.mountingTypes.map(m => ({ value: m, label: m }))}
+            valueKey="value"
+            displayKey="label"
+            value={form.mountingType}
+            onSelect={opt => set('mountingType', opt?.value || '')}
+            placeholder="— Select Mounting —"
+          />
+        </div>
+
+        </div>
+      </div>
+
+      <div className="subtle-group">
+        <div className="group-header">Finish Specification</div>
+        <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+          <div className="form-field">
+            <label className="form-label">
+              Finish Specification
+              {isAdmin && (
+                <button onClick={(e) => openManage('finish_option', 'Finish Options', e)} className="quick-edit-btn" title="Manage Options">
+                  <Settings size={12} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              className="data-type-string compact-select"
+              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.finish}
+              onSelect={opt => set('finish', opt?.value || '')}
+              placeholder="— Select Finish —"
+            />
+          </div>
         </div>
       </div>
 
@@ -323,6 +414,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
             finishName={form.finish}
             hidePricePerRiser={true}
             title="Landing Configuration Preview"
+            minimal={true}
           />
         </div>
       )}
@@ -334,6 +426,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
         categoryLabel={quickModal.label}
         onUpdate={load}
         triggerRect={quickModal.rect}
+        userRole={user?.role}
       />
 
 

@@ -141,6 +141,11 @@
 .ed-card-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 20px; border-bottom: 1px solid var(--gpt-border);
+  /* FREEZE LOGIC */
+  position: sticky;
+  top: 0;
+  background: var(--gpt-surface);
+  z-index: 40;
 }
 .ed-card-title { font-size: 13px; font-weight: 700; color: var(--gpt-text-primary); }
 .ed-card-body  { padding: 20px; }
@@ -172,8 +177,19 @@
 .ed-input-disabled { background: var(--gpt-body-bg) !important; color: var(--gpt-text-muted) !important; cursor: not-allowed; }
 
 .ed-section-title {
-  font-size: 14px; font-weight: 700; color: var(--gpt-text-primary);
-  margin-top: 10px; margin-bottom: 12px;
+  font-size: 13px; font-weight: 800; color: #10a37f;
+  margin-top: 24px; margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  /* FREEZE LOGIC */
+  position: sticky;
+  top: 50px; /* Offset for card header */
+  background: var(--gpt-surface);
+  z-index: 35;
+  padding: 8px 0;
+  /* HIGHLIGHT LOGIC */
+  border-left: 3px solid #10a37f;
+  padding-left: 10px;
 }
 .ed-divider {
   height: 1px; background: var(--gpt-border); margin: 24px 0;

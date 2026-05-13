@@ -214,6 +214,7 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
             finishName={form.finish}
             hidePricePerRiser={true}
             title="Kick Plate Preview"
+            minimal={true}
           />
         </div>
       )}
@@ -225,6 +226,7 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
         categoryLabel={quickModal.label}
         onUpdate={load}
         triggerRect={quickModal.rect}
+        userRole={user?.role}
         defaultOptions={
           quickModal.category === 'finish_option' ? DEFAULT_FINISH_OPTIONS : ([])
         }

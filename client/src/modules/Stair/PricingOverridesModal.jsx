@@ -61,7 +61,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="0.01" 
                       placeholder={`${globalConfig.steel_price_per_lb || '0.75'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.steel_price_per_lb ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.steel_price_per_lb ?? ''}
                       onChange={(e) => setConfigVal('steel_price_per_lb', e.target.value)}
                     />
@@ -77,7 +77,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="0.01" 
                       placeholder={`${globalConfig.stair_pan_rate || '1.00'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.stair_pan_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.stair_pan_rate ?? ''}
                       onChange={(e) => setConfigVal('stair_pan_rate', e.target.value)}
                     />
@@ -99,7 +99,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="0.01" 
                       placeholder={`${globalConfig.galvanize_rate || '0.75'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.galvanize_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.galvanize_rate ?? ''}
                       onChange={(e) => setConfigVal('galvanize_rate', e.target.value)}
                     />
@@ -115,7 +115,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="0.01" 
                       placeholder={`${globalConfig.powder_coat_rate || '1.75'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.powder_coat_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.powder_coat_rate ?? ''}
                       onChange={(e) => setConfigVal('powder_coat_rate', e.target.value)}
                     />
@@ -137,7 +137,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="1.00" 
                       placeholder={`${globalConfig.shop_hourly_rate || '70'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.shop_hourly_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.shop_hourly_rate ?? ''}
                       onChange={(e) => setConfigVal('shop_hourly_rate', e.target.value)}
                     />
@@ -153,7 +153,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="1.00" 
                       placeholder={`${globalConfig.field_hourly_rate || '70'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.field_hourly_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.field_hourly_rate ?? ''}
                       onChange={(e) => setConfigVal('field_hourly_rate', e.target.value)}
                     />
@@ -175,7 +175,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="1.00" 
                       placeholder={`${globalConfig.mounting_embedded_rate || '5'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.mounting_embedded_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.mounting_embedded_rate ?? ''}
                       onChange={(e) => setConfigVal('mounting_embedded_rate', e.target.value)}
                     />
@@ -191,7 +191,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="1.00" 
                       placeholder={`${globalConfig.mounting_anchored_rate || '6'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.mounting_anchored_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.mounting_anchored_rate ?? ''}
                       onChange={(e) => setConfigVal('mounting_anchored_rate', e.target.value)}
                     />
@@ -207,7 +207,7 @@ export default function PricingOverridesModal({ isOpen, onClose, localConfig, se
                     <input 
                       type="number" step="0.001" 
                       placeholder={`${globalConfig.anchor_bolt_rate || '0.025'} (Global)`}
-                      className="w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 text-slate-700"
+                      className={`w-full pl-4 pr-3 py-2 bg-transparent text-sm font-bold outline-none border-none focus:ring-0 ${localConfig.anchor_bolt_rate ? 'text-[#10a37f]' : 'text-slate-700'}`}
                       value={localConfig.anchor_bolt_rate ?? ''}
                       onChange={(e) => setConfigVal('anchor_bolt_rate', e.target.value)}
                     />

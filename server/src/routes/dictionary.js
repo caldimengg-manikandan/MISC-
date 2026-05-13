@@ -41,14 +41,14 @@ router.get('/:category', async (req, res) => {
 
     if (showAll) {
       // Management view: global defaults + this tenant's entries (all active states)
-      query = `SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price, isActive, admin_owner_id
+      query = `SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMin, widthMax, spanMin, spanMax, shopEfficiency, fieldEfficiency, price, isActive, admin_owner_id, is_system_default, created_at, updated_at, updated_by
                FROM dictionary
                WHERE category = ? AND (admin_owner_id IS NULL OR admin_owner_id = ?)
                ORDER BY CASE WHEN admin_owner_id IS NULL THEN 0 ELSE 1 END, [order] ASC, label ASC`;
       params = [req.params.category, adminOwnerId];
     } else {
       // Normal dropdown view: global defaults + active tenant entries
-      query = `SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price, isActive, admin_owner_id
+      query = `SELECT id, category, label, value, description, [order], steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMin, widthMax, spanMin, spanMax, shopEfficiency, fieldEfficiency, price, isActive, admin_owner_id, is_system_default, created_at, updated_at, updated_by
                FROM dictionary
                WHERE category = ?
                  AND (isActive = 1 OR isActive IS NULL)
@@ -63,12 +63,16 @@ router.get('/:category', async (req, res) => {
     const normalized = entries.map(e => ({
       ...e,
       isGlobalDefault: e.admin_owner_id === null,
+      isSystemDefault: e.is_system_default === 1 || e.is_system_default === true,
       steelLbsLf: e.steelLbsLf != null ? parseFloat(e.steelLbsLf) : null,
       shopLaborMhLf: e.shopLaborMhLf != null ? parseFloat(e.shopLaborMhLf) : null,
       fieldLaborMhLf: e.fieldLaborMhLf != null ? parseFloat(e.fieldLaborMhLf) : null,
+      widthMin: e.widthMin != null ? parseFloat(e.widthMin) : null,
       widthMax: e.widthMax != null ? parseFloat(e.widthMax) : null,
       spanMin: e.spanMin != null ? parseFloat(e.spanMin) : null,
       spanMax: e.spanMax != null ? parseFloat(e.spanMax) : null,
+      shopEfficiency: e.shopEfficiency != null ? parseFloat(e.shopEfficiency) : null,
+      fieldEfficiency: e.fieldEfficiency != null ? parseFloat(e.fieldEfficiency) : null,
       price: e.price != null ? parseFloat(e.price) : null,
     }));
 
@@ -85,7 +89,7 @@ router.get('/all/categories', auth, adminOnly, async (req, res) => {
   try {
     const adminOwnerId = resolveAdminOwnerId(req);
     const [entries] = await db.query(
-      `SELECT id, category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price, admin_owner_id
+      `SELECT id, category, label, value, description, [order], isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMin, widthMax, spanMin, spanMax, shopEfficiency, fieldEfficiency, price, admin_owner_id
        FROM dictionary
        WHERE admin_owner_id IS NULL OR admin_owner_id = ?
        ORDER BY category ASC, [order] ASC`,
@@ -101,7 +105,7 @@ router.get('/all/categories', auth, adminOnly, async (req, res) => {
 // @desc    Add or Reactivate a dictionary entry (scoped to this tenant)
 router.post('/', auth, adminOnly, async (req, res) => {
   try {
-    const { category, label, value, description, order, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price } = req.body;
+    const { category, label, value, description, order, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMin, widthMax, spanMin, spanMax, shopEfficiency, fieldEfficiency, price } = req.body;
     const adminOwnerId = resolveAdminOwnerId(req);
 
     console.log(`[Dictionary] Attempting to add/reactivate: ${category} -> ${label} (${value}) for tenant: ${adminOwnerId}`);
@@ -116,8 +120,8 @@ router.post('/', auth, adminOnly, async (req, res) => {
       if (existing[0].isActive == 0 || existing[0].isActive === null || existing[0].is_active == 0) {
         console.log(`[Dictionary] Reactivating existing inactive entry: ${existing[0].id}`);
         await db.query(
-          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, is_active = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ?, price = ? WHERE id = ? AND admin_owner_id = ?',
-          [label, order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, price || null, existing[0].id, adminOwnerId]
+          'UPDATE dictionary SET label = ?, [order] = ?, isActive = 1, is_active = 1, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMin = ?, widthMax = ?, spanMin = ?, spanMax = ?, shopEfficiency = ?, fieldEfficiency = ?, price = ? WHERE id = ? AND admin_owner_id = ?',
+          [label, order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMin || null, widthMax || null, spanMin || null, spanMax || null, shopEfficiency || null, fieldEfficiency || null, price || null, existing[0].id, adminOwnerId]
         );
         const [updatedEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [existing[0].id]);
         return res.status(200).json({ success: true, data: updatedEntry[0], message: 'Reactivated existing entry' });
@@ -127,8 +131,8 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'INSERT INTO dictionary (category, label, value, description, [order], isActive, is_active, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price, admin_owner_id) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMax || null, spanMin || null, spanMax || null, price || null, adminOwnerId]
+      'INSERT INTO dictionary (category, label, value, description, [order], isActive, is_active, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMin, widthMax, spanMin, spanMax, shopEfficiency, fieldEfficiency, price, admin_owner_id) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [category, label, value, description || '', order || 0, steelLbsLf || null, shopLaborMhLf || null, fieldLaborMhLf || null, widthMin || null, widthMax || null, spanMin || null, spanMax || null, shopEfficiency || null, fieldEfficiency || null, price || null, adminOwnerId]
     );
 
     const [newEntry] = await db.query('SELECT * FROM dictionary WHERE id = ?', [rows[0].id]);
@@ -145,7 +149,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
 router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
     const adminOwnerId = resolveAdminOwnerId(req);
-    const { category, label, value, description, order, isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMax, spanMin, spanMax, price } = req.body;
+    const { category, label, value, description, order, isActive, steelLbsLf, shopLaborMhLf, fieldLaborMhLf, widthMin, widthMax, spanMin, spanMax, shopEfficiency, fieldEfficiency, price } = req.body;
 
     // Security: ensure the entry belongs to this tenant
     const [check] = await db.query('SELECT id, admin_owner_id FROM dictionary WHERE id = ?', [req.params.id]);
@@ -155,7 +159,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     }
 
     await db.query(
-      'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ?, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMax = ?, spanMin = ?, spanMax = ?, price = ? WHERE id = ?',
+      'UPDATE dictionary SET category = ?, label = ?, value = ?, description = ?, [order] = ?, isActive = ?, steelLbsLf = ?, shopLaborMhLf = ?, fieldLaborMhLf = ?, widthMin = ?, widthMax = ?, spanMin = ?, spanMax = ?, shopEfficiency = ?, fieldEfficiency = ?, price = ?, updated_at = GETDATE(), updated_by = ? WHERE id = ?',
       [
         category,
         label,
@@ -166,10 +170,14 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
         steelLbsLf || null,
         shopLaborMhLf || null,
         fieldLaborMhLf || null,
+        widthMin || null,
         widthMax || null,
         spanMin || null,
         spanMax || null,
+        shopEfficiency || null,
+        fieldEfficiency || null,
         price || null,
+        req.user?.email || String(req.user?.id),
         req.params.id
       ]
     );
@@ -190,9 +198,14 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
     const adminOwnerId = resolveAdminOwnerId(req);
 
     // Security: only allow deleting own entries, or global defaults if user is admin/superadmin
-    const [check] = await db.query('SELECT id, admin_owner_id FROM dictionary WHERE id = ?', [req.params.id]);
+    const [check] = await db.query('SELECT id, admin_owner_id, is_system_default FROM dictionary WHERE id = ?', [req.params.id]);
     if (check.length === 0) return res.status(404).json({ success: false, message: 'Entry not found' });
-    
+
+    // Block deletion of system defaults regardless of who is asking
+    if (check[0].is_system_default === 1 || check[0].is_system_default === true) {
+      return res.status(403).json({ success: false, message: 'Cannot delete a system default entry. System defaults are protected.' });
+    }
+
     const isGlobalDefault = check[0].admin_owner_id === null;
     const isOwner = check[0].admin_owner_id == adminOwnerId;
     const isSuperAdmin = req.user.role === 'superadmin';

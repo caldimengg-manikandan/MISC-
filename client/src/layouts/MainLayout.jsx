@@ -10,7 +10,7 @@ import {
   Box, Database, ArrowUpDown, ChevronDown, Settings,
   HelpCircle, Share2, Save, Pin, DollarSign,
   Zap, Users, Printer, FileSpreadsheet, Trash2, Key, ShieldAlert, History,
-  AlertTriangle, ArrowRight
+  AlertTriangle, ArrowRight, BookOpen
 } from 'lucide-react';
 import ProjectContextMenu from '../components/ProjectContextMenu';
 import ProfileContextMenu from '../components/ProfileContextMenu';
@@ -61,12 +61,13 @@ const NAV_ITEMS = [
     path: null,
     adminOnly: false, // filtered per-child below
     children: [
-      { id: 'pricing', label: 'Pricing Rates', icon: <DollarSign size={13} />, path: '/settings/pricing', adminOnly: true },
-      { id: 'customers', label: 'Customer Master', icon: <Users size={13} />, path: '/settings/customers', adminOnly: true },
-      { id: 'team', label: 'Team Management', icon: <Users size={13} />, path: '/settings/team', adminOnly: true },
-      { id: 'system', label: 'System Admin', icon: <Database size={13} />, path: '/settings/system', adminOnly: true },
-      { id: 'license', label: 'License & Usage', icon: <Key size={13} />, path: '/settings/license', adminOnly: true },
-      { id: 'personalization', label: 'Personalization', icon: <Zap size={13} />, path: '/settings/personalization', adminOnly: false },
+      { id: 'pricing',         label: 'Pricing Rates',  icon: <DollarSign size={13} />, path: '/settings/pricing',         adminOnly: true },
+      { id: 'library',          label: 'Library Hub',    icon: <BookOpen size={13} />,   path: '/library',                  adminOnly: true },
+      { id: 'customers',        label: 'Customer Master',icon: <Users size={13} />,      path: '/settings/customers',       adminOnly: true },
+      { id: 'team',             label: 'Team Management',icon: <Users size={13} />,      path: '/settings/team',            adminOnly: true },
+      { id: 'system',           label: 'System Admin',   icon: <Database size={13} />,  path: '/settings/system',          adminOnly: true },
+      { id: 'license',          label: 'License & Usage',icon: <Key size={13} />,       path: '/settings/license',         adminOnly: true },
+      { id: 'personalization',  label: 'Personalization',icon: <Zap size={13} />,       path: '/settings/personalization', adminOnly: false },
     ]
   },
   {

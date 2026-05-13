@@ -60,7 +60,7 @@ export const generateProposalPDF = (projectData, stairs, estimationResult = null
       ['Run/Rise', 'Engineering Std', `${stair.run?.value || 0}" / ${stair.rise?.value || 0}"`, '—'],
       ['Angle', 'Compliance Check', `${stair.angle || 0} deg`, '—'],
       ['Stringers', stair.stringerSize || 'N/A', `${stair.calcStringerLF || 0} LF`, `${stair.calcStringerWeight || 0}`],
-      ['Tread Pans', stair.panPlThk || '12ga', `${stair.calcPanArea || 0} SQFT`, `${stair.calcPanSteelWeight || 0}`],
+      ['Tread Pans', stair.panPlThk || '0.1046', `${stair.calcPanArea || 0} SQFT`, `${stair.calcPanSteelWeight || 0}`],
       ['Concrete', '3000 PSI Fill', `${stair.calcConcreteCY || 0} CY`, '—']
     ];
 
