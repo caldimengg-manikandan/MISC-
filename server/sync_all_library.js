@@ -15,7 +15,8 @@ async function syncFile(pool, filename) {
     
     for (const entry of data) {
         const r = pool.request();
-        const fields = Object.keys(entry).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
+        const exclude = ['id', 'created_at', 'updated_at', 'updated_by', 'created_by'];
+        const fields = Object.keys(entry).filter(k => !exclude.includes(k));
         
         let updateSql = "UPDATE dictionary SET ";
         let insertCols = "INSERT INTO dictionary (";
