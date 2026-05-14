@@ -1,5 +1,5 @@
 const db = require('../../config/mssql');
-const { GAUGE_THICKNESS } = require('./PanPlateWeightCalculationService');
+const { GAUGE_THICKNESS } = require('../calculation/PanPlateWeightCalculationService');
 
 const DEFAULT_APPLICATION_TYPE = 'Commercial / Standard Duty';
 
