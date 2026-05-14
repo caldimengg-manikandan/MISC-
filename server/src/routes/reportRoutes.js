@@ -42,15 +42,24 @@ const flatNum = (v, fallback = 0) => {
 const fmt = (v, d = 2) => (typeof v === 'number' ? v.toFixed(d) : (v ?? '—'));
 const fmtDollar = (v) => (typeof v === 'number' ? `$${v.toFixed(2)}` : '—');
 
+const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
+
 // ─── GET /api/reports/projects ────────────────────────────────────────────────
 // Returns a lightweight list of user's projects for the selector dropdown.
 router.get('/projects', async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT id, projectNumber, projectName, customer_name, status, updatedAt
-       FROM projects WHERE userId = ? ORDER BY updatedAt DESC`,
-      [req.userId]
-    );
+    const ownerAdminId = await resolveOwnerAdminId(req);
+    let query, params;
+    
+    if (ownerAdminId === null) {
+       query = `SELECT id, projectNumber, projectName, customer_name, status, updatedAt FROM projects ORDER BY updatedAt DESC`;
+       params = [];
+    } else {
+       query = `SELECT id, projectNumber, projectName, customer_name, status, updatedAt FROM projects WHERE owner_admin_id = ? OR company_id = ? OR userId = ? ORDER BY updatedAt DESC`;
+       params = [ownerAdminId, ownerAdminId, req.userId];
+    }
+    
+    const [rows] = await db.query(query, params);
     res.json({ success: true, projects: rows });
   } catch (err) {
     logger.error('reportRoutes /projects error', { error: err.message });
@@ -64,12 +73,21 @@ router.get('/:projectId/live', async (req, res) => {
   try {
     await configManager.loadConfigs();
 
+    const ownerAdminId = await resolveOwnerAdminId(req);
+    let whereClause = 'p.id = ?';
+    let params = [req.params.projectId];
+    
+    if (ownerAdminId !== null) {
+      whereClause += ' AND (p.owner_admin_id = ? OR p.company_id = ? OR p.userId = ? OR p.createdBy = ?)';
+      params.push(ownerAdminId, ownerAdminId, req.userId, req.userId);
+    }
+
     const [rows] = await db.query(`
       SELECT p.*, c.companyName as linkedCustomerName
       FROM projects p
       LEFT JOIN customers c ON p.customer_id = c.id
-      WHERE p.id = ? AND p.userId = ?
-    `, [req.params.projectId, req.userId]);
+      WHERE ${whereClause}
+    `, params);
 
     const project = rows[0];
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
@@ -297,7 +315,7 @@ router.get('/:projectId/live', async (req, res) => {
 router.get('/:projectId/bom-excel', async (req, res) => {
   try {
     // Re-use live data
-    const liveRes = await fetchLiveData(req.params.projectId, req.userId);
+    const liveRes = await fetchLiveData(req.params.projectId, req.userId, req);
     if (!liveRes.success) return res.status(404).json(liveRes);
 
     const { project, rates, summary, stairs, rails, platforms } = liveRes;
@@ -604,15 +622,24 @@ router.get('/:projectId/bom-excel', async (req, res) => {
 });
 
 // ─── Internal helper: fetch live data (used by bom-excel internally) ──────────
-async function fetchLiveData(projectId, userId) {
+async function fetchLiveData(projectId, userId, req) {
   await configManager.loadConfigs();
+
+  const ownerAdminId = await resolveOwnerAdminId({ user: { id: userId, role: req?.userRole }, companyId: req?.companyId });
+  let whereClause = 'p.id = ?';
+  let params = [projectId];
+  
+  if (ownerAdminId !== null) {
+    whereClause += ' AND (p.owner_admin_id = ? OR p.company_id = ? OR p.userId = ? OR p.createdBy = ?)';
+    params.push(ownerAdminId, ownerAdminId, userId, userId);
+  }
 
   const [rows] = await db.query(`
     SELECT p.*, c.companyName as linkedCustomerName
     FROM projects p
     LEFT JOIN customers c ON p.customer_id = c.id
-    WHERE p.id = ? AND p.userId = ?
-  `, [projectId, userId]);
+    WHERE ${whereClause}
+  `, params);
 
   const project = rows[0];
   if (!project) return { success: false };
