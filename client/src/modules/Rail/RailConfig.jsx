@@ -382,97 +382,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
           {type === 'guardRail' ? 'Guard Rail Specifications' : 'Rail Specifications'}
         </div>
 
-        {/* ── Identification Group ─────────────────────────────────────────── */}
-        <div className="subtle-group" style={{ marginBottom: '20px' }}>
-          <div className="group-header">Identification & Global Context</div>
-          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
-            <div className="form-field">
-              <label className="form-label">
-                Material Type
-                {isAdmin && (
-                  <button onClick={(e) => openManage('material_type', 'Material Types', e)} className="quick-edit-btn" title="Manage Options">
-                    <Settings size={12} />
-                  </button>
-                )}
-              </label>
-              <SearchableSelect
-                className="compact-select"
-                options={dropdowns.steelGrades.map(sg => ({ value: sg.id || sg, label: sg.label || sg }))}
-                valueKey="value"
-                displayKey="label"
-                value={form.materialGradeId || form.steelGrade}
-                onSelect={opt => {
-                  setForm(prev => ({
-                    ...prev,
-                    materialGradeId: opt?.value || '',
-                    steelGrade: opt?.label || ''
-                  }));
-                  if (onChange) onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
-                }}
-                placeholder="— Select Type —"
-              />
-            </div>
 
-            <div className="form-field">
-              <label className="form-label">
-                Mounting Type
-                {isAdmin && (
-                  <button
-                    onClick={(e) => openManage('mounting_type', 'Mounting Types', e)}
-                    className="quick-edit-btn"
-                    title="Manage Options"
-                  >
-                    <Settings size={12} />
-                  </button>
-                )}
-              </label>
-              <SearchableSelect
-                className={`compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
-                options={dropdowns.mountings.map(m => ({ value: m, label: m }))}
-                valueKey="value"
-                displayKey="label"
-                value={form.mountingType}
-                onSelect={opt => set('mountingType', opt?.value || '')}
-                placeholder="— Select —"
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="form-label">
-                Finish Specification
-                {isAdmin && (
-                  <button
-                    onClick={(e) => openManage('finish_option', 'Finish Options', e)}
-                    className="quick-edit-btn"
-                    title="Manage Options"
-                  >
-                    <Settings size={12} />
-                  </button>
-                )}
-              </label>
-              <SearchableSelect
-                className="compact-select"
-                options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
-                valueKey="value"
-                displayKey="label"
-                value={form.finish}
-                onSelect={opt => set('finish', opt?.value || '')}
-                placeholder="— Select Finish —"
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="form-label">Rail Number / ID</label>
-              <input
-                className="form-input compact-input"
-                value={form.railNumber || ''}
-                onChange={e => set('railNumber', e.target.value)}
-                onFocus={e => e.target.select()}
-                placeholder="e.g. R-01"
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Suggestion Filters - OPTION B */}
         {(type === 'guardRail' || type === 'caneRail') && (
@@ -643,36 +553,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
           />
 
 
-          <div className="form-field">
-            <label className="form-label">
-              Material Type
-              {isAdmin && (
-                <button
-                  onClick={(e) => openManage('material_type', 'Material Types', e)}
-                  className="quick-edit-btn"
-                  title="Manage Options"
-                >
-                  <Settings size={12} />
-                </button>
-              )}
-            </label>
-            <SearchableSelect
-              className="compact-select"
-              options={dropdowns.steelGrades.map(sg => ({ value: sg.id || sg, label: sg.label || sg }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.materialGradeId || form.steelGrade}
-              onSelect={opt => {
-                setForm(prev => ({
-                  ...prev,
-                  materialGradeId: opt?.value || '',
-                  steelGrade: opt?.label || ''
-                }));
-                if (onChange) onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
-              }}
-              placeholder="— Select Type —"
-            />
-          </div>
+
 
           {!config.lbsPerFt && (
             <div className="form-field">
@@ -836,7 +717,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             </>
           )}
 
-          <div className="form-field" style={{ gridColumn: 'span 2', display: config.hasIntermediateRails ? 'block' : 'none' }}>
+          <div className="form-field" style={{ display: config.hasIntermediateRails ? 'block' : 'none' }}>
             <label className="form-label">
               Intermediate Rails
             </label>
@@ -865,6 +746,54 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
               </span>
             )}
           </div>
+
+          <div className="form-field">
+            <label className="form-label">
+              Mounting Type
+              {isAdmin && (
+                <button
+                  onClick={(e) => openManage('mounting_type', 'Mounting Types', e)}
+                  className="quick-edit-btn"
+                  title="Manage Options"
+                >
+                  <Settings size={12} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              className={`compact-select ${showMountingWarning ? 'border-amber-400 bg-amber-50' : ''}`}
+              options={dropdowns.mountings.map(m => ({ value: m, label: m }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.mountingType}
+              onSelect={opt => set('mountingType', opt?.value || '')}
+              placeholder="— Select —"
+            />
+          </div>
+
+          <div className="form-field">
+            <label className="form-label">
+              Finish Specification
+              {isAdmin && (
+                <button
+                  onClick={(e) => openManage('finish_option', 'Finish Options', e)}
+                  className="quick-edit-btn"
+                  title="Manage Options"
+                >
+                  <Settings size={12} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.finishes.map(f => ({ value: f, label: f }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.finish}
+              onSelect={opt => set('finish', opt?.value || '')}
+              placeholder="— Select Finish —"
+            />
+          </div>
         </div>
       </div>
 
@@ -878,6 +807,7 @@ export default function RailConfig({ type = 'guardRail', data, onChange, onFocus
             unitType="LF"
             finishName={form.finish}
             hidePricePerRiser={true}
+            hideGrossWeight={true}
             title="Rail Configuration Preview"
             mountingType={form.mountingType}
             minimal={true}

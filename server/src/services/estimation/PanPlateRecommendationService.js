@@ -1,6 +1,16 @@
 const db = require('../../config/mssql');
+const { GAUGE_THICKNESS } = require('./PanPlateWeightCalculationService');
 
 const DEFAULT_APPLICATION_TYPE = 'Commercial / Standard Duty';
+
+function getGaugeFromInches(inches) {
+  const val = parseFloat(inches);
+  if (isNaN(val)) return null;
+  for (const [g, t] of Object.entries(GAUGE_THICKNESS)) {
+    if (Math.abs(t - val) < 0.0001) return g;
+  }
+  return null;
+}
 
 class PanPlateRecommendationService {
   /**
@@ -27,9 +37,15 @@ class PanPlateRecommendationService {
       
       const params = { width: wFt };
 
-      if (gauge) {
+      let searchGauge = gauge;
+      if (gauge && !String(gauge).toLowerCase().includes('ga')) {
+        const mappedGauge = getGaugeFromInches(gauge);
+        if (mappedGauge) searchGauge = mappedGauge;
+      }
+
+      if (searchGauge) {
         query += ` AND custom_fields LIKE @gaugeMatch`;
-        params.gaugeMatch = `%${gauge}%`;
+        params.gaugeMatch = `%${searchGauge}%`;
       }
 
       query += ` ORDER BY recommendation_order ASC, [order] ASC`;
@@ -41,7 +57,7 @@ class PanPlateRecommendationService {
       }
 
       // Fallback: Try without gauge if no match found for specific gauge
-      if (gauge) {
+      if (searchGauge) {
         const [fallbackRows] = await db.query(`
           SELECT TOP 1 * FROM dictionary 
           WHERE category = 'pan_plate_config' 

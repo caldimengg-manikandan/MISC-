@@ -389,8 +389,8 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
   };
 
   // Helper to identify stair type regardless of slug/label from different DB versions
-  const isPanStair = form.stairType?.toLowerCase().trim() === 'pan-concrete' || form.stairType?.toLowerCase().trim().includes('pan plate');
   const isGratingStair = form.stairType?.toLowerCase().trim() === 'grating-tread' || form.stairType?.toLowerCase().trim().includes('grating');
+  const isPanStair = (form.stairType?.toLowerCase().trim() === 'pan-concrete' || form.stairType?.toLowerCase().trim().includes('pan plate')) && !isGratingStair;
   const isNonMetalStair = form.stairType?.toLowerCase().trim() === 'non-metal' || form.stairType?.toLowerCase().trim().includes('non metal');
 
   // --- Smart Auto-Suggest for Rolled Stringer Size ---
@@ -472,7 +472,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
       try {
         const token = localStorage.getItem('steel_token');
         const appType = encodeURIComponent(form.applicationType || 'Commercial / Standard Duty');
-        const gaugeToMatch = thicknessSource === 'gauge' ? selectedGauge : '';
+        const gaugeToMatch = thicknessSource === 'gauge' ? selectedGauge : manualThicknessInches;
         const res = await fetch(
           `${API_BASE_URL}/api/v1/calculate/pan-plate-recommendation?width=${stairWidthFt}&length=${totalRunFt}&stairType=${form.stairType}&applicationType=${appType}&gauge=${gaugeToMatch}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -780,28 +780,30 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
 
 
 
-          <div className="form-field">
-            <label className="form-label">
-              {isPanStair ? 'Pan support type' : 'Connection Type'}
-              {isAdmin && (
-                <button
-                  onClick={(e) => openManage('connection_type', 'Connection Types', e)}
-                  className="quick-edit-btn"
-                  title="Manage Options"
-                >
-                  <Settings size={14} />
-                </button>
-              )}
-            </label>
-            <SearchableSelect
-              options={supportTypeOptions}
-              valueKey="value"
-              displayKey="label"
-              value={form.connectionType}
-              onSelect={opt => set('connectionType', opt?.value || '')}
-              placeholder="— Select Connection —"
-            />
-          </div>
+          {isPanStair && (
+            <div className="form-field">
+              <label className="form-label">
+                {isPanStair ? 'Pan support type' : 'Connection Type'}
+                {isAdmin && (
+                  <button
+                    onClick={(e) => openManage('connection_type', 'Connection Types', e)}
+                    className="quick-edit-btn"
+                    title="Manage Options"
+                  >
+                    <Settings size={14} />
+                  </button>
+                )}
+              </label>
+              <SearchableSelect
+                options={supportTypeOptions}
+                valueKey="value"
+                displayKey="label"
+                value={form.connectionType}
+                onSelect={opt => set('connectionType', opt?.value || '')}
+                placeholder="— Select Connection —"
+              />
+            </div>
+          )}
 
 
 
@@ -920,10 +922,8 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
                         const clean = val.toLowerCase().trim();
                         
                         const isExplicitGauge = clean.includes('ga') || clean.includes('gauge');
-                        const numVal = parseFloat(clean);
-                        const isLikelyGauge = !isNaN(numVal) && numVal >= 7 && !clean.includes('.');
 
-                        if (isExplicitGauge || isLikelyGauge) {
+                        if (isExplicitGauge) {
                           setThicknessSource('gauge');
                           const match = clean.match(/(\d+)/);
                           if (match) {
@@ -1038,7 +1038,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
           <UnitInput id="stair-rise" label="Rise" value={form.rise} onChange={v => set('rise', v)} dtTag="FT-IN" dtClass="dt-ft-in" />
           
           <div className="form-field">
-            <label className="form-label">Risers</label>
+            <label className="form-label">No. of Risers</label>
             <input className="form-input" type="number" value={form.numRisers || ''} onChange={e => set('numRisers', e.target.value)} placeholder="0" />
           </div>
 
@@ -1480,19 +1480,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             )}
           </div>
 
-          <EstimationPreviewCard
-            systemCalc={{
-              ...form.systemCalc,
-              shopTotalHrs: form.systemCalc.stringerShopHrs,
-              fieldTotalHrs: form.systemCalc.stringerFieldHrs
-            }}
-            totalCost={form.totalCost}
-            stairType={form.stairType}
-            finishName={form.finish}
-            hidePorRok={true}
-            hideAnchorBolts={true}
-            minimal={true}
-          />
+          {/* EstimationPreviewCard removed as requested */}
         </div>
       )}
 

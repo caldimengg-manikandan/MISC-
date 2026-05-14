@@ -1076,19 +1076,18 @@ class StairCalculationService {
             if (stairTypeLabel.includes('PAN')) {
               strLbs = 10.600;
               panLbs = resolvedWidth * 10.0;
-              baseRiserShopHrs = 1.350;
-              baseRiserFieldHrs = 0.900;
-              shopHrs = 0.150;
-              fieldHrs = 0.100;
+              // ✅ EXCEL PARITY: Per-tread labor rates (1.6 shop, 1.0 field per tread)
+              baseRiserShopHrs = 1.600;
+              baseRiserFieldHrs = 1.000;
             } else if (stairTypeLabel.includes('GRATING')) {
               strLbs = 10.600;
               panLbs = resolvedWidth * 10.0;
-              baseRiserShopHrs = 1.250;
-              baseRiserFieldHrs = 0.850;
-              shopHrs = 0.150;
-              fieldHrs = 0.100;
+              baseRiserShopHrs = 1.600;
+              baseRiserFieldHrs = 1.000;
             } else {
               panLbs = 0;
+              baseRiserShopHrs = 1.600;
+              baseRiserFieldHrs = 1.000;
             }
           }
 
@@ -1106,11 +1105,17 @@ class StairCalculationService {
 
           if (exactMatch.length > 0 && exactMatch[0].steelLbsLf !== null) {
             strLbs = parseFloat(exactMatch[0].steelLbsLf);
-            shopHrs = parseFloat(exactMatch[0].shopLaborMhLf || shopHrs);
-            fieldHrs = parseFloat(exactMatch[0].fieldLaborMhLf || fieldHrs);
+            // ✅ Use explicit null-check so a stored value of 0 doesn't fall back
+            if (exactMatch[0].shopLaborMhLf !== null && exactMatch[0].shopLaborMhLf !== undefined) {
+              shopHrs = parseFloat(exactMatch[0].shopLaborMhLf);
+            }
+            if (exactMatch[0].fieldLaborMhLf !== null && exactMatch[0].fieldLaborMhLf !== undefined) {
+              fieldHrs = parseFloat(exactMatch[0].fieldLaborMhLf);
+            }
             if (exactMatch[0].price !== null && exactMatch[0].price > 0) {
               dictPriceLF = exactMatch[0].price;
             }
+            console.log(`[STAIR ENGINE] 📋 Stringer dict EXACT MATCH: "${src.substring(0,50)}" → lbs/ft=${strLbs}, shopHrs=${shopHrs}, fieldHrs=${fieldHrs}`);
           } else {
             const cleanFull = src.replace(/[^A-Z0-9]/gi, '').toUpperCase();
             const [fullMatch] = await db.query(
@@ -1124,11 +1129,16 @@ class StairCalculationService {
 
             if (fullMatch.length > 0 && fullMatch[0].steelLbsLf !== null) {
               strLbs = parseFloat(fullMatch[0].steelLbsLf);
-              shopHrs = parseFloat(fullMatch[0].shopLaborMhLf || shopHrs);
-              fieldHrs = parseFloat(fullMatch[0].fieldLaborMhLf || fieldHrs);
+              if (fullMatch[0].shopLaborMhLf !== null && fullMatch[0].shopLaborMhLf !== undefined) {
+                shopHrs = parseFloat(fullMatch[0].shopLaborMhLf);
+              }
+              if (fullMatch[0].fieldLaborMhLf !== null && fullMatch[0].fieldLaborMhLf !== undefined) {
+                fieldHrs = parseFloat(fullMatch[0].fieldLaborMhLf);
+              }
               if (fullMatch[0].price !== null && fullMatch[0].price > 0) {
                 dictPriceLF = fullMatch[0].price;
               }
+              console.log(`[STAIR ENGINE] 📋 Stringer dict FULL MATCH: lbs/ft=${strLbs}, shopHrs=${shopHrs}, fieldHrs=${fieldHrs}`);
             } else {
               let searchProfile = src;
               if (src.includes('/')) {
@@ -1163,8 +1173,15 @@ class StairCalculationService {
 
               if (dictBenchmarks.length > 0 && dictBenchmarks[0].steelLbsLf !== null && dictBenchmarks[0].steelLbsLf > 0) {
                 strLbs = parseFloat(dictBenchmarks[0].steelLbsLf);
-                shopHrs = parseFloat(dictBenchmarks[0].shopLaborMhLf || shopHrs);
-                fieldHrs = parseFloat(dictBenchmarks[0].fieldLaborMhLf || fieldHrs);
+                if (dictBenchmarks[0].shopLaborMhLf !== null && dictBenchmarks[0].shopLaborMhLf !== undefined) {
+                  shopHrs = parseFloat(dictBenchmarks[0].shopLaborMhLf);
+                }
+                if (dictBenchmarks[0].fieldLaborMhLf !== null && dictBenchmarks[0].fieldLaborMhLf !== undefined) {
+                  fieldHrs = parseFloat(dictBenchmarks[0].fieldLaborMhLf);
+                }
+                console.log(`[STAIR ENGINE] 📋 Stringer dict FUZZY MATCH: lbs/ft=${strLbs}, shopHrs=${shopHrs}, fieldHrs=${fieldHrs}`);
+              } else {
+                console.warn(`[STAIR ENGINE] ⚠️ No stringer_size dict match for "${src}" — using weight regex / STRINGER_BENCHMARKS fallback`);
               }
             }
           }
@@ -1180,22 +1197,20 @@ class StairCalculationService {
           const effectiveStringerLF = (st.totalLFBothStringers > 0) ? st.totalLFBothStringers : 0;
 
           // ✅ FORMULA: Base Weight = profile lbs/ft × total LF both stringers
+          //   e.g. MC12x10.6 stringer, 10ft long: 10.6 lbs/ft × 10ft × 2 stringers = 212 lbs
           stringerBaseWeight = effectiveStringerLF * strLbs;
 
-          // ✅ FORMULA: Shop/Field Hours from the stringer_size library are ALREADY the total
-          // for BOTH stringers combined (NS + FS). e.g., 1.5 shop hrs = total for the pair.
-          // Do NOT multiply by 2.
-          // isRecipeMode (Std. entries) → use library value directly as total hours for both stringers
-          // Non-recipe (raw profile like MC12x10.6) → fallback: per-LF × total LF
-          if (isRecipeMode && shopHrs > 0) {
-            // Library value already covers both stringers combined
-            shopHoursInternal = shopHrs;
-            fieldHoursInternal = fieldHrs;
-          } else {
-            // Raw profile fallback: treat as hrs/LF
-            shopHoursInternal = effectiveStringerLF * shopHrs;
-            fieldHoursInternal = effectiveStringerLF * fieldHrs;
-          }
+          // ✅ FORMULA: Shop/Field Hours = rate_per_tread × numTreads
+          //   PRIMARY SOURCE: stringer_size library (shopHrs / fieldHrs resolved from dict lookup above).
+          //   These are per-tread rates stored in the "Shop HRS" and "Field HRS" columns.
+          //   e.g. MC12x10.6 → 1.5 shop hrs/tread × 10 treads = 15 shop hrs
+          //        MC12x14.3 → 1.5 shop hrs/tread × 10 treads = 15 shop hrs
+          //   FALLBACK: if no stringer-size rate found, use baseRiserShopHrs from the stair_type dict.
+          const resolvedShopHrsPerTread = shopHrs > 0 ? shopHrs : baseRiserShopHrs;
+          const resolvedFieldHrsPerTread = fieldHrs > 0 ? fieldHrs : baseRiserFieldHrs;
+          shopHoursInternal = resolvedShopHrsPerTread * numberOfTreads;
+          fieldHoursInternal = resolvedFieldHrsPerTread * numberOfTreads;
+          console.log(`[STAIR ENGINE] 🕐 Stringer Labor: ${resolvedShopHrsPerTread} shop hrs/tread × ${numberOfTreads} treads = ${shopHoursInternal.toFixed(2)} shop hrs (source: ${shopHrs > 0 ? 'stringer_size dict' : 'stair_type fallback'})`);
 
           const isGratingStair = stairTypeLabel.includes('GRATING') || (st.config && st.config.stairGrating === true);
           const isPanPlateStair = stairTypeLabel === 'PAN_PLATE_CONC_FILLED' || 
@@ -1583,13 +1598,16 @@ class StairCalculationService {
                 stringerLength: geometry.stringerLength
               } : null,
               summary: {
-                totalStringerWeight: this.roundExcel(stringerBaseWeight + treadSupportWeight + connectionWeight, 3),
+                totalStairStringerWeight: this.roundExcel(stringerBaseWeight + treadSupportWeight + connectionWeight, 3),
                 totalPanPlateWeight: this.roundExcel(panTotalWeight, 3),
-                totalHardwareWeight: this.roundExcel(14, 3),
+                totalHardwareWeight: this.roundExcel(CONNECTION_WEIGHT_LBS, 3),
+                connectionWeight: this.roundExcel(connectionWeight, 3),
                 baseSteelWeight: this.roundExcel(totalSteelWeight, 3),
                 scrapWeight: this.roundExcel(scrapLbs, 3),
-                totalStringerShopHours: this.roundExcel(stringerShopHrs, 3),
+                totalStairStringerShopHours: this.roundExcel(stringerShopHrs, 3),
+                totalStairStringerFieldHours: this.roundExcel(fieldTotalHrsCombined, 3),
                 totalPanPlateShopHours: this.roundExcel(panPlateShopHrs, 3),
+                totalPanPlateFieldHours: 0,
                 totalConnectionShopHours: this.roundExcel(connectionShopHrs, 3),
                 totalFieldHours: this.roundExcel(fieldTotalHrsCombined, 3),
                 shopLaborCost: this.roundExcel(shopLaborCost, 2),
@@ -1601,7 +1619,16 @@ class StairCalculationService {
                 porRokAnchorsCost: this.roundExcel(porRokCost, 2),
                 scrapWeightCost: this.roundExcel(scrapPriceOnly, 2),
                 grandTotal: this.roundExcel(totalCostPerStair, 2)
-              }
+              },
+              // ✅ root properties for calculateFinal:aggregate
+              totalStairStringerWeight: this.roundExcel(stringerBaseWeight + treadSupportWeight + connectionWeight, 3),
+              totalStairStringerShopHours: this.roundExcel(stringerShopHrs, 3),
+              totalStairStringerFieldHours: this.roundExcel(fieldTotalHrsCombined, 3),
+              totalPanPlateWeight: this.roundExcel(panTotalWeight, 3),
+              totalPanPlateShopHours: this.roundExcel(panPlateShopHrs, 3),
+              totalPanPlateFieldHours: 0,
+              totalHardwareWeight: this.roundExcel(CONNECTION_WEIGHT_LBS, 3),
+              connectionWeight: this.roundExcel(connectionWeight, 3)
             }
           };
         };
@@ -1651,14 +1678,24 @@ class StairCalculationService {
     const shopRate = configManager.get('shop_hourly_rate', 90);
     const fieldRate = configManager.get('field_hourly_rate', 125);
 
-    // Accumulators for accurate Vertical Summation (Sum of Parts)
     let totalBaseSteelWeight = 0;
-    let totalStringerWeight = 0;
+    let totalStairStringerWeight = 0;
+    let totalStairStringerShopHours = 0;
+    let totalStairStringerFieldHours = 0;
     let totalPanPlateWeight = 0;
+    let totalPanPlateShopHours = 0;
+    let totalPanPlateFieldHours = 0;
+    let totalHardwareWeight = 0;
+    let connectionWeight = 0;
+    let totalRailWeight = 0;
+    let totalRailShopHours = 0;
+    let totalRailFieldHours = 0;
+    let totalLandingWeight = 0;
+    let totalLandingShopHours = 0;
+    let totalLandingFieldHours = 0;
     let totalScrapLbs = 0;
     let totalShopHours = 0;
-    let totalStringerShopHours = 0;
-    let totalPanPlateShopHours = 0;
+    let totalConnectionShopHours = 0;
     let totalFieldHours = 0;
     let totalRisers = 0;
     let totalGalvShopHrs = 0;
@@ -1683,10 +1720,11 @@ class StairCalculationService {
     rails.forEach((r, i) => {
       const s = r.systemCalc || r;
       totalBaseSteelWeight += (s.totalSteel || 0);
-      totalStringerWeight += (s.totalSteel || 0);
+      totalRailWeight += (s.totalSteel || 0);
       totalScrapLbs += (s.scrapLbs || 0);
       totalShopHours += (s.shopTotalHrs || 0);
-      totalStringerShopHours += (s.shopTotalHrs || 0);
+      totalRailShopHours += (s.shopTotalHrs || 0);
+      totalRailFieldHours += (s.fieldTotalHrs || 0);
       totalFieldHours += (s.fieldTotalHrs || 0);
       totalGalvShopHrs += (s.galvShopTotalHrs || 0);
       totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
@@ -1710,10 +1748,11 @@ class StairCalculationService {
     platforms.forEach((p, i) => {
       const s = p.systemCalc || p;
       totalBaseSteelWeight += (s.totalSteel || 0);
-      totalStringerWeight += (s.totalSteel || 0);
+      totalLandingWeight += (s.totalSteel || 0);
       totalScrapLbs += (s.scrapLbs || 0);
       totalShopHours += (s.shopTotalHrs || 0);
-      totalStringerShopHours += (s.shopTotalHrs || 0);
+      totalLandingShopHours += (s.shopTotalHrs || 0);
+      totalLandingFieldHours += (s.fieldTotalHrs || 0);
       totalFieldHours += (s.fieldTotalHrs || 0);
       totalGalvShopHrs += (s.galvShopTotalHrs || 0);
       totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
@@ -1735,15 +1774,25 @@ class StairCalculationService {
     stairs.forEach((st, i) => {
       const aggregate = (item) => {
         const s = item.systemCalc || item;
-        // ✅ s.totalSteel = stringers + pans + grating + connections (pan plate already included)
-        // Do NOT add s.stairPansTotalWeight — that would double-count pan plates
+        
+        // ✅ Reliable Metric Aggregation from top-level systemCalc properties
+        const strW = (s.totalStairStringerWeight || 0);
+        const strShop = (s.totalStairStringerShopHours || 0);
+        const strField = (s.totalStairStringerFieldHours || 0);
+
         totalBaseSteelWeight += (s.totalSteel || 0);
-        totalStringerWeight += ((s.totalSteel || 0) - (s.panPlateWeight || 0));
-        totalPanPlateWeight += (s.panPlateWeight || 0);
+        totalStairStringerWeight += strW;
+        totalPanPlateWeight += (s.totalPanPlateWeight || 0);
         totalScrapLbs += (s.scrapLbs || 0);
         totalShopHours += (s.shopTotalHrs || 0);
-        totalStringerShopHours += (s.totalStringerShopHours || s.stringerShopHrs || 0);
+        totalStairStringerShopHours += strShop;
+        totalStairStringerFieldHours += strField;
+        
         totalPanPlateShopHours += (s.panPlateShopHrs || 0);
+        totalPanPlateFieldHours += (s.panPlateFieldHrs || 0);
+        totalHardwareWeight += (s.totalHardwareWeight || 0);
+        connectionWeight += (s.connectionWeight || 0);
+        totalConnectionShopHours += (s.totalConnectionShopHours || 0);
         totalFieldHours += (s.fieldTotalHrs || 0);
         totalGalvShopHrs += (s.galvShopTotalHrs || 0);
         totalGalvFieldHrs += (s.galvFieldTotalHrs || 0);
@@ -1773,10 +1822,10 @@ class StairCalculationService {
 
     return {
       ...estimate,
-      standardSummary: {
+      summary: {
         totalSteelWeight: this.roundExcel(totalBaseSteelWeight + totalScrapLbs, 3),
         baseSteelWeight: this.roundExcel(totalBaseSteelWeight, 3),
-        totalStringerWeight: this.roundExcel(totalStringerWeight, 3),
+        totalStairStringerWeight: this.roundExcel(totalStairStringerWeight, 3),
         totalPanPlateWeight: this.roundExcel(totalPanPlateWeight, 3),
         scrapWeight: this.roundExcel(totalScrapLbs, 3),
 
@@ -1789,15 +1838,25 @@ class StairCalculationService {
         galvanizeCost: this.roundExcel(sumGalvanizePrice, 2),
         anchorBoltsCost: this.roundExcel(sumAnchorBolts, 2),
         porRokAnchorsCost: this.roundExcel(sumPorRok, 2),
-        mountingCharges: this.roundExcel(sumPorRok, 2),
 
         subtotalWithoutTax: this.roundExcel(subtotalWithoutTax, 2),
         taxAmount: this.roundExcel(taxAmount, 2),
         grandTotal: this.roundExcel(grandTotal, 2),
 
         totalShopHours: this.roundExcel(totalShopHours, 3),
-        totalStringerShopHours: this.roundExcel(totalStringerShopHours, 3),
+        totalStairStringerShopHours: this.roundExcel(totalStairStringerShopHours, 3),
+        totalStairStringerFieldHours: this.roundExcel(totalStairStringerFieldHours, 3),
         totalPanPlateShopHours: this.roundExcel(totalPanPlateShopHours, 3),
+        totalPanPlateFieldHours: this.roundExcel(totalPanPlateFieldHours, 3),
+        totalHardwareWeight: this.roundExcel(totalHardwareWeight, 3),
+        connectionWeight: this.roundExcel(connectionWeight, 3),
+        totalRailWeight: this.roundExcel(totalRailWeight, 3),
+        totalRailShopHours: this.roundExcel(totalRailShopHours, 3),
+        totalRailFieldHours: this.roundExcel(totalRailFieldHours, 3),
+        totalLandingWeight: this.roundExcel(totalLandingWeight, 3),
+        totalLandingShopHours: this.roundExcel(totalLandingShopHours, 3),
+        totalLandingFieldHours: this.roundExcel(totalLandingFieldHours, 3),
+        totalConnectionShopHours: this.roundExcel(totalConnectionShopHours, 3),
         totalFieldHours: this.roundExcel(totalFieldHours, 3),
         totalGalvanizeShopHours: this.roundExcel(totalGalvShopHrs, 3),
         totalGalvanizeFieldHours: this.roundExcel(totalGalvFieldHrs, 3),
@@ -1829,17 +1888,17 @@ class StairCalculationService {
 
       const response = {
         success: true,
-        totalWeight: final.standardSummary?.totalSteelWeight || 0,
-        totalCost: final.standardSummary?.grandTotal || 0,
+        totalWeight: final.summary?.totalSteelWeight || 0,
+        totalCost: final.summary?.grandTotal || 0,
         breakdown: {
           rails: final.rails || [],
           platforms: final.platforms || [],
           stairs: final.stairs || [],
           totals: {
-            totalSteelWeight: final.standardSummary?.totalSteelWeight || 0
+            totalSteelWeight: final.summary?.totalSteelWeight || 0
           }
         },
-        summary: final.standardSummary || {}
+        summary: final.summary || {}
       };
 
       if (this.debug) {

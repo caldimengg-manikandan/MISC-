@@ -74,6 +74,7 @@ export default function EstimationPreviewCard({
   hidePricePerRiser = false,
   hidePorRok = false,
   hideAnchorBolts = false,
+  hideGrossWeight = false,
   minimal = false
 }) {
   const scrapFactorPct = systemCalc.scrapFactorPct || 11;
@@ -159,8 +160,8 @@ export default function EstimationPreviewCard({
         {/* ROW 1: STRUCTURAL DATA */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--gpt-border)' }}>
           <StatCell label="Steel Net" value={steelLbsSubTotal} />
-          <StatCell label="Gross Weight" value={formatNum(grossWeight, 3)} />
-          <StatCell label="Shop Hrs" value={formatNum(systemCalc.totalStringerShopHours || 0, 3)} />
+          {!hideGrossWeight && <StatCell label="Gross Weight" value={formatNum(grossWeight, 3)} />}
+          <StatCell label="Shop Hrs" value={formatNum(systemCalc.shopTotalHrs || 0, 3)} />
           <StatCell label="Field Hrs" value={formatNum(systemCalc.fieldTotalHrs || 0, 3)} borderRight={false} />
         </div>
 
@@ -204,7 +205,7 @@ export default function EstimationPreviewCard({
         </div>
         <div style={cellRowStyle(false)}>
           {!minimal && <StatCell label={`Scrap lbs (+${scrapFactorPct}%)`} value={steelScrapLbs} color={scrapColor} />}
-          <StatCell label="Total weight (gross)" value={formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} borderRight={false} />
+          {!hideGrossWeight && <StatCell label="Total weight (gross)" value={formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} borderRight={false} />}
         </div>
       </div>
 
@@ -260,12 +261,12 @@ export default function EstimationPreviewCard({
           {!minimal && <StatCell label={`Tax (${taxRatePct}%)`} value={taxDollars} borderRight={false} />}
           {minimal && <StatCell label="Total weight (gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} borderRight={false} />}
         </div>
-        {!minimal && (
-          <div style={cellRowStyle(false)}>
-            <StatCell label="Total Weight (Gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} />
-            <StatCell label="Material + Scrap" value={`$${formatMoney((systemCalc.subTotalMaterial || 0) + (systemCalc.scrapPriceOnly || 0))}`} color={moneyColor} borderRight={false} />
-          </div>
-        )}
+          {!minimal && (
+            <div style={cellRowStyle(false)}>
+              {!hideGrossWeight && <StatCell label="Total Weight (Gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lbs`} />}
+              <StatCell label="Material + Scrap" value={`$${formatMoney((systemCalc.subTotalMaterial || 0) + (systemCalc.scrapPriceOnly || 0))}`} color={moneyColor} borderRight={false} />
+            </div>
+          )}
 
         {/* ── Bottom Bar with accent glow on Total Estimate ── */}
         <div style={{ display: 'flex', marginTop: 'auto', borderTop: '0.5px solid var(--gpt-border)', ...subBgStyle }}>

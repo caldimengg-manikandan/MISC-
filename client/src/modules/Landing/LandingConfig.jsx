@@ -237,151 +237,117 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
             <span className="form-input-unit">FT²</span>
           </div>
         </div>
-        </div>
       </div>
+    </div>
 
-      <div className="subtle-group">
-        <div className="group-header">Platform Selection & Specs</div>
-        <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-        <div className="form-field">
-          <label className="form-label">
-            Platform Type
-            {isAdmin && (
-              <button onClick={(e) => openManage('platform_type', 'Platform Types', e)} className="quick-edit-btn" title="Manage Options">
-                <Settings size={12} />
-              </button>
-            )}
-          </label>
-          <SearchableSelect
-            className="data-type-string compact-select"
-            options={dropdowns.platformTypes.map(pt => ({ value: pt.value || pt.label || pt, label: pt.label || pt.value || pt }))}
-            valueKey="value"
-            displayKey="label"
-            value={form.platformType}
-            onSelect={opt => {
-              const updated = { ...form, platformType: opt?.value || '', selectionSource: 'manual' };
-              setForm(updated);
-              if (onChange) onChange(updated);
-            }}
-            placeholder="— Select Type —"
-          />
-          {platformWarning && (
-            <div style={{
-              marginTop: '6px', fontSize: '10.5px', padding: '8px 12px', borderRadius: '4px',
-              backgroundColor: platformWarningType === 'warning' ? '#FEF3C7' : '#D1FAE5',
-              color: platformWarningType === 'warning' ? '#92400E' : '#065F46',
-              border: `1px solid ${platformWarningType === 'warning' ? '#FDE68A' : '#A7F3D0'}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div>
-                {platformWarning.split('\n').map((line, i) => (
-                  <div key={i} style={{ fontWeight: i === 0 && platformWarningType === 'warning' ? '700' : '500' }}>
-                    {line}
-                  </div>
-                ))}
-              </div>
-              {platformWarningType === 'warning' && recommendedPlatformType && (
-                <button
-                  onClick={() => {
-                    const updated = { ...form, platformType: recommendedPlatformType, selectionSource: 'auto' };
-                    setForm(updated);
-                    if (onChange) onChange(updated);
-                  }}
-                  style={{
-                    backgroundColor: '#D97706',
-                    color: 'white',
-                    border: 'none',
-                    padding: '4px 10px',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  Apply
+    <div className="subtle-group">
+      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+          <div className="form-field">
+            <label className="form-label">
+              Platform Type
+              {isAdmin && (
+                <button onClick={(e) => openManage('platform_type', 'Platform Types', e)} className="quick-edit-btn" title="Manage Options">
+                  <Settings size={12} />
                 </button>
               )}
-            </div>
-          )}
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">
-            Material Type
-            {isAdmin && (
-              <button onClick={(e) => openManage('material_type', 'Material Types', e)} className="quick-edit-btn" title="Manage Options">
-                <Settings size={12} />
-              </button>
+            </label>
+            <SearchableSelect
+              className="data-type-string compact-select"
+              options={dropdowns.platformTypes.map(pt => ({ value: pt.value || pt.label || pt, label: pt.label || pt.value || pt }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.platformType}
+              onSelect={opt => {
+                const updated = { ...form, platformType: opt?.value || '', selectionSource: 'manual' };
+                setForm(updated);
+                if (onChange) onChange(updated);
+              }}
+              placeholder="— Select Type —"
+            />
+            {platformWarning && (
+              <div style={{
+                marginTop: '6px', fontSize: '10.5px', padding: '8px 12px', borderRadius: '4px',
+                backgroundColor: platformWarningType === 'warning' ? '#FEF3C7' : '#D1FAE5',
+                color: platformWarningType === 'warning' ? '#92400E' : '#065F46',
+                border: `1px solid ${platformWarningType === 'warning' ? '#FDE68A' : '#A7F3D0'}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div>
+                  {platformWarning.split('\n').map((line, i) => (
+                    <div key={i} style={{ fontWeight: i === 0 && platformWarningType === 'warning' ? '700' : '500' }}>
+                      {line}
+                    </div>
+                  ))}
+                </div>
+                {platformWarningType === 'warning' && recommendedPlatformType && (
+                  <button
+                    onClick={() => {
+                      const updated = { ...form, platformType: recommendedPlatformType, selectionSource: 'auto' };
+                      setForm(updated);
+                      if (onChange) onChange(updated);
+                    }}
+                    style={{
+                      backgroundColor: '#D97706',
+                      color: 'white',
+                      border: 'none',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
             )}
-          </label>
-          <SearchableSelect
-            className="compact-select"
-            options={dropdowns.steelGrades.map(sg => ({ value: sg.id || sg, label: sg.label || sg }))}
-            valueKey="value"
-            displayKey="label"
-            value={form.materialGradeId || form.steelGrade}
-            onSelect={opt => {
-              setForm(prev => ({
-                ...prev,
-                materialGradeId: opt?.value || '',
-                steelGrade: opt?.label || ''
-              }));
-              if (onChange) onChange({ ...form, materialGradeId: opt?.value || '', steelGrade: opt?.label || '' });
-            }}
-            placeholder="— Select Type —"
-          />
-        </div>
+          </div>
 
-        <div className="form-field">
-          <label className="form-label">
-            Pan/Plate Gauge
-            {isAdmin && (
-              <button onClick={(e) => openManage('gauge_plate_spec', 'Gauge Specs', e)} className="quick-edit-btn" title="Manage Options">
-                <Settings size={12} />
-              </button>
-            )}
-          </label>
-          <SearchableSelect
-            className="compact-select"
-            options={dropdowns.gauges.map(g => ({ value: g.id || g, label: g.label || g }))}
-            valueKey="value"
-            displayKey="label"
-            value={form.gaugeId}
-            onSelect={opt => set('gaugeId', opt?.value || '')}
-            placeholder="— Select Gauge —"
-          />
-        </div>
+          <div className="form-field">
+            <label className="form-label">
+              Pan/Plate Gauge
+              {isAdmin && (
+                <button onClick={(e) => openManage('gauge_plate_spec', 'Gauge Specs', e)} className="quick-edit-btn" title="Manage Options">
+                  <Settings size={12} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.gauges.map(g => ({ value: g.id || g, label: g.label || g }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.gaugeId}
+              onSelect={opt => set('gaugeId', opt?.value || '')}
+              placeholder="— Select Gauge —"
+            />
+          </div>
 
-        <div className="form-field">
-          <label className="form-label">
-            Mounting Type
-            {isAdmin && (
-              <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
-                <Settings size={12} />
-              </button>
-            )}
-          </label>
-          <SearchableSelect
-            className="compact-select"
-            options={dropdowns.mountingTypes.map(m => ({ value: m, label: m }))}
-            valueKey="value"
-            displayKey="label"
-            value={form.mountingType}
-            onSelect={opt => set('mountingType', opt?.value || '')}
-            placeholder="— Select Mounting —"
-          />
-        </div>
+          <div className="form-field">
+            <label className="form-label">
+              Mounting Type
+              {isAdmin && (
+                <button onClick={(e) => openManage('mounting_type', 'Mounting Types', e)} className="quick-edit-btn" title="Manage Options">
+                  <Settings size={12} />
+                </button>
+              )}
+            </label>
+            <SearchableSelect
+              className="compact-select"
+              options={dropdowns.mountingTypes.map(m => ({ value: m, label: m }))}
+              valueKey="value"
+              displayKey="label"
+              value={form.mountingType}
+              onSelect={opt => set('mountingType', opt?.value || '')}
+              placeholder="— Select Mounting —"
+            />
+          </div>
 
-        </div>
-      </div>
-
-      <div className="subtle-group">
-        <div className="group-header">Finish Specification</div>
-        <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
           <div className="form-field">
             <label className="form-label">
               Finish Specification
@@ -413,6 +379,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
             unitType="SF"
             finishName={form.finish}
             hidePricePerRiser={true}
+            hideGrossWeight={true}
             title="Landing Configuration Preview"
             minimal={true}
           />

@@ -154,29 +154,7 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
             </div>
           </div>
 
-          <div className="form-field">
-            <label className="form-label">
-              Steel Grade
-              {isAdmin && (
-                <button
-                  onClick={(e) => openManage('steel_grade_stair', 'Steel Grades', e)}
-                  className="quick-edit-btn"
-                  title="Manage Options"
-                >
-                  <Settings size={14} />
-                </button>
-              )}
-            </label>
-            <SearchableSelect
-              className="compact-select"
-              options={dropdowns.steelGrades.map(sg => ({ value: sg, label: sg }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.steelGrade}
-              onSelect={opt => set('steelGrade', opt?.value || '')}
-              placeholder="— Select Grade —"
-            />
-          </div>
+
 
           <div className="form-field">
             <label className="form-label">
@@ -213,6 +191,7 @@ export default function KickPlateConfig({ data, onChange, onFocus }) {
             unitType="LF"
             finishName={form.finish}
             hidePricePerRiser={true}
+            hideGrossWeight={true}
             title="Kick Plate Preview"
             minimal={true}
           />
