@@ -241,7 +241,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
     </div>
 
     <div className="subtle-group">
-      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+      <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
           <div className="form-field">
             <label className="form-label">
               Platform Type
@@ -308,25 +308,7 @@ export default function LandingConfig({ data, parentStairType, onChange, onFocus
             )}
           </div>
 
-          <div className="form-field">
-            <label className="form-label">
-              Pan/Plate Gauge
-              {isAdmin && (
-                <button onClick={(e) => openManage('gauge_plate_spec', 'Gauge Specs', e)} className="quick-edit-btn" title="Manage Options">
-                  <Settings size={12} />
-                </button>
-              )}
-            </label>
-            <SearchableSelect
-              className="compact-select"
-              options={dropdowns.gauges.map(g => ({ value: g.id || g, label: g.label || g }))}
-              valueKey="value"
-              displayKey="label"
-              value={form.gaugeId}
-              onSelect={opt => set('gaugeId', opt?.value || '')}
-              placeholder="— Select Gauge —"
-            />
-          </div>
+
 
           <div className="form-field">
             <label className="form-label">

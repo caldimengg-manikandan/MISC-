@@ -100,18 +100,14 @@ const calculateStairGeometry = (input) => {
     throw new Error("Invalid stair geometry calculation: totalRun cannot be 0.");
   }
 
-  // RULE 5: STRINGER LENGTH & PITCH LINE W/ EXACT GEOMETRY
-  // The stringer pitch ALWAYS follows strictly the hypotenuse of a single step.
-  // Because Treads = Risers - 1, taking Total Height / Total Run physically breaks the slope line.
-  
+  // RULE 5: STRINGER LENGTH & PITCH LINE 
   // Angle is exclusively determined by the exact step relationship (user input) to prevent precision drift
   const angleRise = targetRiseFt > 0 ? targetRiseFt : actualRise;
   const angle = Math.atan(angleRise / runFt) * (180 / Math.PI);
 
-  // Stringer length theoretically stretches along the pitch line spanning exactly 'Risers' number of triangles from floor intersection to floor intersection. 
-  const stringerLength = risers * Math.sqrt(
-    Math.pow(actualRise, 2) + Math.pow(runFt, 2)
-  );
+  // 📏 Total Stringer Length Calculation
+  // USER REQUIREMENT: Show horizontal span (9.167) as the Total Stringer Length
+  const stringerLength = totalRun;
 
   // RULE 10: DEBUG MODE
   console.table({

@@ -970,12 +970,10 @@ export default function StairEstimation() {
   };
 
   useEffect(() => {
-    // Ensure global rates are loaded and trigger a re-render so they display in the header
-    if (!configManager.initialized) {
-      configManager.load().then(() => {
-        setLocalConfig(prev => ({ ...prev })); // Force re-render to pick up configManager.get()
-      });
-    }
+    // 🔄 Always force-reload global rates on mount to capture any changes made in PricingSettings
+    configManager.load(true).then(() => {
+      setLocalConfig(prev => ({ ...prev })); // Force re-render to pick up updated configManager.get()
+    });
   }, []);
 
   const jumpTo = (stairId, targetId) => {
@@ -1352,8 +1350,11 @@ export default function StairEstimation() {
         const run = toInchesFull(stair.run);
         const width = toFeetFull(stair.stairWidth);
 
-        // Only include stairs with valid geometry
-        if (rise && run && width) {
+        const hasMainGeometry = (rise > 0 && run > 0 && width > 0);
+        const hasSubItems = (stair.flights?.length > 0 || stair.landings?.length > 0 || stair.rails?.length > 0);
+
+        // Only include stairs with valid geometry or sub-items (flights/rails/landings)
+        if (hasMainGeometry || hasSubItems) {
           stairFlights.push({
             id: stair.id,
             width,
@@ -1514,40 +1515,58 @@ export default function StairEstimation() {
         if (hasMainGeometry || hasSubItems) {
           stairs.push({
             id: stair.id,
-            risers: parseInt(stair.numRisers) || 0,
-            run: stair.run,
-            rise: stair.rise,
-            totalHeight: stair.totalHeight,
-            width: stair.stairWidth,
-            stairType: stair.stairType !== undefined ? stair.stairType : 'PAN PLATE CONC. FILLED',
-            panPlThk: stair.panPlThk,
-            gratingTreadType: stair.gratingType || '',
+            width,
+            rise,
+            run,
+            totalHeight: toInches(stair.totalHeight),
+            numRisers: parseInt(stair.numRisers || stair.systemCalc?.numRisers) || 0,
             stringerSize: stair.stringerSize || '',
             stringerType: stair.stringerType || 'Rolled',
-            stringerLength: stair.stringerLength,
-            // 🛡️ DUMMY FIELDS: Extents are for reference only and must not affect estimation
-            nsStringerBot: { value: '0', unit: 'FT' },
-            fsStringerBot: { value: '0', unit: 'FT' },
-            nsStringerTop: { value: '0', unit: 'FT' },
-            fsStringerTop: { value: '0', unit: 'FT' },
+            stairType: stair.stairType !== undefined ? stair.stairType : 'PAN PLATE CONC. FILLED',
+            gratingTreadType: stair.gratingType || '',
+            nsStringerBot: 0,
+            fsStringerBot: 0,
+            nsStringerTop: 0,
+            fsStringerTop: 0,
             nsStringerConnBot: stair.nsStringerConnBot || 'Welded',
             fsStringerConnBot: stair.fsStringerConnBot || 'Welded',
             nsStringerConnTop: stair.nsStringerConnTop || 'Welded',
             fsStringerConnTop: stair.fsStringerConnTop || 'Welded',
             finish: stair.finish || 'Primer',
             mountingType: stair.mountingType || '',
+            gaugeId: stair.gaugeId || '',
+            panPlateConfigId: stair.panPlateConfigId || '',
+            panPlateThickness: stair.panPlateThickness
+              ? parseFloat(stair.panPlateThickness)
+              : (stair.panPlThk?.value ? parseFloat(stair.panPlThk.value) : null),
+            panPlateGauge: stair.panPlateGauge || null,
+            panPlateThicknessSource: stair.panPlateThicknessSource || null,
+            panPlateTypeId: stair.panPlateTypeId || null,
+            panSupportTypeId: stair.panSupportTypeId || null,
+            riserHeightInches: rise,
+            treadWidthInches: run,
+            stairWidthFeet: width,
             flights: (stair.flights || []).map(f => ({
               ...f,
               width: toFeet(f.stairWidth),
               rise: toInches(f.rise),
               run: toInches(f.run),
               totalHeight: toInches(f.totalHeight),
-              stringerLength: f.stringerLength,
-              // 🛡️ DUMMY FIELDS: Extents are for reference only and must not affect estimation
-              nsStringerBot: { value: '0', unit: 'FT' },
-              fsStringerBot: { value: '0', unit: 'FT' },
-              nsStringerTop: { value: '0', unit: 'FT' },
-              fsStringerTop: { value: '0', unit: 'FT' }
+              gaugeId: f.gaugeId || stair.gaugeId || '',
+              panPlateConfigId: f.panPlateConfigId || stair.panPlateConfigId || '',
+              panPlateThickness: f.panPlateThickness
+                ? parseFloat(f.panPlateThickness)
+                : (f.panPlThk?.value
+                    ? parseFloat(f.panPlThk.value)
+                    : (stair.panPlateThickness ? parseFloat(stair.panPlateThickness) : null)),
+              panPlateGauge: f.panPlateGauge || stair.panPlateGauge || null,
+              riserHeightInches: toInches(f.rise),
+              treadWidthInches: toInches(f.run),
+              stairWidthFeet: toFeet(f.stairWidth),
+              nsStringerBot: 0,
+              fsStringerBot: 0,
+              nsStringerTop: 0,
+              fsStringerTop: 0
             }))
           });
         }
@@ -2997,10 +3016,12 @@ export default function StairEstimation() {
             <div className="sc-rail-heading">Assemblies</div>
             {stairs.map(stair => {
               const assemblyTotal = (stair.totalCost || 0) +
+                (stair.flights || []).reduce((sum, f) => sum + (f.totalCost || 0), 0) +
                 (stair.rails || []).reduce((sum, r) => sum + (r.totalCost || 0), 0) +
                 (stair.landings || []).reduce((sum, l) => sum + (l.totalCost || 0), 0);
 
               const assemblyWeight = (stair.totalWeight || 0) +
+                (stair.flights || []).reduce((sum, f) => sum + (f.totalWeight || 0), 0) +
                 (stair.rails || []).reduce((sum, r) => sum + (r.totalWeight || 0), 0) +
                 (stair.landings || []).reduce((sum, l) => sum + (l.totalWeight || 0), 0);
 
@@ -3034,11 +3055,17 @@ export default function StairEstimation() {
                           <span><span className="bc-branch">↳</span>Stringers & Pans</span>
                           <span className="bc-val">${Math.round(stair.totalCost).toLocaleString()}</span>
                         </button>
-                      ) : (
+                      ) : ((stair.flights?.length || 0) === 0 ? (
                         <div style={{ padding: '4px 6px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>
                           No flight geometry defined
                         </div>
-                      )}
+                      ) : null)}
+                      {(stair.flights || []).map((f, i) => f.totalCost > 0 && (
+                        <button key={f.id} className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `stair-${stair.id}`)}>
+                          <span><span className="bc-branch">↳</span>{f.label || `Flight ${i + 1}`}</span>
+                          <span className="bc-val">${Math.round(f.totalCost || 0).toLocaleString()}</span>
+                        </button>
+                      ))}
                       {(stair.landings || []).map((l, i) => (
                         <button key={l.id} className="sc-breakdown-item" onClick={() => jumpTo(stair.id, `landing-${l.id}`)}>
                           <span><span className="bc-branch">↳</span>{l.label}</span>
@@ -3355,13 +3382,14 @@ export default function StairEstimation() {
                   alignItems: 'start'
                 }}
               >
+                {/* Quadrant 1: PAN PLATE DETAILS (Separated Card) */}
                 <div className="sc-calc-quadrant" style={{ borderLeft: '4px solid #10b981' }}>
-                  <div className="sc-calc-quad-header" style={{ color: '#059669' }}>Pan Plate Details</div>
+                  <div className="sc-calc-quad-header" style={{ color: '#059669' }}>Pan Plate</div>
                   <div className="sc-calc-quad-body" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginBottom: '8px' }}>
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
                         <span className="sc-calc-item-label" style={{ fontWeight: '700', color: '#059669' }}>Pan Plate Weight</span>
-                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalPanPlateWeight || 0).toFixed(3)} lb</span>
+                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalPanPlateWeight || 0).toFixed(3)} LBS</span>
                       </div>
                       <div style={{ width: '100%', display: 'flex', gap: '16px', fontSize: '11px', color: '#64748B' }}>
                         <span>Shop: <b style={{ color: '#334155' }}>{(summaryData.totalPanPlateShopHours || 0).toFixed(3)} hrs</b></span>
@@ -3369,19 +3397,15 @@ export default function StairEstimation() {
                       </div>
                     </div>
 
-                    <div className="sc-calc-item">
+                    <div className="sc-calc-item" style={{ marginBottom: '8px' }}>
                       <span className="sc-calc-item-label">Material Cost</span>
                       <span className="sc-calc-item-value">${(summaryData.pansMaterialPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
 
                     <div className="sc-calc-item" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                      <span className="sc-calc-item-label" style={{ fontWeight: '700', color: '#059669' }}>Total Estimation Cost</span>
-                      <span className="sc-calc-item-value sc-highlight-green" style={{ fontSize: '15px' }}>
-                        ${(
-                          (summaryData.pansMaterialPrice || 0) + 
-                          ((summaryData.totalPanPlateShopHours || 0) * (localConfig.shop_hourly_rate ?? configManager.get('shop_hourly_rate') ?? 50)) +
-                          ((summaryData.totalPanPlateFieldHours || 0) * (localConfig.field_hourly_rate ?? configManager.get('field_hourly_rate') ?? 50))
-                        ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span className="sc-calc-item-label">Total Estimation Cost</span>
+                      <span className="sc-calc-item-value" style={{ fontWeight: '700', color: '#059669' }}>
+                        ${((summaryData.pansMaterialPrice || 0) + ((summaryData.totalPanPlateShopHours || 0) * (summaryData.totalShopHours > 0 ? summaryData.shopLaborCost / summaryData.totalShopHours : 90)) + ((summaryData.totalPanPlateFieldHours || 0) * (summaryData.totalFieldHours > 0 ? summaryData.fieldLaborCost / summaryData.totalFieldHours : 125))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -3395,7 +3419,7 @@ export default function StairEstimation() {
                     <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginBottom: '10px' }}>
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
                         <span className="sc-calc-item-label" style={{ fontWeight: '700', color: '#2563eb' }}>Stair Stringers</span>
-                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalStairStringerWeight || 0).toFixed(3)} lb</span>
+                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalStairStringerWeight || 0).toFixed(3)} LBS</span>
                       </div>
                       <div style={{ width: '100%', display: 'flex', gap: '16px', fontSize: '11px', color: '#64748B' }}>
                         <span>Shop: <b style={{ color: '#334155' }}>{(summaryData.totalStairStringerShopHours || 0).toFixed(3)} hrs</b></span>
@@ -3407,7 +3431,7 @@ export default function StairEstimation() {
                     <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginBottom: '10px' }}>
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
                         <span className="sc-calc-item-label" style={{ fontWeight: '700', color: '#2563eb' }}>Railings (Guard/Wall/Grab)</span>
-                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalRailWeight || 0).toFixed(3)} lb</span>
+                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalRailWeight || 0).toFixed(3)} LBS</span>
                       </div>
                       <div style={{ width: '100%', display: 'flex', gap: '16px', fontSize: '11px', color: '#64748B' }}>
                         <span>Shop: <b style={{ color: '#334155' }}>{(summaryData.totalRailShopHours || 0).toFixed(3)} hrs</b></span>
@@ -3419,7 +3443,7 @@ export default function StairEstimation() {
                     <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
                         <span className="sc-calc-item-label" style={{ fontWeight: '700', color: '#2563eb' }}>Landings / Platforms</span>
-                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalLandingWeight || 0).toFixed(3)} lb</span>
+                        <span className="sc-calc-item-value" style={{ fontWeight: '800' }}>{(summaryData.totalLandingWeight || 0).toFixed(3)} LBS</span>
                       </div>
                       <div style={{ width: '100%', display: 'flex', gap: '16px', fontSize: '11px', color: '#64748B' }}>
                         <span>Shop: <b style={{ color: '#334155' }}>{(summaryData.totalLandingShopHours || 0).toFixed(3)} hrs</b></span>
@@ -3435,14 +3459,14 @@ export default function StairEstimation() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', background: '#fffbeb', padding: '8px', borderRadius: '6px', border: '1px solid #fef3c7' }}>
                         <span className="sc-calc-item-label" style={{ fontSize: '10px' }}>TOTAL SHOP HRS</span>
-                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#b45309' }}>{(summaryData.totalShopHours || 0).toFixed(3)} hrs</span>
+                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#b45309' }}>{(summaryData.totalShopHours || 0).toFixed(3)}</span>
                         <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: '#d97706' }}>
                           ${(summaryData.shopLaborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                       </div>
                       <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', background: '#f0f9ff', padding: '8px', borderRadius: '6px', border: '1px solid #e0f2fe' }}>
                         <span className="sc-calc-item-label" style={{ fontSize: '10px' }}>TOTAL FIELD HRS</span>
-                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#0369a1' }}>{(summaryData.totalFieldHours || 0).toFixed(3)} hrs</span>
+                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#0369a1' }}>{(summaryData.totalFieldHours || 0).toFixed(3)}</span>
                         <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: '#0284c7' }}>
                           ${(summaryData.fieldLaborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
@@ -3521,7 +3545,7 @@ export default function StairEstimation() {
                       boxShadow: '0 4px 20px rgba(15, 23, 42, 0.15)',
                       width: '100%'
                     }}>
-                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Project Total</span>
+                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Total Estimation</span>
                       <span style={{ color: '#38BDF8', fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' }}>
                         ${(summaryData.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>

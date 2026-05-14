@@ -11,37 +11,18 @@ import API_BASE_URL from '../../config/api';
  */
 export default function EstimateReport({ data, onBack }) {
   const printRef = useRef();
-  const [config, setConfig] = useState({
+  const config = data?.config || {
     steel_price_per_lb: 0.75,
     shop_hourly_rate: 70.00,
     field_hourly_rate: 70.00,
     tax_rate: 0.06,
     galvanize_rate: 0.10,
-    scrap_markup: 0.11,
+    scrap_factor_pct: 11,
     powder_coat_rate: 1.75,
     anchor_bolt_rate: 0.025,
     embedded_post_rate: 5.00,
     anchored_post_rate: 6.00
-  });
-  const [fetchingConfig, setFetchingConfig] = useState(true);
-
-  useEffect(() => {
-    async function fetchPricing() {
-      try {
-        const token = localStorage.getItem('steel_token');
-        const res = await fetch(`${API_BASE_URL}/api/v1/admin/config`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const d = await res.json();
-        if (d.success) setConfig(d.data);
-      } catch (e) {
-        console.error("Failed to fetch report pricing config", e);
-      } finally {
-        setFetchingConfig(false);
-      }
-    }
-    fetchPricing();
-  }, []);
+  };
 
   if (!data || !data.summary) {
     return (
@@ -66,7 +47,7 @@ export default function EstimateReport({ data, onBack }) {
 
   // Pull directly from summary to ensure total parity
   const steelWeight = summary.baseSteelWeight || 0;
-  const scrapWeight = summary.scrapWeight || (steelWeight * (config.scrap_markup || 0.11)); 
+  const scrapWeight = summary.scrapWeight || (steelWeight * ((config.scrap_factor_pct !== undefined ? config.scrap_factor_pct / 100 : 0.11)));
   const shopHours = summary.totalShopHours || 0;
   const fieldHours = summary.totalFieldHours || 0;
   const galvShopHrsTotal = summary.totalGalvanizeShopHours || 0;
@@ -209,7 +190,7 @@ export default function EstimateReport({ data, onBack }) {
               <ModernRatePill label="Shop $/hr" value={`$${(config.shop_hourly_rate || 0).toFixed(2)}`} />
               <ModernRatePill label="Field $/hr" value={`$${(config.field_hourly_rate || 0).toFixed(2)}`} />
               <ModernRatePill label="Galvanize $/lb" value={`$${(config.galvanize_rate || 0).toFixed(4)}`} />
-              <ModernRatePill label="Scrap %" value={`${((config.scrap_markup || 0) * 100).toFixed(1)}%`} />
+              <ModernRatePill label="Scrap %" value={`${(config.scrap_factor_pct !== undefined ? config.scrap_factor_pct : 11).toFixed(1)}%`} />
               <ModernRatePill label="Tax %" value={`${((config.tax_rate || 0) * 100).toFixed(2)}%`} />
               <ModernRatePill label="Anchor Rate" value={`$${(config.anchor_bolt_rate || 0).toFixed(4)}/lb`} />
               <ModernRatePill label="Anchored Rate" value={`$${(config.anchored_post_rate || 0).toFixed(2)}/post`} />
@@ -249,11 +230,18 @@ export default function EstimateReport({ data, onBack }) {
                 <td className="text-right total-col">{fmtDollar(steelPriceRaw)}</td>
               </tr>
               <tr>
-                <td>Pans / Grating cost</td>
-                <td className="text-right">{fmtDollar(pansPrice + gratingPrice)}</td>
+                <td>Stair Pans TOTAL PRICE</td>
+                <td className="text-right">{fmtDollar(pansPrice)}</td>
                 <td className="text-right">—</td>
                 <td className="text-right">—</td>
-                <td className="text-right total-col">{fmtDollar(pansPrice + gratingPrice)}</td>
+                <td className="text-right total-col">{fmtDollar(pansPrice)}</td>
+              </tr>
+              <tr>
+                <td>Grating TOTAL PRICE</td>
+                <td className="text-right">{fmtDollar(gratingPrice)}</td>
+                <td className="text-right">—</td>
+                <td className="text-right">—</td>
+                <td className="text-right total-col">{fmtDollar(gratingPrice)}</td>
               </tr>
               <tr className="font-bold border-t-2 border-slate-200">
                 <td>Module sub-total</td>
@@ -342,7 +330,10 @@ export default function EstimateReport({ data, onBack }) {
                   <tr className="h-10">
                     <td className="border border-slate-400 text-right px-4 font-bold">Stair Pans TOTAL PRICE</td>
                     <td className="border border-slate-400 text-center font-bold text-[#f59e0b] px-2">{pansPrice === 0 ? "0" : pansPrice.toFixed(2)}</td>
-                    <td className="border border-slate-400" colSpan={5} />
+                    <td className="border border-slate-400" colSpan={2} />
+                    <td className="border border-slate-400 text-center font-bold bg-slate-50">{summary?.totalPanPlateWeight?.toFixed(3) || '0.000'}</td>
+                    <td className="border border-slate-400 text-center font-bold bg-slate-50">{summary?.totalPanPlateShopHours?.toFixed(2) || '0.00'}</td>
+                    <td className="border border-slate-400 text-center font-bold bg-slate-50">0.00</td>
                   </tr>
                   {/* STAIR GRATING ROW */}
                   <tr className="h-10">
@@ -477,7 +468,7 @@ export default function EstimateReport({ data, onBack }) {
                       <td className="p-2 text-center border border-slate-300">{s.stairCategory || 'Commercial'}</td>
                       <td className="p-2 text-center border border-slate-300">{s.stairType || '-'}</td>
                       <td className="p-2 text-center border border-slate-300">{s.gratingTreadType || s.gratingType || '-'}</td>
-                      <td className="p-2 text-center border border-slate-300">{s.panPlThk || s.gaugeId || '-'}</td>
+                      <td className="p-2 text-center border border-slate-300">{s.panPlThk?.value || (typeof s.panPlThk === 'string' ? s.panPlThk : s.gaugeId || '-')}</td>
                       <td className="p-2 text-center border border-slate-300">{s.mountingType || '-'}</td>
                       <td className="p-2 text-center border border-slate-300">{s.finish || '-'}</td>
                       <td className="p-2 text-right border border-slate-300 font-bold bg-slate-50">{(s.totalWeight || s.systemCalc?.totalWeight || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>

@@ -183,22 +183,6 @@ export default function PricingSettings() {
 
   return (
     <div className="min-h-screen bg-[#fcfcfc] pb-20">
-      {/* ── DEPRECATION BANNER ─────────────────────────────────────────── */}
-      <div className="max-w-[1200px] mx-auto px-6 pt-4">
-        <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-2">
-          <Info size={16} className="text-amber-600 shrink-0" />
-          <div className="flex-1">
-            <span className="text-sm font-semibold text-amber-800">Pricing Engine has moved to Library Hub</span>
-            <p className="text-xs text-amber-600 mt-0.5">This page will remain accessible, but the canonical location is now the Library Hub for unified reference data management.</p>
-          </div>
-          <button
-            onClick={() => navigate('/library/__rates__')}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors shrink-0"
-          >
-            Open in Library Hub <ExternalLink size={13} />
-          </button>
-        </div>
-      </div>
 
       {/* ── STICKY HEADER ─────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 mb-6">

@@ -8,7 +8,7 @@ import './LibraryHub.css';
 
 import LibrarySidebar from '../../components/library/LibrarySidebar';
 import LibraryTable from '../../components/library/LibraryTable';
-import LibraryRatesPanel from '../../components/library/LibraryRatesPanel';
+
 import UploadDialog from '../../components/library/UploadDialog';
 import AuditLogViewer from '../../components/library/AuditLogViewer';
 import { useLibraryData, useCategorySummary } from '../../hooks/useLibraryData';
@@ -32,7 +32,7 @@ const CATEGORY_LABELS = {
   steel_grade_stair: 'Steel Grades (Stair)',
   steel_grade_rail:  'Steel Grades (Rail)',
   pan_plate_config:  'Pan Plate Configurations',
-  __rates__:         'Global Configuration',
+
 };
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -61,8 +61,7 @@ export default function LibraryHub() {
       .catch(err => console.error('Failed to fetch system config:', err));
   }, []);
 
-  // Is the pricing engine panel active?
-  const isRatesMode = activeCategory === '__rates__';
+
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { summary, loading: summaryLoading, refresh: refreshSummary } = useCategorySummary();
@@ -186,7 +185,7 @@ export default function LibraryHub() {
           <button
             className="lib-btn lib-btn-secondary"
             onClick={handleDownload}
-            disabled={!activeCategory || isRatesMode}
+            disabled={!activeCategory}
             title="Download Excel template for this category"
           >
             <Download size={13} /> Download
@@ -194,7 +193,7 @@ export default function LibraryHub() {
           <button
             className="lib-btn lib-btn-secondary"
             onClick={() => setShowUpload(true)}
-            disabled={!activeCategory || isRatesMode}
+            disabled={!activeCategory}
             title="Upload Excel to bulk-import"
           >
             <Upload size={13} /> Upload
@@ -224,10 +223,6 @@ export default function LibraryHub() {
             <div style={{ fontSize: 12, color: 'var(--lib-text-muted)', maxWidth: 280, textAlign: 'center' }}>
               Choose a library category from the left panel to view and edit its entries.
             </div>
-          </div>
-        ) : isRatesMode ? (
-          <div className="lib-content" style={{ overflowY: 'auto' }}>
-            <LibraryRatesPanel />
           </div>
         ) : (
           <div className="lib-content" style={{ display: 'flex', flexDirection: 'column' }}>

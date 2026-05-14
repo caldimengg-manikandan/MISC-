@@ -7,7 +7,9 @@ class ConfigManager {
     this.initialized = false;
   }
 
-  async load() {
+  async load(force = false) {
+    if (this.initialized && !force) return;
+
     const token = localStorage.getItem('steel_token');
     if (!token) return; // Skip fetch on public pages to avoid 401 noise
 

@@ -780,173 +780,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
 
 
 
-          {isPanStair && (
-            <div className="form-field">
-              <label className="form-label">
-                {isPanStair ? 'Pan support type' : 'Connection Type'}
-                {isAdmin && (
-                  <button
-                    onClick={(e) => openManage('connection_type', 'Connection Types', e)}
-                    className="quick-edit-btn"
-                    title="Manage Options"
-                  >
-                    <Settings size={14} />
-                  </button>
-                )}
-              </label>
-              <SearchableSelect
-                options={supportTypeOptions}
-                valueKey="value"
-                displayKey="label"
-                value={form.connectionType}
-                onSelect={opt => set('connectionType', opt?.value || '')}
-                placeholder="— Select Connection —"
-              />
-            </div>
-          )}
 
-
-
-          {/* ── Conditional Pan / Tread Inputs (Same Line) ─────────────────────────────────── */}
-          {isPanStair && (
-            <>
-
-              {/* Pan Plate Config auto-selected field */}
-              <div className="form-field">
-                <label className="form-label">
-                  Pan Plate Configuration
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => openManage('pan_plate_config', 'Pan Plate Configs', e)}
-                      className="quick-edit-btn"
-                      title="Manage Options"
-                    >
-                      <Settings size={14} />
-                    </button>
-                  )}
-                </label>
-
-                {recommendedPanPlateConfig && (
-                  <div className="recommendation-banner fade-in" style={{ 
-                    marginBottom: '8px', 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    background: form.panPlateSelectionSource === 'manual' ? '#F1F5F9' : '#ECFDF5',
-                    borderColor: form.panPlateSelectionSource === 'manual' ? '#E2E8F0' : '#A7F3D0',
-                    color: form.panPlateSelectionSource === 'manual' ? '#64748B' : '#059669'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <Check size={14} style={{ marginRight: '6px' }}/>
-                      <span style={{ fontSize: '11px', fontWeight: 600 }}>
-                        Recommended: {Number(stairWidthFt).toFixed(0)}'W × {Number(totalRunFt).toFixed(2)}'L 
-                        {recommendedPanPlateConfig.label?.includes('TYPE-1') && ' · Single Support'}
-                        {recommendedPanPlateConfig.label?.includes('TYPE-2') && ' · Dual Support'}
-                      </span>
-                    </div>
-                    {form.panPlateSelectionSource === 'manual' && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          const recId = recommendedPanPlateConfig.id || recommendedPanPlateConfig.value;
-                          const updated = { ...form, panPlateConfigId: recId, panPlateSelectionSource: 'auto' };
-                          setForm(updated);
-                          onChange(updated);
-                          toast.success('Applied recommendation');
-                        }}
-                        style={{
-                          background: '#3B82F6', color: 'white', border: 'none',
-                          padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-                          fontSize: '10px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
-                        }}
-                      >
-                        Use Recommended
-                      </button>
-                    )}
-                  </div>
-                )}
-                {form.panPlateSelectionSource === 'manual' && !panPlateValidationMessage && form.panPlateConfigId && (
-                  <div className="info-banner fade-in" style={{ marginBottom: '8px', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}>
-                    <Settings size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }}/>
-                    Manually overridden
-                  </div>
-                )}
-                {panPlateValidationMessage && (
-                  <div className="warning-banner fade-in" style={{ marginBottom: '8px' }}>
-                    <AlertTriangle size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }}/>
-                    {panPlateValidationMessage}
-                  </div>
-                )}
-
-                <SearchableSelect
-                  options={dropdowns.panPlateConfigs.map(c => {
-                    // Strip the [bracketed range] from the label if it exists
-                    const cleanLabel = (c.label || '').replace(/\s*\[.*\]\s*$/, '').trim();
-                    return { value: c.id || c.value, label: cleanLabel };
-                  })}
-                  valueKey="value"
-                  displayKey="label"
-                  value={form.panPlateConfigId}
-                  onSelect={opt => {
-                    const updated = { ...form, panPlateConfigId: opt?.value || '', panPlateSelectionSource: 'manual' };
-                    setForm(updated);
-                    onChange(updated);
-                  }}
-                  placeholder="— Select Pan Plate Config —"
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="form-label">
-                  Plate Thickness
-                  <span className="data-badge dt-string"></span>
-                </label>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div className="form-input-with-unit" style={{ border: '1.5px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
-                    <input 
-                      type="text"
-                      className="arch-input"
-                      style={{ 
-                        height: '42px', 
-                        border: 'none', 
-                        padding: '0 12px',
-                        fontWeight: 600,
-                        fontSize: '13px',
-                        color: '#1E293B',
-                        width: '100%'
-                      }}
-                      value={thicknessSource === 'gauge' ? selectedGauge : manualThicknessInches}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const clean = val.toLowerCase().trim();
-                        
-                        const isExplicitGauge = clean.includes('ga') || clean.includes('gauge');
-
-                        if (isExplicitGauge) {
-                          setThicknessSource('gauge');
-                          const match = clean.match(/(\d+)/);
-                          if (match) {
-                            setSelectedGauge(`${match[1]}ga`);
-                          } else {
-                            setSelectedGauge(val);
-                          }
-                        } else {
-                          setThicknessSource('manual');
-                          setManualThicknessInches(val);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="e.g. 12ga or 0.1046"
-                    />
-                    <span className="form-input-unit" style={{ background: '#F1F5F9', color: '#64748B', fontWeight: 700, padding: '0 12px', display: 'flex', alignItems: 'center' }}>
-                      {thicknessSource === 'gauge' ? 'GA' : 'IN'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
 
           {isGratingStair && (
             <div className="form-field fade-in">
@@ -1039,7 +873,22 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
           
           <div className="form-field">
             <label className="form-label">No. of Risers</label>
-            <input className="form-input" type="number" value={form.numRisers || ''} onChange={e => set('numRisers', e.target.value)} placeholder="0" />
+            <div className="relative flex items-center">
+              <input 
+                className="form-input w-full pr-16" 
+                type="number" 
+                value={form.numRisers || ''} 
+                onChange={e => set('numRisers', e.target.value)} 
+                placeholder="0" 
+              />
+              {form.systemCalc?.riserHeightIn > 0 && (
+                <div className="absolute right-0 flex items-center pr-1" style={{ gap: '8px' }}>
+                  <button type="button" className="form-input-unit unit-active" style={{ position: 'relative', right: 'auto', top: 'auto', transform: 'none' }}>
+                    IN
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── Total Stringer Length: Auto-Calc Display ───────── */}
@@ -1102,7 +951,7 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
                         ? 'Auto-calculated via Pythagorean theorem from Rise / Run / Risers'
                         : 'Auto-calculated from stair geometry'}
                     />
-                    <span className="form-input-unit" style={{ color: 'var(--accent-blue, #3B82F6)', fontWeight: 700 }}>ST</span>
+                    <span className="form-input-unit" style={{ color: 'var(--accent-blue, #3B82F6)', fontWeight: 700 }}>FT</span>
                   </div>
                 </div>
               );
@@ -1212,6 +1061,169 @@ export default function StairConfig({ stair = {}, onChange = () => { }, isFlight
             </div>
           </div>
 
+          {isPanStair && (
+            <>
+              {/* 1. Plate Thickness */}
+              <div className="form-field">
+                <label className="form-label">
+                  Plate Thickness
+                  <span className="data-badge dt-string"></span>
+                </label>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="form-input-with-unit" style={{ border: '1.5px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden' }}>
+                    <input 
+                      type="text"
+                      className="arch-input"
+                      style={{ 
+                        height: '42px', 
+                        border: 'none', 
+                        padding: '0 12px',
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        color: '#1E293B',
+                        width: '100%'
+                      }}
+                      value={thicknessSource === 'gauge' ? selectedGauge : manualThicknessInches}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const clean = val.toLowerCase().trim();
+                        
+                        const isExplicitGauge = clean.includes('ga') || clean.includes('gauge');
+
+                        if (isExplicitGauge) {
+                          setThicknessSource('gauge');
+                          const match = clean.match(/(\d+)/);
+                          if (match) {
+                            setSelectedGauge(`${match[1]}ga`);
+                          } else {
+                            setSelectedGauge(val);
+                          }
+                        } else {
+                          setThicknessSource('manual');
+                          setManualThicknessInches(val);
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="e.g. 12ga or 0.1046"
+                    />
+                    <span className="form-input-unit" style={{ background: '#F1F5F9', color: '#64748B', fontWeight: 700, padding: '0 12px', display: 'flex', alignItems: 'center' }}>
+                      {thicknessSource === 'gauge' ? 'GA' : 'IN'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Pan Support Type */}
+              <div className="form-field">
+                <label className="form-label">
+                  {isPanStair ? 'Pan support type' : 'Connection Type'}
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => openManage('connection_type', 'Connection Types', e)}
+                      className="quick-edit-btn"
+                      title="Manage Options"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  )}
+                </label>
+                <SearchableSelect
+                  options={supportTypeOptions}
+                  valueKey="value"
+                  displayKey="label"
+                  value={form.connectionType}
+                  onSelect={opt => set('connectionType', opt?.value || '')}
+                  placeholder="— Select Connection —"
+                />
+              </div>
+
+              {/* 3. Pan Plate Configuration */}
+              <div className="form-field">
+                <label className="form-label">
+                  Pan Plate Configuration
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => openManage('pan_plate_config', 'Pan Plate Configs', e)}
+                      className="quick-edit-btn"
+                      title="Manage Options"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  )}
+                </label>
+
+                <SearchableSelect
+                  options={dropdowns.panPlateConfigs.map(c => {
+                    // Strip the [bracketed range] from the label if it exists
+                    const cleanLabel = (c.label || '').replace(/\s*\[.*\]\s*$/, '').trim();
+                    return { value: c.id || c.value, label: cleanLabel };
+                  })}
+                  valueKey="value"
+                  displayKey="label"
+                  value={form.panPlateConfigId}
+                  onSelect={opt => {
+                    const updated = { ...form, panPlateConfigId: opt?.value || '', panPlateSelectionSource: 'manual' };
+                    setForm(updated);
+                    onChange(updated);
+                  }}
+                  placeholder="— Select Pan Plate Config —"
+                />
+
+                {recommendedPanPlateConfig && (
+                  <div className="recommendation-banner fade-in" style={{ 
+                    marginTop: '8px', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    background: form.panPlateSelectionSource === 'manual' ? '#F1F5F9' : '#ECFDF5',
+                    borderColor: form.panPlateSelectionSource === 'manual' ? '#E2E8F0' : '#A7F3D0',
+                    color: form.panPlateSelectionSource === 'manual' ? '#64748B' : '#059669'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Check size={14} style={{ marginRight: '6px' }}/>
+                      <span style={{ fontSize: '11px', fontWeight: 600 }}>
+                        Recommended: {Number(stairWidthFt).toFixed(0)}'W × {Number(totalRunFt).toFixed(2)}'L 
+                        {recommendedPanPlateConfig.label?.includes('TYPE-1') && ' · Single Support'}
+                        {recommendedPanPlateConfig.label?.includes('TYPE-2') && ' · Dual Support'}
+                      </span>
+                    </div>
+                    {form.panPlateSelectionSource === 'manual' && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const recId = recommendedPanPlateConfig.id || recommendedPanPlateConfig.value;
+                          const updated = { ...form, panPlateConfigId: recId, panPlateSelectionSource: 'auto' };
+                          setForm(updated);
+                          onChange(updated);
+                          toast.success('Applied recommendation');
+                        }}
+                        style={{
+                          background: '#3B82F6', color: 'white', border: 'none',
+                          padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
+                          fontSize: '10px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
+                        }}
+                      >
+                        Use Recommended
+                      </button>
+                    )}
+                  </div>
+                )}
+                {form.panPlateSelectionSource === 'manual' && !panPlateValidationMessage && form.panPlateConfigId && (
+                  <div className="info-banner fade-in" style={{ marginTop: '8px', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}>
+                    <Settings size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }}/>
+                    Manually overridden
+                  </div>
+                )}
+                {panPlateValidationMessage && (
+                  <div className="warning-banner fade-in" style={{ marginTop: '8px' }}>
+                    <AlertTriangle size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }}/>
+                    {panPlateValidationMessage}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
         </div>
       </div>

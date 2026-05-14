@@ -231,6 +231,7 @@ router.get('/:projectId/live', async (req, res) => {
 
     const summary = {
       stairSteelLbs: allStairs.reduce((s, st) => s + st.stringerLbs, 0),
+      panLbs:        summarySource.totalPanPlateWeight || allStairs.reduce((s, st) => s + st.panLbs, 0),
       railSteelLbs:  allRails.reduce((s, r) => s + r.weight, 0),
       platSteelLbs:  allPlatforms.reduce((s, p) => s + p.steelLbsTotal, 0),
       totalSteelLbs: summarySource.totalSteelWeight || 0,
@@ -405,10 +406,12 @@ router.get('/:projectId/bom-excel', async (req, res) => {
 
     const sumData = [
       ['Steel lbs (base)',       summary.stairSteelLbs,  summary.railSteelLbs,  summary.platSteelLbs,  summary.stairSteelLbs+summary.railSteelLbs+summary.platSteelLbs],
+      ['Stair Pans lbs',         summary.panLbs,         '—', '—',              summary.panLbs],
       ['Scrap lbs',              '—', '—', '—',          summary.totalScrapLbs],
       ['Steel cost',             '—', '—', '—',          summary.baseSteelCost],
       ['Scrap cost',             '—', '—', '—',          summary.scrapCost],
-      ['Pans / Grating cost',    summary.pansCost + summary.gratingCost, '—', '—', summary.pansCost + summary.gratingCost],
+      ['Stair Pans TOTAL PRICE', summary.pansCost,       '—', '—',              summary.pansCost],
+      ['Grating TOTAL PRICE',    summary.gratingCost,    '—', '—',              summary.gratingCost],
       ['Finish cost',            '—', '—', '—',          summary.finishCost],
       ['POR ROK cost',           '—', '—', '—',          summary.porRokCost],
       ['Anchor bolts cost',      '—', '—', '—',          summary.anchorBoltsCost],
@@ -765,6 +768,7 @@ async function fetchLiveData(projectId, userId) {
 
     const summary = {
       stairSteelLbs: allStairs.reduce((s, st) => s + st.stringerLbs, 0),
+      panLbs:        summarySource.totalPanPlateWeight || allStairs.reduce((s, st) => s + st.panLbs, 0),
       railSteelLbs:  allRails.reduce((s, r) => s + r.weight, 0),
       platSteelLbs:  allPlatforms.reduce((s, p) => s + p.steelLbsTotal, 0),
       totalSteelLbs: summarySource.totalSteelWeight || 0,

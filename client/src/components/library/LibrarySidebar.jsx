@@ -112,21 +112,6 @@ export default function LibrarySidebar({ activeCategory, onSelect, summary = {},
           );
         })}
 
-        {/* Global Configuration — Virtual Category at Bottom */}
-        <div style={{ margin: '8px 0', borderTop: '1px solid var(--lib-border)' }} />
-        <div
-          className={`lib-sidebar-item ${activeCategory === '__rates__' ? 'active' : ''}`}
-          onClick={() => onSelect('__rates__')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={e => e.key === 'Enter' && onSelect('__rates__')}
-        >
-          <div className="lib-cat-icon">
-            <Settings size={13} />
-          </div>
-          <span className="lib-cat-label" style={{ fontWeight: 600 }}>Global Configuration</span>
-          <span className="lib-rates-pin-badge">CONFIG</span>
-        </div>
 
         {filteredCategories.length === 0 && (
           <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--lib-text-muted)', fontSize: 12 }}>

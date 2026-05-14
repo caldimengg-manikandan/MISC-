@@ -192,14 +192,8 @@ class StairCalculationService {
       console.warn('[STRINGER ENGINE] calculateStringerLengthDirect: invalid inputs', { riseInches, runInches, risers });
       return 0;
     }
-    const totalRiseFt = (riseInches * risers) / 12;
-    const totalRunFt  = (runInches  * risers) / 12;
-    const lengthFt    = Math.sqrt(Math.pow(totalRiseFt, 2) + Math.pow(totalRunFt, 2));
-    if (!isFinite(lengthFt) || lengthFt <= 0) {
-      console.error('[STRINGER ENGINE] calculateStringerLengthDirect: non-finite result');
-      return 0;
-    }
-    return parseFloat(lengthFt.toFixed(2));
+    const totalRunFt  = (runInches  * (risers - 1)) / 12; // Standard run is treads * run_per_tread
+    return parseFloat(totalRunFt.toFixed(3));
   }
 
   resetTrace() {

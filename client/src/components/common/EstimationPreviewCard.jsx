@@ -159,17 +159,17 @@ export default function EstimationPreviewCard({
       }}>
         {/* ROW 1: STRUCTURAL DATA */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--gpt-border)' }}>
-          <StatCell label="Steel Net" value={`${steelLbsSubTotal} lb`} />
-          {!hideGrossWeight && <StatCell label="Gross Weight" value={`${formatNum(grossWeight, 3)} lb`} />}
-          <StatCell label="Shop Hrs" value={`${formatNum(systemCalc.shopTotalHrs || 0, 3)} hrs`} />
-          <StatCell label="Field Hrs" value={`${formatNum(systemCalc.fieldTotalHrs || 0, 3)} hrs`} borderRight={false} />
+          <StatCell label="Steel Net" value={steelLbsSubTotal} />
+          {!hideGrossWeight && <StatCell label="Gross Weight" value={formatNum(grossWeight, 3)} />}
+          <StatCell label="Shop Hrs" value={formatNum(systemCalc.shopTotalHrs || 0, 3)} />
+          <StatCell label="Field Hrs" value={formatNum(systemCalc.fieldTotalHrs || 0, 3)} borderRight={false} />
         </div>
 
         {/* ROW 2: FINANCIAL DATA */}
         <div style={{ display: 'flex', background: 'rgba(16, 185, 129, 0.03)' }}>
           <StatCell label="Steel Cost" value={steelDollars} />
           <StatCell label="Finish Cost" value={finishDollars} />
-          <StatCell label="Grout/Mt" value={porRokDollars} />
+
           <StatCell 
             label="Total Estimate" 
             value={totalEstimate} 
@@ -194,18 +194,18 @@ export default function EstimationPreviewCard({
             <>
               <StatCell 
                 label={systemCalc.gratingWeight > 0 ? "Grating weight" : "Pan plate weight"} 
-                value={`${formatNum(systemCalc.gratingWeight > 0 ? systemCalc.gratingWeight : systemCalc.panPlateWeight, 3)} lb`} 
+                value={formatNum(systemCalc.gratingWeight > 0 ? systemCalc.gratingWeight : systemCalc.panPlateWeight, 3)} 
               />
               {!systemCalc.gratingWeight && systemCalc.panSupportType && (
                 <StatCell label="Pan support type" value={systemCalc.panSupportType} />
               )}
             </>
           )}
-          <StatCell label="Steel lbs total" value={`${steelLbsSubTotal} lb`} borderRight={false} />
+          <StatCell label="Steel lbs total" value={steelLbsSubTotal} borderRight={false} />
         </div>
         <div style={cellRowStyle(false)}>
-          {!minimal && <StatCell label={`Scrap lbs (+${scrapFactorPct}%)`} value={`${steelScrapLbs} lb`} color={scrapColor} />}
-          {!hideGrossWeight && <StatCell label="Total weight (gross)" value={`${formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} lb`} borderRight={false} />}
+          {!minimal && <StatCell label={`Scrap lbs (+${scrapFactorPct}%)`} value={steelScrapLbs} color={scrapColor} />}
+          {!hideGrossWeight && <StatCell label="Total weight (gross)" value={formatNum((Number(systemCalc.totalSteel || 0) + Number(systemCalc.scrapLbs || 0)), 3)} borderRight={false} />}
         </div>
       </div>
 
@@ -213,11 +213,11 @@ export default function EstimationPreviewCard({
       <div style={quadrantStyle(false, true)}>
         <SectionHeader title="Labor" />
         <div style={cellRowStyle(true)}>
-          <StatCell label="Shop hrs total" value={`${formatNum(systemCalc.shopTotalHrs || 0, 3)} hrs`} borderRight={!minimal} />
+          <StatCell label="Shop hrs total" value={formatNum(systemCalc.shopTotalHrs || 0, 3)} borderRight={!minimal} />
           {!minimal && <StatCell label="Shop labor cost" value={shopLaborDollars} color={moneyColor} borderRight={false} />}
         </div>
         <div style={cellRowStyle(false)}>
-          <StatCell label="Field hrs total" value={`${formatNum(systemCalc.fieldTotalHrs || 0, 3)} hrs`} borderRight={!minimal} />
+          <StatCell label="Field hrs total" value={formatNum(systemCalc.fieldTotalHrs || 0, 3)} borderRight={!minimal} />
           {!minimal && <StatCell label="Field labor cost" value={fieldLaborDollars} color={moneyColor} borderRight={false} />}
         </div>
       </div>

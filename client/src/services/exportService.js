@@ -60,7 +60,7 @@ export const generateProposalPDF = (projectData, stairs, estimationResult = null
       ['Run/Rise', 'Engineering Std', `${stair.run?.value || 0}" / ${stair.rise?.value || 0}"`, '—'],
       ['Angle', 'Compliance Check', `${stair.angle || 0} deg`, '—'],
       ['Stringers', stair.stringerSize || 'N/A', `${stair.calcStringerLF || 0} LF`, `${stair.calcStringerWeight || 0}`],
-      ['Tread Pans', stair.panPlThk || '0.1046', `${stair.calcPanArea || 0} SQFT`, `${stair.calcPanSteelWeight || 0}`],
+      ['Tread Pans', stair.panPlThk?.value || (typeof stair.panPlThk === 'string' ? stair.panPlThk : '0.1046'), `${stair.calcPanArea || 0} SQFT`, `${stair.calcPanSteelWeight || 0}`],
       ['Concrete', '3000 PSI Fill', `${stair.calcConcreteCY || 0} CY`, '—']
     ];
 
@@ -77,7 +77,7 @@ export const generateProposalPDF = (projectData, stairs, estimationResult = null
     currentY = doc.lastAutoTable.finalY + 15;
   });
 
-  const totalWeight = stairsArr.reduce((sum, s) => sum + parseFloat(s.calcStringerWeight || 0) + parseFloat(s.calcPanSteelWeight || 0), 0);
+  const structWeight = stairsArr.reduce((sum, s) => sum + parseFloat(s.calcStringerWeight || 0), 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text('ESTIMATION SUMMARY', 15, currentY + 10);
@@ -85,21 +85,23 @@ export const generateProposalPDF = (projectData, stairs, estimationResult = null
   
   const additionalCosts = typeof projectData?.additionalCosts === 'string' ? JSON.parse(projectData.additionalCosts) : (projectData?.additionalCosts || null);
   const parsedEst = estimationResult || (typeof projectData?.estimationResult === 'string' ? JSON.parse(projectData.estimationResult) : (projectData?.estimationResult || null));
+  const res = parsedEst?.sfeSummary || parsedEst?.summary || {};
+  const panPlateWeight = parseFloat(res.panPlateWeight || stairsArr.reduce((sum, s) => sum + parseFloat(s.calcPanSteelWeight || 0), 0));
 
   const summaryBody = [
-    ['TOTAL STEEL WEIGHT (w/ 11% Scrap)', `${totalWeight.toFixed(2)} lbs`],
+    ['TOTAL STRUCTURAL STEEL WEIGHT (w/ 11% Scrap)', `${structWeight.toFixed(2)} lbs`],
+    ['TOTAL PAN PLATE WEIGHT', `${panPlateWeight.toFixed(2)} lbs`],
     ['FINISHING SURFACE AREA (for Galv)', `${finishArea.toFixed(2)} SQFT`],
     ['TOTAL FABRICATION HOURS', '— Hrs'],
     ['TOTAL ESTIMATED COST', '— USD']
   ];
 
   if (parsedEst) {
-    const res = parsedEst?.sfeSummary || parsedEst?.summary || {};
     if (res.totalShopHours !== undefined && res.totalFieldHours !== undefined) {
-      summaryBody[2] = ['TOTAL FABRICATION HOURS', `${(parseFloat(res.totalShopHours) + parseFloat(res.totalFieldHours)).toFixed(2)} Hrs`];
+      summaryBody[3] = ['TOTAL FABRICATION HOURS', `${(parseFloat(res.totalShopHours) + parseFloat(res.totalFieldHours)).toFixed(2)} Hrs`];
     }
     if (res.grandTotal !== undefined) {
-      summaryBody[3] = ['TOTAL ESTIMATED COST', `$${parseFloat(res.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}`];
+      summaryBody[4] = ['TOTAL ESTIMATED COST', `$${parseFloat(res.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}`];
     }
   }
 
@@ -145,6 +147,8 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   // Extraction of calculated summary data
   const res = estimationResult?.sfeSummary || estimationResult?.summary || {};
   const priceLb = res.steel_price_per_lb || 0.75;
+  const panPlateWeight = res.totalPanPlateWeight || 0;
+  const panPlateShopHrs = res.totalPanPlateShopHours || 0;
   const shopRate = res.shop_hourly_rate || 70;
   const fieldRate = res.field_hourly_rate || 70;
   const taxRate = res.tax_rate || 0.06;
@@ -266,8 +270,12 @@ export const generateFabricationExcel = async (projectData, stairs, estimationRe
   worksheet.getRow(tableStart+3).getCell(2).value = 'Stair Pans TOTAL PRICE';
   worksheet.getRow(tableStart+3).getCell(2).alignment = { horizontal: 'right' };
   worksheet.getRow(tableStart+3).getCell(3).value = pansPrice;
+  worksheet.getRow(tableStart+3).getCell(6).value = panPlateWeight;
+  worksheet.getRow(tableStart+3).getCell(7).value = panPlateShopHrs;
+  worksheet.getRow(tableStart+3).getCell(8).value = 0;
   applyCellStyles(tableStart+3, 2, 3, true, 'FFF59E0B', null, true);
-  applyCellStyles(tableStart+3, 4, 8);
+  applyCellStyles(tableStart+3, 4, 5);
+  applyCellStyles(tableStart+3, 6, 8, true);
 
   // Row: Grating
   worksheet.getRow(tableStart+4).getCell(1).value = gratingPrice > 0 ? 'Yes' : 'No';
