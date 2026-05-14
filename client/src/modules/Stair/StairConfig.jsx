@@ -3355,9 +3355,8 @@ export default function StairEstimation() {
                   alignItems: 'start'
                 }}
               >
-                {/* Quadrant 1: PAN PLATE DETAILS (Separated Card) */}
                 <div className="sc-calc-quadrant" style={{ borderLeft: '4px solid #10b981' }}>
-                  <div className="sc-calc-quad-header" style={{ color: '#059669' }}>Pan Plate & Hardware</div>
+                  <div className="sc-calc-quad-header" style={{ color: '#059669' }}>Pan Plate Details</div>
                   <div className="sc-calc-quad-body" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginBottom: '8px' }}>
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
@@ -3370,14 +3369,20 @@ export default function StairEstimation() {
                       </div>
                     </div>
 
-                    <div className="sc-calc-item" style={{ marginBottom: '8px' }}>
+                    <div className="sc-calc-item">
                       <span className="sc-calc-item-label">Material Cost</span>
                       <span className="sc-calc-item-value">${(summaryData.pansMaterialPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
 
                     <div className="sc-calc-item" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                      <span className="sc-calc-item-label">Hardware & Conn. Weight</span>
-                      <span className="sc-calc-item-value" style={{ fontWeight: '700' }}>{( (summaryData.totalHardwareWeight || 0) + (summaryData.connectionWeight || 0) ).toFixed(3)} lb</span>
+                      <span className="sc-calc-item-label" style={{ fontWeight: '700', color: '#059669' }}>Total Estimation Cost</span>
+                      <span className="sc-calc-item-value sc-highlight-green" style={{ fontSize: '15px' }}>
+                        ${(
+                          (summaryData.pansMaterialPrice || 0) + 
+                          ((summaryData.totalPanPlateShopHours || 0) * (localConfig.shop_hourly_rate ?? configManager.get('shop_hourly_rate') ?? 50)) +
+                          ((summaryData.totalPanPlateFieldHours || 0) * (localConfig.field_hourly_rate ?? configManager.get('field_hourly_rate') ?? 50))
+                        ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -3430,14 +3435,14 @@ export default function StairEstimation() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', background: '#fffbeb', padding: '8px', borderRadius: '6px', border: '1px solid #fef3c7' }}>
                         <span className="sc-calc-item-label" style={{ fontSize: '10px' }}>TOTAL SHOP HRS</span>
-                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#b45309' }}>{(summaryData.totalShopHours || 0).toFixed(3)}</span>
+                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#b45309' }}>{(summaryData.totalShopHours || 0).toFixed(3)} hrs</span>
                         <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: '#d97706' }}>
                           ${(summaryData.shopLaborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                       </div>
                       <div className="sc-calc-item" style={{ flexDirection: 'column', alignItems: 'flex-start', background: '#f0f9ff', padding: '8px', borderRadius: '6px', border: '1px solid #e0f2fe' }}>
                         <span className="sc-calc-item-label" style={{ fontSize: '10px' }}>TOTAL FIELD HRS</span>
-                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#0369a1' }}>{(summaryData.totalFieldHours || 0).toFixed(3)}</span>
+                        <span className="sc-calc-item-value" style={{ fontSize: '15px', color: '#0369a1' }}>{(summaryData.totalFieldHours || 0).toFixed(3)} hrs</span>
                         <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: '#0284c7' }}>
                           ${(summaryData.fieldLaborCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
