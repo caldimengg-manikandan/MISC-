@@ -117,9 +117,11 @@ api.interceptors.response.use(
 
 function handleGlobalLogout() {
   localStorage.removeItem('steel_user');
-  // Avoid loop if already on login
+  // W7 Fix: Use relative path to stay within the sub-directory (e.g., /misc/login)
+  // Redirecting to '/login' (absolute) jumps to the root domain, which we must avoid.
   if (!window.location.pathname.includes('/login')) {
-    window.location.href = '/login';
+    const basePath = window.location.pathname.startsWith('/misc') ? '/misc' : '';
+    window.location.href = `${basePath}/login`;
   }
 }
 

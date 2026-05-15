@@ -42,6 +42,7 @@ const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'Strict',
+  path: '/', // Ensure cookies are accessible across all sub-paths (e.g., /misc)
 };
 
 function setAuthCookies(res, accessToken, refreshToken) {
