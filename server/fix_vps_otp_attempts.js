@@ -19,35 +19,46 @@ async function fix() {
 
         for (const col of columns) {
             console.log(`🛠️ Checking ${col}...`);
+            
+            // 1. Drop existing default constraint if it exists (so we can ALTER COLUMN)
             await r.query(`
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.default_constraints 
-                    WHERE parent_object_id = OBJECT_ID('users') 
-                    AND col_name(parent_object_id, parent_column_id) = '${col}'
-                )
-                BEGIN
-                    UPDATE users SET ${col} = 0 WHERE ${col} IS NULL;
-                    ALTER TABLE users ADD CONSTRAINT DF_users_${col} DEFAULT 0 FOR ${col};
-                    PRINT '✅ Added DEFAULT 0 to ${col}';
-                END
+                DECLARE @ConstraintName nvarchar(200)
+                SELECT @ConstraintName = Name FROM sys.default_constraints
+                WHERE parent_object_id = OBJECT_ID('users')
+                AND col_name(parent_object_id, parent_column_id) = '${col}'
                 
-                -- Ensure NOT NULL
+                IF @ConstraintName IS NOT NULL
+                EXEC('ALTER TABLE users DROP CONSTRAINT ' + @ConstraintName)
+            `);
+
+            // 2. Make sure existing NULLs are 0
+            await r.query(`UPDATE users SET ${col} = 0 WHERE ${col} IS NULL`);
+
+            // 3. Re-add the DEFAULT constraint and make NOT NULL
+            await r.query(`
                 ALTER TABLE users ALTER COLUMN ${col} INT NOT NULL;
-                PRINT '✅ Ensured ${col} is NOT NULL';
+                ALTER TABLE users ADD CONSTRAINT DF_users_${col} DEFAULT 0 FOR ${col};
+                PRINT '✅ Fixed ${col}';
             `);
         }
 
-        // Special case for BIT columns (is_locked, mfa_enabled, isPaid might be BIT)
-        await r.query(`
-            IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' AND COLUMN_NAME = 'is_locked' AND DATA_TYPE = 'bit')
-            ALTER TABLE users ALTER COLUMN is_locked BIT NOT NULL;
-            
-            IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' AND COLUMN_NAME = 'mfa_enabled' AND DATA_TYPE = 'bit')
-            ALTER TABLE users ALTER COLUMN mfa_enabled BIT NOT NULL;
-            
-            IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' AND COLUMN_NAME = 'isPaid' AND DATA_TYPE = 'bit')
-            ALTER TABLE users ALTER COLUMN isPaid BIT NOT NULL;
-        `);
+        // Special case for BIT columns (re-verify types and ensure NOT NULL)
+        const bitCols = ['is_locked', 'mfa_enabled', 'isPaid'];
+        for (const col of bitCols) {
+             await r.query(`
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' AND COLUMN_NAME = '${col}' AND DATA_TYPE = 'bit')
+                BEGIN
+                    -- Drop constraint to allow change
+                    DECLARE @CName nvarchar(200)
+                    SELECT @CName = Name FROM sys.default_constraints WHERE parent_object_id = OBJECT_ID('users') AND col_name(parent_object_id, parent_column_id) = '${col}'
+                    IF @CName IS NOT NULL EXEC('ALTER TABLE users DROP CONSTRAINT ' + @CName)
+                    
+                    ALTER TABLE users ALTER COLUMN ${col} BIT NOT NULL;
+                    ALTER TABLE users ADD CONSTRAINT DF_users_${col}_bit DEFAULT 0 FOR ${col};
+                    PRINT '✅ Fixed BIT column ${col}';
+                END
+             `);
+        }
 
         console.log('🚀 VPS database fix completed!');
         process.exit(0);
