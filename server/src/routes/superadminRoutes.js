@@ -199,6 +199,22 @@ router.patch('/licenses/:id', async (req, res) => {
   }
 });
 
+// ── DELETE /api/superadmin/licenses/:id ───────────────────────────────────────
+router.delete('/licenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [existing] = await db.query('SELECT license_key FROM licenses WHERE id = ?', [id]);
+    if (!existing.length) return res.status(404).json({ success: false, error: 'License not found' });
+
+    await db.query('DELETE FROM licenses WHERE id = ?', [id]);
+    await logAction(req.userId, 'DELETE_LICENSE', id, 'license', { key: existing[0].license_key });
+
+    res.json({ success: true, message: 'License deleted permanently' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── GET /api/superadmin/users ─────────────────────────────────────────────────
 router.get('/users', async (req, res) => {
   try {

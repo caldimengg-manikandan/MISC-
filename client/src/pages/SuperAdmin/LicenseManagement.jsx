@@ -16,7 +16,8 @@ import {
   RefreshCw,
   X,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -93,6 +94,23 @@ const LicenseManagement = () => {
       fetchLicenses();
     } catch (err) {
       toast.error('Update failed');
+    }
+  };
+
+  const handleDeleteLicense = async (id, email) => {
+    if (!window.confirm(`Are you sure you want to PERMANENTLY delete the license for ${email}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.delete(`/superadmin/licenses/${id}`);
+      toast.success('License deleted permanently');
+      fetchLicenses();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete license');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -282,6 +300,13 @@ const LicenseManagement = () => {
                           title="Edit License"
                         >
                           <MoreVertical className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteLicense(license.id, license.admin_email || license.invite_email)}
+                          className="p-2 hover:bg-rose-50 hover:text-rose-600 rounded-lg border border-slate-200 transition-all text-slate-400"
+                          title="Delete License"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
