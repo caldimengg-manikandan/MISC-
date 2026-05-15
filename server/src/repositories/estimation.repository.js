@@ -2,13 +2,13 @@
 const db = require('../config/mssql');
 
 class EstimationRepository {
-    async getStats(companyId = null, userId = null) {
+    async getStats(ownerAdminId = null, userId = null) {
         let query = 'SELECT status, COUNT(*) as count FROM projects';
         let params = [];
         
-        if (companyId !== null && companyId !== undefined) {
-            query += ' WHERE (company_id = ? OR owner_admin_id = ?';
-            params.push(companyId, companyId);
+        if (ownerAdminId !== null) {
+            query += ' WHERE (owner_admin_id = ?';
+            params.push(ownerAdminId);
             if (userId) {
                 query += ' OR userId = ? OR createdBy = ? OR assigned_engineer_id = ? OR reviewer_id = ?';
                 params.push(userId, userId, userId, userId);
@@ -21,7 +21,7 @@ class EstimationRepository {
         return rows;
     }
 
-    async findAll(filters = {}, companyId = null, userId = null) {
+    async findAll(filters = {}, ownerAdminId = null, userId = null) {
         let query = `
             SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email, c.phone,
                    u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
@@ -34,9 +34,9 @@ class EstimationRepository {
         `;
         let params = [];
 
-        if (companyId !== null && companyId !== undefined) {
-            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?';
-            params.push(companyId, companyId);
+        if (ownerAdminId !== null) {
+            query += ' AND (p.owner_admin_id = ?';
+            params.push(ownerAdminId);
             if (userId) {
                 query += ' OR p.userId = ? OR p.createdBy = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
                 params.push(userId, userId, userId, userId);
@@ -58,7 +58,7 @@ class EstimationRepository {
         return rows;
     }
 
-    async findById(id, companyId = null, userId = null) {
+    async findById(id, ownerAdminId = null, userId = null) {
         let query = `
             SELECT p.*, c.companyName as LinkedCustomerName, c.contactPerson, c.email as CustomerEmail, c.phone as CustomerPhone,
                    c.street as CustomerStreet, c.city as CustomerCity, c.state as CustomerState, c.zip as CustomerZip,
@@ -72,9 +72,9 @@ class EstimationRepository {
         `;
         let params = [id];
 
-        if (companyId !== null && companyId !== undefined) {
-            query += ' AND (p.company_id = ? OR p.owner_admin_id = ?';
-            params.push(companyId, companyId);
+        if (ownerAdminId !== null) {
+            query += ' AND (p.owner_admin_id = ?';
+            params.push(ownerAdminId);
             if (userId) {
                 query += ' OR p.userId = ? OR p.createdBy = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?';
                 params.push(userId, userId, userId, userId);

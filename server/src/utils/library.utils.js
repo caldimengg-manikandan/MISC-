@@ -16,17 +16,23 @@ function hasLibraryAccess(user) {
 }
 
 /**
- * Resolves the admin_owner_id for the current user (mirrors dictionary.js pattern).
+ * Resolves the admin_owner_id for the current user (mirrors resolveOwnerAdminId logic).
  * - admin/superadmin → their own userId
  * - owner → their userId
- * - estimator → their admin_owner_id (if they somehow bypass the guard)
+ * - estimator → their admin_owner_id
  */
 function resolveAdminOwnerId(req) {
   const role = req.user?.role;
-  if (role === 'admin' || role === 'superadmin' || role === 'owner') {
-    return req.user?.id || req.userId;
-  }
-  return req.user?.admin_owner_id || null;
+  const userId = req.userId || req.user?.id;
+  
+  // SuperAdmins return null (global view)
+  if (role === 'superadmin') return null;
+  
+  // Admins are the owners
+  if (role === 'admin' || role === 'owner') return userId;
+  
+  // Sub-users use their parent admin
+  return req.user?.admin_owner_id || userId;
 }
 
 /**
@@ -38,6 +44,7 @@ function buildTenantFilter(user, adminOwnerId) {
   if (user.role === 'superadmin') {
     return { clause: '', params: [] };
   }
+  // Standard users see system defaults (NULL) + their own tenant data
   return {
     clause: 'AND (admin_owner_id IS NULL OR admin_owner_id = ?)',
     params: [adminOwnerId],

@@ -7,7 +7,8 @@ const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 class EstimationController {
     async getDashboardStats(req, res) {
         try {
-            const rows = await estimationRepository.getStats(req.companyId, req.userId);
+            const ownerAdminId = await resolveOwnerAdminId(req);
+            const rows = await estimationRepository.getStats(ownerAdminId, req.userId);
             const stats = {
                 [STATUS.NEW]: 0,
                 [STATUS.ASSIGNED]: 0,
@@ -28,7 +29,8 @@ class EstimationController {
     async getList(req, res) {
         try {
             const { status, engineerId } = req.query;
-            const estimations = await estimationRepository.findAll({ status, engineerId }, req.companyId, req.userId);
+            const ownerAdminId = await resolveOwnerAdminId(req);
+            const estimations = await estimationRepository.findAll({ status, engineerId }, ownerAdminId, req.userId);
             const processed = estimations.map(e => ({
                 ...e,
                 status: statusService.updateStatus(e)
@@ -42,8 +44,9 @@ class EstimationController {
     async getDetail(req, res) {
         try {
             const { id } = req.params;
-            const estimation = await estimationRepository.findById(id, req.companyId, req.userId);
-            if (!estimation) return res.status(404).json({ success: false, message: 'Not found' });
+            const ownerAdminId = await resolveOwnerAdminId(req);
+            const estimation = await estimationRepository.findById(id, ownerAdminId, req.userId);
+            if (!estimation) return res.status(404).json({ success: false, message: 'Not found or access denied' });
 
             if (estimation.modules && typeof estimation.modules === 'string') {
                 try { estimation.modules = JSON.parse(estimation.modules); } catch (e) { estimation.modules = null; }

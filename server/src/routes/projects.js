@@ -64,26 +64,26 @@ router.get('/', auth, async (req, res) => {
                ORDER BY p.updatedAt DESC`;
       params = [];
     } else if (req.userRole === 'admin') {
-      // Admin sees all projects they own OR created directly (legacy projects have NULL owner_admin_id)
+      // Admin strictly sees projects belonging to their license/tenant
       query = `SELECT p.*, u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
                       u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
                FROM projects p
                LEFT JOIN users u_creator ON p.createdBy = u_creator.id
                LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
-               WHERE (p.owner_admin_id = ? OR p.company_id = ? OR p.userId = ? OR p.createdBy = ?)
+               WHERE p.owner_admin_id = ?
                ORDER BY p.updatedAt DESC`;
-      params = [ownerAdminId, ownerAdminId, req.userId, req.userId];
+      params = [ownerAdminId];
     } else {
-      // Estimator/Engineer: must be creator, assigned engineer, or assigned reviewer
+      // Estimator/Engineer: must belong to the tenant AND have specific access to the project
       query = `SELECT p.*, u_creator.name as CreatorName, u_creator.full_name as CreatorFullName,
                       u_engineer.name as EngineerName, u_engineer.full_name as EngineerFullName
                FROM projects p
                LEFT JOIN users u_creator ON p.createdBy = u_creator.id
                LEFT JOIN users u_engineer ON p.assigned_engineer_id = u_engineer.id
-               WHERE (p.owner_admin_id = ? OR p.company_id = ?)
+               WHERE p.owner_admin_id = ?
                AND (p.userId = ? OR p.createdBy = ? OR p.engineerId = ? OR p.assigned_engineer_id = ? OR p.reviewer_id = ?)
                ORDER BY p.updatedAt DESC`;
-      params = [ownerAdminId, ownerAdminId, req.userId, req.userId, req.userId, req.userId, req.userId];
+      params = [ownerAdminId, req.userId, req.userId, req.userId, req.userId, req.userId];
     }
 
     const [projects] = await db.query(query, params);
