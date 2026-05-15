@@ -13,7 +13,16 @@ function generateLicenseSignature(licenseData) {
     licenseData.license_type,
     licenseData.max_estimators,
     // Convert dates to a consistent ISO string or timestamp format if they exist
-    licenseData.valid_until ? new Date(licenseData.valid_until).toISOString().split('T')[0] : 'null',
+    (() => {
+      if (!licenseData.valid_until) return 'null';
+      try {
+        const d = new Date(licenseData.valid_until);
+        if (isNaN(d.getTime())) return 'invalid';
+        return d.toISOString().split('T')[0];
+      } catch (e) {
+        return 'error';
+      }
+    })(),
     licenseData.is_active !== undefined ? (licenseData.is_active ? '1' : '0') : '1'
   ].join('|');
 

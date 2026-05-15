@@ -77,14 +77,30 @@ router.post('/licenses', async (req, res) => {
       return res.status(400).json({ success: false, error: 'adminEmail, validFrom, validUntil are required' });
     }
 
+    // ── Helper: Parse DD-MM-YYYY or YYYY-MM-DD to Date object/ISO string ──
+    const parseDate = (d) => {
+      if (!d) return null;
+      // If already YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}/.test(d)) return d.split('T')[0];
+      // If DD-MM-YYYY
+      const parts = d.split('-');
+      if (parts.length === 3 && parts[2].length === 4) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+      }
+      return d; // fallback
+    };
+
+    const fmtValidFrom = parseDate(validFrom);
+    const fmtValidUntil = parseDate(validUntil);
+
     // Check if user exists or create a pending user
     let [uRows] = await db.query('SELECT id, email FROM users WHERE email = ?', [adminEmail.toLowerCase()]);
     if (uRows.length === 0) {
       // Create pending admin account (mustChangePassword = 1)
       const pwHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 12);
       const [inserted] = await db.query(
-        `INSERT INTO users (email, [password], [role], isPaid, subscriptionStatus, mustChangePassword, otp_attempts, createdAt)
-         OUTPUT INSERTED.id VALUES (?, ?, 'admin', 1, 'active', 1, 0, GETDATE())`,
+        `INSERT INTO users (email, [password], [role], isPaid, subscriptionStatus, mustChangePassword, otp_attempts, otp_resend_count, failed_attempts, is_locked, mfa_enabled, createdAt)
+         OUTPUT INSERTED.id VALUES (?, ?, 'admin', 1, 'active', 1, 0, 0, 0, 0, 0, GETDATE())`,
         [adminEmail.toLowerCase(), pwHash]
       );
       uRows = [{ id: inserted[0].id }];
@@ -97,15 +113,15 @@ router.post('/licenses', async (req, res) => {
       license_key: licenseKey,
       admin_user_id: null,
       license_type: licenseType,
-      max_estimators: maxEstimators,
-      valid_until: validUntil,
+      max_estimators: parseInt(maxEstimators) || 1,
+      valid_until: fmtValidUntil,
       is_active: 1
     });
 
     const [result] = await db.query(
       `INSERT INTO licenses (license_key, license_type, max_estimators, valid_from, valid_until, is_active, created_by, notes, invite_token, invite_email, invite_sent_at, signature)
        OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, GETDATE(), ?)`,
-      [licenseKey, licenseType, maxEstimators, validFrom, validUntil, req.userId, notes || null, inviteToken, adminEmail.toLowerCase(), signature]
+      [licenseKey, licenseType, parseInt(maxEstimators) || 1, fmtValidFrom, fmtValidUntil, req.userId, notes || null, inviteToken, adminEmail.toLowerCase(), signature]
     );
 
     const licenseId = result[0].id;
