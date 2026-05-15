@@ -127,8 +127,25 @@ router.post('/licenses', async (req, res) => {
     const licenseId = result[0].id;
     const activationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/activate?token=${inviteToken}`;
 
-    await EmailService.sendAdminInvite(adminEmail, activationLink, licenseType, maxEstimators);
+    let emailSent = true;
+    try {
+      await EmailService.sendAdminInvite(adminEmail, activationLink, licenseType, maxEstimators);
+    } catch (e) {
+      console.error('Email failed to send but license was created:', e.message);
+      emailSent = false;
+    }
+    
     await logAction(req.userId, 'CREATE_LICENSE', licenseId, 'license', { adminEmail, licenseType, maxEstimators });
+
+    if (!emailSent) {
+      return res.status(201).json({ 
+        success: true, 
+        licenseId, 
+        licenseKey, 
+        message: 'License created successfully, but the invitation email could not be sent (SMTP error). Please check your email configuration.',
+        emailError: true
+      });
+    }
 
     res.status(201).json({ success: true, licenseId, licenseKey, message: 'License created and invite sent.' });
   } catch (err) {

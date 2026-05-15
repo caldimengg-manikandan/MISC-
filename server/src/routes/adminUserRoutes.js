@@ -111,12 +111,21 @@ router.post('/', async (req, res) => {
     const [adminLicRows] = await db.query('SELECT license_type, max_estimators FROM licenses WHERE admin_user_id = ?', [req.userId]);
     const lt = adminLicRows[0]?.license_type || 'standard';
 
-    await EmailService.sendAdminInvite(email, activationLink, lt, 1, name || '');
+    let emailSent = true;
+    try {
+      await EmailService.sendAdminInvite(email, activationLink, lt, 1, name || '');
+    } catch (e) {
+      console.error('Estimator invite email failed but account was created:', e.message);
+      emailSent = false;
+    }
 
     res.status(201).json({
       success: true,
       userId: newUserId,
-      message: `Estimator account created. Invite email sent to ${email}.`
+      emailSent,
+      message: emailSent 
+        ? `Estimator account created. Invite email sent to ${email}.`
+        : `Estimator account created, but the invite email could not be sent (SMTP error).`
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
