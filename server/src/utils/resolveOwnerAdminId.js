@@ -22,17 +22,24 @@ async function resolveOwnerAdminId(req) {
 
   if (req.userRole === 'admin') return req.userId;
 
-  // Estimator: use fresh DB value from req.user (auth.js fetches this every request)
+  // Estimator: use fresh DB value from req.user
   if (req.user && req.user.admin_owner_id) {
     return req.user.admin_owner_id;
   }
 
-  // Fallback: old JWT or edge case — hit DB directly
+  // Fallback for estimators: check DB directly
   const [rows] = await db.query(
-    'SELECT admin_owner_id FROM users WHERE id = ?',
+    'SELECT role, admin_owner_id FROM users WHERE id = ?',
     [req.userId]
   );
-  return rows[0]?.admin_owner_id ?? null;
+  
+  if (!rows.length) return req.userId;
+  
+  const user = rows[0];
+  if (user.role === 'admin') return req.userId;
+  if (user.role === 'superadmin') return null;
+  
+  return user.admin_owner_id || req.userId; // Default to self if no owner found
 }
 
 module.exports = resolveOwnerAdminId;
