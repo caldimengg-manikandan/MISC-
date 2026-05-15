@@ -585,8 +585,8 @@ const registerVerified = async (req, res) => {
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 30);
     const [rows] = await db.query(
-      `INSERT INTO users (full_name, name, email, company, phone, [password], [role], [plan], isPaid, isVerified, trialStart, trialEnd, createdAt)
-       OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, 'estimator', 'trial', 0, 1, ?, ?, GETUTCDATE())`,
+      `INSERT INTO users (full_name, name, email, company, phone, [password], [role], [plan], isPaid, isVerified, trialStart, trialEnd, otp_attempts, createdAt)
+       OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, 'estimator', 'trial', 0, 1, ?, ?, 0, GETUTCDATE())`,
       [fullName, fullName, email.toLowerCase(), organization || '', phone || '', hashedPassword, trialStart, trialEnd]
     );
     const userId = rows[0].id;

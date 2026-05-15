@@ -83,8 +83,8 @@ router.post('/licenses', async (req, res) => {
       // Create pending admin account (mustChangePassword = 1)
       const pwHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 12);
       const [inserted] = await db.query(
-        `INSERT INTO users (email, [password], [role], isPaid, subscriptionStatus, mustChangePassword, createdAt)
-         OUTPUT INSERTED.id VALUES (?, ?, 'admin', 1, 'active', 1, GETDATE())`,
+        `INSERT INTO users (email, [password], [role], isPaid, subscriptionStatus, mustChangePassword, otp_attempts, createdAt)
+         OUTPUT INSERTED.id VALUES (?, ?, 'admin', 1, 'active', 1, 0, GETDATE())`,
         [adminEmail.toLowerCase(), pwHash]
       );
       uRows = [{ id: inserted[0].id }];

@@ -90,9 +90,9 @@ router.post('/', async (req, res) => {
     const inviteExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
     const [inserted] = await db.query(
-      `INSERT INTO users (email, [password], name, [role], admin_owner_id, isPaid, subscriptionStatus, mustChangePassword, createdAt)
+      `INSERT INTO users (email, [password], name, [role], admin_owner_id, isPaid, subscriptionStatus, mustChangePassword, otp_attempts, createdAt)
        OUTPUT INSERTED.id
-       VALUES (?, ?, ?, 'estimator', ?, 1, 'active', 1, GETDATE())`,
+       VALUES (?, ?, ?, 'estimator', ?, 1, 'active', 1, 0, GETDATE())`,
       [email.toLowerCase(), tempPw, name || '', req.userId]
     );
 
