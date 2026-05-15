@@ -119,8 +119,8 @@ router.post('/licenses', async (req, res) => {
     });
 
     const [result] = await db.query(
-      `INSERT INTO licenses (license_key, license_type, max_estimators, valid_from, valid_until, is_active, created_by, notes, invite_token, invite_email, invite_sent_at, signature)
-       OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, GETDATE(), ?)`,
+      `INSERT INTO licenses (license_key, license_type, max_estimators, valid_from, valid_until, is_active, created_by, notes, invite_token, invite_email, invite_sent_at, signature, created_at)
+       OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, GETDATE(), ?, GETDATE())`,
       [licenseKey, licenseType, parseInt(maxEstimators) || 1, fmtValidFrom, fmtValidUntil, req.userId, notes || null, inviteToken, adminEmail.toLowerCase(), signature]
     );
 

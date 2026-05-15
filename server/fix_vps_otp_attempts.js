@@ -60,6 +60,24 @@ async function fix() {
              `);
         }
 
+        // 3. Fix licenses table created_at
+        console.log('🛠️ Checking licenses table...');
+        await r.query(`
+            IF NOT EXISTS (
+                SELECT 1 FROM sys.default_constraints 
+                WHERE parent_object_id = OBJECT_ID('licenses') 
+                AND col_name(parent_object_id, parent_column_id) = 'created_at'
+            )
+            BEGIN
+                UPDATE licenses SET created_at = GETDATE() WHERE created_at IS NULL;
+                ALTER TABLE licenses ADD CONSTRAINT DF_licenses_created_at DEFAULT GETDATE() FOR created_at;
+                PRINT '✅ Added DEFAULT GETDATE() to licenses.created_at';
+            END
+            
+            ALTER TABLE licenses ALTER COLUMN created_at DATETIME NOT NULL;
+            PRINT '✅ Ensured licenses.created_at is NOT NULL';
+        `);
+
         console.log('🚀 VPS database fix completed!');
         process.exit(0);
     } catch (err) {
