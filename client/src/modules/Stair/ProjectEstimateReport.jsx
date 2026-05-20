@@ -37,13 +37,23 @@ export default function EstimateReport({ data, onBack }) {
     );
   }
 
-  const { projectData = {}, summary = {}, stairs = [], rails = [], platforms = [], rawStairs = [], additionalCosts = null } = data;
+  // Data extraction with fallbacks for nested breakdown structures
+  const projectData = data?.projectData || {};
+  const summary = data?.summary || {};
+  const additionalCosts = data?.additionalCosts || null;
+  
+  // Arrays from breakdown if present
+  const stairs = data?.breakdown?.stairs || data?.stairs || [];
+  const rails = data?.breakdown?.rails || data?.rails || [];
+  const platforms = data?.breakdown?.platforms || data?.platforms || [];
+  const rawStairs = data?.rawStairs || stairs;
+
   const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
   const todayLong = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   // Formatting helpers
   const fmtDollar = (v) => v ? `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
-  const fmtNum = (v, d = 2) => (v !== undefined && v !== null) ? v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
+  const fmtNum = (v, d = 2) => (v !== undefined && v !== null && v !== 0) ? v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
 
   // Pull directly from summary to ensure total parity
   const steelWeight = summary.baseSteelWeight || 0;
@@ -59,8 +69,8 @@ export default function EstimateReport({ data, onBack }) {
   const fieldLaborPrice = summary.fieldLaborCost || 0;
 
   const pansPrice = summary.pansMaterialPrice || 0;
-  const gratingPrice = summary.gratingPrice || summary.gratingCost || 0;
-  const galvanizePrice = summary.galvanizeCost || 0;
+  const gratingPrice = summary.gratingPrice || summary.gratingCost || summary.gratingTotalCost || 0;
+  const galvanizePrice = summary.galvanizeCost || summary.finishCost || 0;
   const anchorBoltsPrice = summary.anchorBoltsCost || 0;
   const porRokPrice = summary.porRokAnchorsCost || 0;
   const mountingCharges = summary.mountingCharges || 0;
@@ -69,6 +79,23 @@ export default function EstimateReport({ data, onBack }) {
   const subTotalWithoutTax = summary.subtotalWithoutTax || 0;
   const salesTaxValue = summary.taxAmount || 0;
   const grandTotalValue = summary.grandTotal || 0;
+
+  // Component Breakdowns for the Summary Table
+  const stairSteelLbs = stairs.reduce((acc, st) => acc + (st.systemCalc?.totalSteel || 0) + (st.flights || []).reduce((fAcc, f) => fAcc + (f.systemCalc?.totalSteel || 0), 0), 0);
+  const railSteelLbs = rails.reduce((acc, r) => acc + (r.systemCalc?.totalSteel || 0), 0);
+  const platSteelLbs = platforms.reduce((acc, p) => acc + (p.systemCalc?.totalSteel || 0), 0);
+
+  const stairScrapLbs = stairs.reduce((acc, st) => acc + (st.systemCalc?.scrapLbs || 0) + (st.flights || []).reduce((fAcc, f) => fAcc + (f.systemCalc?.scrapLbs || 0), 0), 0);
+  const railScrapLbs = rails.reduce((acc, r) => acc + (r.systemCalc?.scrapLbs || 0), 0);
+  const platScrapLbs = platforms.reduce((acc, p) => acc + (p.systemCalc?.scrapLbs || 0), 0);
+
+  const stairSteelCost = stairs.reduce((acc, st) => acc + (st.systemCalc?.steelPriceBase || 0) + (st.flights || []).reduce((fAcc, f) => fAcc + (f.systemCalc?.steelPriceBase || 0), 0), 0);
+  const railSteelCost = rails.reduce((acc, r) => acc + (r.systemCalc?.steelPriceBase || 0), 0);
+  const platSteelCost = platforms.reduce((acc, p) => acc + (p.systemCalc?.steelPriceBase || 0), 0);
+
+  const stairTotal = stairs.reduce((acc, st) => acc + (st.totalCost || 0) + (st.flights || []).reduce((fAcc, f) => fAcc + (f.totalCost || 0), 0), 0);
+  const railTotal = rails.reduce((acc, r) => acc + (r.totalCost || 0), 0);
+  const platTotal = platforms.reduce((acc, p) => acc + (p.totalCost || 0), 0);
 
   const handlePrint = () => window.print();
 
@@ -214,20 +241,29 @@ export default function EstimateReport({ data, onBack }) {
             <tbody>
               <tr>
                 <td>Steel lbs (base)</td>
-                <td className="text-right">{fmtNum(summary.stairSteelLbs || 0, 0)}</td>
-                <td className="text-right">{fmtNum(summary.railSteelLbs || 0, 0)}</td>
-                <td className="text-right">{fmtNum(summary.platSteelLbs || 0, 0)}</td>
+                <td className="text-right">{fmtNum(stairSteelLbs, 0)}</td>
+                <td className="text-right">{fmtNum(railSteelLbs, 0)}</td>
+                <td className="text-right">{fmtNum(platSteelLbs, 0)}</td>
                 <td className="text-right total-col">{fmtNum(steelWeight, 0)}</td>
               </tr>
               <tr>
                 <td>Scrap lbs</td>
-                <td colSpan={3} className="text-center text-slate-300">—</td>
+                <td className="text-right text-slate-500">{fmtNum(stairScrapLbs, 0)}</td>
+                <td className="text-right text-slate-500">{fmtNum(railScrapLbs, 0)}</td>
+                <td className="text-right text-slate-500">{fmtNum(platScrapLbs, 0)}</td>
                 <td className="text-right total-col warn">{fmtNum(scrapWeight, 0)}</td>
               </tr>
               <tr>
                 <td>Steel cost</td>
-                <td colSpan={3} className="text-center text-slate-300">—</td>
+                <td className="text-right text-slate-500">{fmtDollar(stairSteelCost)}</td>
+                <td className="text-right text-slate-500">{fmtDollar(railSteelCost)}</td>
+                <td className="text-right text-slate-500">{fmtDollar(platSteelCost)}</td>
                 <td className="text-right total-col">{fmtDollar(steelPriceRaw)}</td>
+              </tr>
+              <tr>
+                <td>Scrap cost</td>
+                <td colSpan={3} className="text-center text-slate-300">—</td>
+                <td className="text-right total-col">{fmtDollar(scrapPriceRaw)}</td>
               </tr>
               <tr>
                 <td>Stair Pans TOTAL PRICE</td>
@@ -245,10 +281,10 @@ export default function EstimateReport({ data, onBack }) {
               </tr>
               <tr className="font-bold border-t-2 border-slate-200">
                 <td>Module sub-total</td>
-                <td className="text-right">{fmtDollar(summary.stairTotal || 0)}</td>
-                <td className="text-right">{fmtDollar(summary.railTotal || 0)}</td>
-                <td className="text-right">{fmtDollar(summary.platTotal || 0)}</td>
-                <td className="text-right total-col">{fmtDollar(summary.stairTotal + summary.railTotal + summary.platTotal)}</td>
+                <td className="text-right">{fmtDollar(stairTotal)}</td>
+                <td className="text-right">{fmtDollar(railTotal)}</td>
+                <td className="text-right">{fmtDollar(platTotal)}</td>
+                <td className="text-right total-col">{fmtDollar(stairTotal + railTotal + platTotal)}</td>
               </tr>
               <tr className="bg-slate-50 italic">
                 <td className="font-bold">Grand Total</td>
@@ -285,8 +321,8 @@ export default function EstimateReport({ data, onBack }) {
                   <tr className="bg-white">
                     <th className="w-[180px]"></th>
                     <th className="w-[150px]"></th>
-                    <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-100">Galvanize<br/>Shop<br/>Hours/ LF</th>
-                    <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-100">Galvanize<br/>Field<br/>Hours/ LF</th>
+                    <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-100">Finish<br/>Shop<br/>Hours/ LF</th>
+                    <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-100">Finish<br/>Field<br/>Hours/ LF</th>
                     <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-200">STEEL (+10%<br/>SCRAP) LBS</th>
                     <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-200">SHOP HOURS</th>
                     <th className="border border-slate-400 p-2 text-[10px] font-bold uppercase text-center bg-slate-200">FIELD HOURS</th>
@@ -314,8 +350,8 @@ export default function EstimateReport({ data, onBack }) {
                     <td className="border border-slate-400 p-0 text-center font-bold">
                       <CurrencyCell value={steelPriceRaw} />
                     </td>
-                    <td className="border border-slate-400" />
-                    <td className="border border-slate-400" />
+                    <td className="border border-slate-400">&nbsp;</td>
+                    <td className="border border-slate-400">&nbsp;</td>
                     <td className="border border-slate-400 p-0 text-center font-bold">
                       <CurrencyCell value={scrapPriceRaw} />
                     </td>
@@ -330,7 +366,7 @@ export default function EstimateReport({ data, onBack }) {
                   <tr className="h-10">
                     <td className="border border-slate-400 text-right px-4 font-bold">Stair Pans TOTAL PRICE</td>
                     <td className="border border-slate-400 text-center font-bold text-[#f59e0b] px-2">{pansPrice === 0 ? "0" : pansPrice.toFixed(2)}</td>
-                    <td className="border border-slate-400" colSpan={2} />
+                    <td className="border border-slate-400" colSpan={2}>&nbsp;</td>
                     <td className="border border-slate-400 text-center font-bold bg-slate-50">{summary?.totalPanPlateWeight?.toFixed(3) || '0.000'}</td>
                     <td className="border border-slate-400 text-center font-bold bg-slate-50">{summary?.totalPanPlateShopHours?.toFixed(2) || '0.00'}</td>
                     <td className="border border-slate-400 text-center font-bold bg-slate-50">0.00</td>
@@ -338,7 +374,7 @@ export default function EstimateReport({ data, onBack }) {
                   {/* STAIR GRATING ROW */}
                   <tr className="h-10">
                     <td className="p-0 border border-slate-400">
-                      <div className="flex h-full">
+                      <div className="flex h-full w-full">
                         <div className={`font-bold px-4 py-1 border-r border-slate-400 flex items-center ${gratingPrice > 0 ? 'bg-[#CCF2D1] text-[#166534]' : 'bg-slate-100 text-slate-400'}`}>{gratingPrice > 0 ? 'Yes' : 'No'}</div>
                         <div className="flex-grow px-2 py-1 text-right font-bold uppercase flex items-center justify-end text-[10px]">Stair Grating</div>
                       </div>
@@ -346,20 +382,20 @@ export default function EstimateReport({ data, onBack }) {
                     <td className="border border-slate-400 p-0 text-center font-bold">
                       <CurrencyCell value={gratingPrice} isZero={gratingPrice === 0} />
                     </td>
-                    <td colSpan={5} className="border border-slate-400" />
+                    <td colSpan={5} className="border border-slate-400">&nbsp;</td>
                   </tr>
-                  {/* GALVANIZE ROW */}
+                  {/* FINISH ROW */}
                   <tr className="h-10">
                     <td className="p-0 border border-slate-400">
-                      <div className="flex h-full">
+                      <div className="flex h-full w-full">
                         <div className={`font-bold px-4 py-1 border-r border-slate-400 flex items-center ${galvanizePrice > 0 ? 'bg-[#CCF2D1] text-[#166534]' : 'bg-slate-100 text-slate-400'}`}>{galvanizePrice > 0 ? 'Yes' : 'No'}</div>
-                        <div className="flex-grow px-2 py-1 text-right font-bold uppercase flex items-center justify-end text-[#166534]">Galvanize</div>
+                        <div className="flex-grow px-2 py-1 text-right font-bold uppercase flex items-center justify-end text-[10px]">Finish Coat</div>
                       </div>
                     </td>
                     <td className="border border-slate-400 p-0 text-center font-bold">
-                      <CurrencyCell value={galvanizePrice} />
+                      <CurrencyCell value={galvanizePrice} isZero={galvanizePrice === 0} />
                     </td>
-                    <td colSpan={5} className="border border-slate-400" />
+                    <td colSpan={5} className="border border-slate-400">&nbsp;</td>
                   </tr>
                   {/* ANCHOR BOLTS ROW */}
                   <tr className="h-10">
@@ -367,7 +403,7 @@ export default function EstimateReport({ data, onBack }) {
                     <td className="border border-slate-400 p-0 text-center font-bold">
                       <CurrencyCell value={anchorBoltsPrice} />
                     </td>
-                    <td colSpan={5} className="border border-slate-400" />
+                    <td colSpan={5} className="border border-slate-400">&nbsp;</td>
                   </tr>
                   {/* POR ROK ROW */}
                   <tr className="h-10">
@@ -375,7 +411,7 @@ export default function EstimateReport({ data, onBack }) {
                     <td className="border border-slate-400 p-0 text-center font-bold">
                       <CurrencyCell value={porRokPrice} />
                     </td>
-                    <td colSpan={5} className="border border-slate-400" />
+                    <td colSpan={5} className="border border-slate-400">&nbsp;</td>
                   </tr>
                   {/* MOUNTING CHARGES ROW */}
                   <tr className="h-10">
@@ -383,7 +419,7 @@ export default function EstimateReport({ data, onBack }) {
                     <td className="border border-slate-400 p-0 text-center font-bold">
                       <CurrencyCell value={mountingCharges} />
                     </td>
-                    <td colSpan={5} className="border border-slate-400" />
+                    <td colSpan={5} className="border border-slate-400">&nbsp;</td>
                   </tr>
                   {/* TOTAL MATERIAL PRICE ROW */}
                   <tr className="h-10">
