@@ -376,9 +376,15 @@ router.get('/:id/activity', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/users/list', async (req, res) => {
   try {
-    const [users] = await db.query(
-      "SELECT id, email, full_name, [role] FROM users ORDER BY full_name"
-    );
+    const { companyId } = req;
+    let query = "SELECT id, email, full_name, [role] FROM users";
+    let params = [];
+    if (companyId) {
+      query += " WHERE company_id = ?";
+      params.push(companyId);
+    }
+    query += " ORDER BY full_name";
+    const [users] = await db.query(query, params);
     res.json({ success: true, users });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

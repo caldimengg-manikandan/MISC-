@@ -29,8 +29,9 @@ PRINT 'SELECT/INSERT/UPDATE/DELETE granted on dbo schema.';
 GO
 
 -- 3. Deny dangerous DDL operations
-DENY ALTER, DROP, CREATE TABLE ON SCHEMA::dbo TO misc_app_user;
-PRINT 'ALTER/DROP/CREATE denied.';
+DENY ALTER ON SCHEMA::dbo TO misc_app_user;
+DENY CREATE TABLE TO misc_app_user;
+PRINT 'ALTER on schema and CREATE TABLE denied.';
 GO
 
 -- 4. Verify permissions before proceeding

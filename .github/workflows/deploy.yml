@@ -30,21 +30,53 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/misc
-            
+
             # 1. Pull latest code
             git pull origin master
-            
-            # 2. Update server dependencies & Run Normalization
+
+            # 2. Validate .env for unquoted special characters (#, $, !)
+            echo "🔍 Validating .env..."
+            python3 - <<'PYEOF'
+            import sys
+            issues = []
+            with open('/var/www/misc/server/.env') as f:
+                for i, line in enumerate(f, 1):
+                    line = line.rstrip('\n')
+                    if line.startswith('#') or '=' not in line:
+                        continue
+                    key, _, val = line.partition('=')
+                    val = val.strip()
+                    # Skip if properly quoted with single or double quotes
+                    if (val.startswith("'") and val.endswith("'")) or \
+                       (val.startswith('"') and val.endswith('"')):
+                        continue
+                    # Flag unquoted values with dangerous characters
+                    for ch in ['#', '$', '!', '%', '&']:
+                        if ch in val:
+                            issues.append(f"  Line {i}: {key.strip()} contains '{ch}' — wrap in single quotes!")
+            if issues:
+                print("❌ .env validation FAILED:")
+                for issue in issues:
+                    print(issue)
+                print("\nFix: Use single quotes → PASSWORD='myP@ss#word!'")
+                sys.exit(1)
+            else:
+                print("✅ .env validation passed")
+            PYEOF
+
+            # 3. Update server dependencies & Run Normalization
             cd server
             npm install --production
             node scripts/normalize_db.js
-            
-            # 3. Update Client
+
+            # 4. Update Client
             cd ../client
             npm install
             npm run build
-            
-            # 4. Restart the backend
-            cd ../server
-            pm2 restart all
+
+            # 5. Restart the backend (--update-env picks up .env changes)
+            cd ..
+            pm2 restart misc-automation --update-env
             pm2 save
+            echo "✅ Deploy complete"
+
