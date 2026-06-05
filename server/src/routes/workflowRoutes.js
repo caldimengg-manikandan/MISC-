@@ -8,6 +8,7 @@ const db = require('../config/mssql');
 const { requireAdmin } = require('../middleware/requireRole');
 const notif = require('../services/NotificationService');
 const logger = require('../utils/logger');
+const resolveOwnerAdminId = require('../utils/resolveOwnerAdminId');
 
 // ── Helper: log an activity ───────────────────────────────────────────────────
 const logActivity = async (projectId, userId, action, comment, fromStatus, toStatus) => {
@@ -376,12 +377,24 @@ router.get('/:id/activity', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/users/list', async (req, res) => {
   try {
-    const { companyId } = req;
+    const ownerAdminId = await resolveOwnerAdminId(req);
+    let adminCompanyId = null;
+    if (ownerAdminId) {
+      const [adminRows] = await db.query("SELECT company_id FROM users WHERE id = ?", [ownerAdminId]);
+      if (adminRows[0]) {
+        adminCompanyId = adminRows[0].company_id;
+      }
+    }
+
     let query = "SELECT id, email, full_name, [role] FROM users";
     let params = [];
-    if (companyId) {
-      query += " WHERE company_id = ?";
-      params.push(companyId);
+    if (ownerAdminId) {
+      query += " WHERE (id = ? OR admin_owner_id = ?)";
+      params.push(ownerAdminId, ownerAdminId);
+      if (adminCompanyId) {
+        query += " OR company_id = ?";
+        params.push(adminCompanyId);
+      }
     }
     query += " ORDER BY full_name";
     const [users] = await db.query(query, params);
