@@ -43,8 +43,8 @@ async function syncSchema() {
 
         for (const col of dictColumns) {
             const checkQuery = `SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dictionary') AND name = '${col.name}'`;
-            const [check] = await pool.request().query(checkQuery);
-            if (check.length === 0) {
+            const checkResult = await pool.request().query(checkQuery);
+            if (checkResult.recordset.length === 0) {
                 console.log(`   Adding column ${col.name}...`);
                 await pool.request().query(`ALTER TABLE dictionary ADD [${col.name}] ${col.type}`);
                 console.log(`   ✅ Column ${col.name} added`);
@@ -55,11 +55,11 @@ async function syncSchema() {
 
         // ── 2. Create dictionary_columns table ──────────────────────────────────
         console.log('\n--- 2. Checking dictionary_columns table ---');
-        const [dictColsTable] = await pool.request().query(
+        const dictColsTableResult = await pool.request().query(
             "SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[dictionary_columns]') AND type in (N'U')"
         );
 
-        if (dictColsTable.length === 0) {
+        if (dictColsTableResult.recordset.length === 0) {
             console.log('   Creating dictionary_columns table...');
             await pool.request().query(`
                 CREATE TABLE [dbo].[dictionary_columns](
@@ -108,11 +108,11 @@ async function syncSchema() {
 
         // ── 4. Create library_audit_log table ────────────────────────────────────
         console.log('\n--- 4. Checking library_audit_log table ---');
-        const [auditTable] = await pool.request().query(
+        const auditTableResult = await pool.request().query(
             "SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[library_audit_log]') AND type in (N'U')"
         );
 
-        if (auditTable.length === 0) {
+        if (auditTableResult.recordset.length === 0) {
             console.log('   Creating library_audit_log table...');
             await pool.request().query(`
                 CREATE TABLE library_audit_log (
