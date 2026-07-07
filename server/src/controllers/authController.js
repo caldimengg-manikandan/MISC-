@@ -120,7 +120,8 @@ const login = async (req, res) => {
     // we consider it the "same device" if the IP matches.
     const sameDevice = (user.session_ip === currentIp);
 
-    if (sameDevice || !user.session_ip) {
+    // OTP device verification is removed per user request. Always log in directly.
+    if (true) {
       // ── Known device — direct login ──
       const sessionToken = crypto.randomBytes(32).toString('hex');
 
